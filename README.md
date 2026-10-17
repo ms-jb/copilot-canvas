@@ -7,10 +7,11 @@ in the middle, your own panels on the right. Answer permission requests, questio
 approvals right in the canvas, even from your phone, and shape the whole thing just by asking
 Copilot. It works with any Copilot chat session where the extension is loaded, with no extra setup.
 
-[![Report an issue](https://img.shields.io/badge/Report_an_issue-d73a49?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues/new/choose)
-[![Issues](https://img.shields.io/badge/Issues-24292f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues)
-[![Releases](https://img.shields.io/badge/Releases-2da44e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/releases)
-[![Install](https://img.shields.io/badge/Install-8957e5?style=for-the-badge&logo=githubcopilot&logoColor=white)](#getting-started)
+[![Get started](https://img.shields.io/badge/Get_started-0078d4?style=for-the-badge&logo=readthedocs&logoColor=white)](#getting-started)
+[![Contributing](https://img.shields.io/badge/Contributing-6e5494?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
+[![Report an issue](https://img.shields.io/badge/Report_an_issue-e74c3c?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues/new/choose)
+[![Make it yours](https://img.shields.io/badge/Make_it_yours-0078d4?style=for-the-badge&logo=githubcopilot&logoColor=white)](#make-it-yours)
+[![Try latest](https://img.shields.io/badge/Try_latest-339933?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/ms-jb/copilot-canvas/tree/main/extension)
 
 <table>
   <tr>
@@ -176,18 +177,19 @@ it.
 
 ## Stack
 
-![Node.js 24](https://img.shields.io/badge/Node.js-24-5FA04E?logo=nodedotjs&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
-![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
-![Mantine 9](https://img.shields.io/badge/Mantine-9-339AF0?logo=mantine&logoColor=white)
-![Vite+](https://img.shields.io/badge/Vite%2B-646CFF?logo=vite&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
+![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white)
+![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
+![Mantine](https://img.shields.io/badge/Mantine-9-339af0?logo=mantine&logoColor=white)
+![Vite+](https://img.shields.io/badge/Vite%2B-1-646cff?logo=vite&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-5-6e9f18?logo=vitest&logoColor=white)
+![npm](https://img.shields.io/badge/npm-11-cb3837?logo=npm&logoColor=white)
 
 ## Contributing
 
-Bugs, ideas and questions go to [Issues](https://github.com/ms-jb/copilot-canvas/issues); pull
-requests are welcome.
+Bugs, ideas and questions go to [Issues](https://github.com/ms-jb/copilot-canvas/issues). See
+[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 
-[MIT](LICENSE)
+Released under the [MIT License](LICENSE).
