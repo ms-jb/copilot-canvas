@@ -1,3 +1,4 @@
+import { useNetwork } from "@mantine/hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchBootstrap, fetchIdentity, type SendContext } from "./api";
 import {
@@ -16,7 +17,9 @@ export type ConnectionPhase =
   | "connected"
   | "reconnecting"
   | "disconnected"
-  | "stale";
+  | "stale"
+  /** The device itself has no network; overrides every other phase until it comes back. */
+  | "offline";
 
 export interface Connection {
   phase: ConnectionPhase;
@@ -34,6 +37,9 @@ const RETRY_BASE_MS = 1000;
 const RETRY_MAX_MS = 15000;
 // EventSource retries on its own; after this long without a connection we call it "not connected".
 const OFFLINE_AFTER_MS = 8000;
+// `vp dev` only: `?state=offline` previews the offline state without turning the network off.
+const PREVIEW_OFFLINE =
+  import.meta.env.DEV && new URLSearchParams(window.location.search).get("state") === "offline";
 
 /**
  * Bootstraps the panel and keeps the transcript view state in sync over SSE.
@@ -57,6 +63,7 @@ export function useConnection(): Connection {
     let retryTimer: ReturnType<typeof setTimeout> | undefined;
     let offlineTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = RETRY_BASE_MS;
+    let stale = false;
     const controller = new AbortController();
 
     const closeSource = () => {
@@ -67,6 +74,7 @@ export function useConnection(): Connection {
 
     const markStale = () => {
       if (disposed) return;
+      stale = true;
       closeSource();
       clearTimeout(retryTimer);
       setPhase("stale");
@@ -171,14 +179,32 @@ export function useConnection(): Connection {
 
     void start();
 
+    // Back online: reconnect now instead of waiting out the retry backoff.
+    const onOnline = () => {
+      if (disposed || stale || source?.readyState === EventSource.OPEN) return;
+      retryDelay = RETRY_BASE_MS;
+      clearTimeout(retryTimer);
+      if (generation) open();
+      else void start();
+    };
+    window.addEventListener("online", onOnline);
+
     return () => {
       disposed = true;
+      window.removeEventListener("online", onOnline);
       controller.abort();
       clearTimeout(retryTimer);
       closeSource();
     };
   }, []);
 
+  const { online } = useNetwork();
   const markStale = useCallback(() => staleRef.current(), []);
-  return { phase, context, config, view, markStale };
+  return {
+    phase: online && !PREVIEW_OFFLINE ? phase : "offline",
+    context,
+    config,
+    view,
+    markStale,
+  };
 }

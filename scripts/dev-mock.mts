@@ -2,7 +2,9 @@
 // without the Copilot app. Registered with `apply: "serve"`: it never runs in or ships with a build.
 //
 // Scenarios: add `?state=empty|waiting|busy|nocontrols` to the page URL (default: a live scripted
-// loop). DEV_PUBLIC_URL sets the "Open on phone" origin ("off" hides the button).
+// conversation loop). `?state=offline` serves the sample without the loop; the page itself shows
+// the offline state (see ui/src/useConnection.ts).
+// DEV_PUBLIC_URL sets the "Open on phone" origin ("off" hides the button).
 
 import { randomUUID } from "node:crypto";
 import type { IncomingMessage, ServerResponse } from "node:http";
@@ -33,7 +35,7 @@ import { loadConfig } from "../extension-src/shared/config.mts";
 
 const SESSION_ID = "dev-mock-session";
 const CSRF_TOKEN = "dev-mock-csrf";
-const SCENARIOS = ["live", "empty", "waiting", "busy", "nocontrols"] as const;
+const SCENARIOS = ["live", "empty", "waiting", "busy", "nocontrols", "offline"] as const;
 type Scenario = (typeof SCENARIOS)[number];
 const COOKIE = "cc-mock-state";
 const MAX_ENTRIES = 60;

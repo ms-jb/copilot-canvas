@@ -27,7 +27,7 @@ route in `extension-src/lib/server.mts`, and the read in the host (for example `
 
 ## The loop
 
-1. Preview without Copilot: `npx vp dev` (`?state=empty|waiting|busy` for other states).
+1. Preview without Copilot: `npx vp dev` (`?state=empty|waiting|busy|offline` for other states).
 2. Check: `npx vp check` and `npx vp test`. Add a test for new logic.
 3. Install: `npm run install-ext` (builds, then installs from this copy).
 4. Ask the user to tap **Reload extensions** (the circular arrow in the canvas's top bar) and to open

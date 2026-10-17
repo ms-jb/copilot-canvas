@@ -66,7 +66,7 @@ Finish this step with one chosen placement and a small list of files to change.
 ## 4. Verify the UI, then deliver
 
 - Use `npx vp dev` without Copilot. Check the default preview plus
-  `?state=empty`, `?state=waiting`, `?state=busy` and `?state=nocontrols`.
+  `?state=empty`, `?state=waiting`, `?state=busy`, `?state=nocontrols` and `?state=offline`.
 - Add matching, non-private preview data in `scripts/dev-mock.mts` for new
   endpoints. Existing scenario flags do not automatically mock your new data.
 - Check desktop, tablet and phone widths, both color schemes, drawer opening,

@@ -177,6 +177,7 @@ Append a query to the `npx vp dev` page to preview other states:
 | `?state=waiting`    | the session waiting on you                |
 | `?state=busy`       | a reply mid-stream                        |
 | `?state=nocontrols` | a Copilot version without native settings |
+| `?state=offline`    | the device offline: banner, input locked  |
 
 `DEV_PUBLIC_URL=https://...` changes the preview's Open on phone origin; `DEV_PUBLIC_URL=off` hides
 it.

@@ -47,6 +47,12 @@ const dark: MantineColorsTuple = [
 ];
 
 const ACCENT_COLORS = new Set(["accent", "blue"]);
+// Light alerts and badges use the theme's soft status surfaces rather than a computed tint.
+const SOFT_SURFACES: Readonly<Record<string, string>> = {
+  red: "var(--cc-danger-soft)",
+  yellow: "var(--cc-warning-soft)",
+  orange: "var(--cc-warning-soft)",
+};
 
 // Filled accent buttons use the accent's contrast ink (dark on the bright dark-theme accent).
 const variantColorResolver: VariantColorsResolver = (input) => {
@@ -54,6 +60,8 @@ const variantColorResolver: VariantColorsResolver = (input) => {
   if (input.variant === "filled" && (!input.color || ACCENT_COLORS.has(input.color))) {
     return { ...result, color: "var(--cc-accent-contrast)" };
   }
+  const soft = input.variant === "light" && input.color ? SOFT_SURFACES[input.color] : undefined;
+  if (soft) return { ...result, background: soft, hover: soft };
   return result;
 };
 

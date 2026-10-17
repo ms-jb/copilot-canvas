@@ -17,6 +17,8 @@ interface UncertainSend {
 export function ChatView({ connection }: ViewProps) {
   const { context, phase, config, view, markStale } = connection;
   const assistantName = config?.assistantName || "Copilot";
+  // Nothing can reach the session: keep drafts, but don't let a send or an answer start.
+  const locked = phase === "stale" || phase === "offline";
   const [draft, setDraft] = useState("");
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [notice, setNotice] = useState<ComposerNotice | null>(null);
@@ -58,7 +60,7 @@ export function ChatView({ connection }: ViewProps) {
 
   const submit = async () => {
     const text = draft;
-    if (inFlight.current || !context || phase === "stale" || text.trim().length === 0) return;
+    if (inFlight.current || !context || locked || text.trim().length === 0) return;
     inFlight.current = true;
     setBusy(true);
     setNotice(null);
@@ -117,7 +119,7 @@ export function ChatView({ connection }: ViewProps) {
             <PendingPrompts
               prompts={view.prompts}
               context={context}
-              disabled={phase === "stale"}
+              disabled={locked}
               assistantName={assistantName}
               onStale={markStale}
             />
@@ -130,7 +132,7 @@ export function ChatView({ connection }: ViewProps) {
           onChange={setDraft}
           onSubmit={() => void submit()}
           busy={busy}
-          disabled={phase === "stale" || context === null}
+          disabled={locked || context === null}
           notice={notice}
           assistantName={assistantName}
           inputRef={input}

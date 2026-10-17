@@ -8,8 +8,9 @@ const STATES: Record<ConnectionPhase, { label: string; tone: Tone }> = {
   connecting: { label: "Connecting", tone: "pending" },
   connected: { label: "Connected", tone: "success" },
   reconnecting: { label: "Reconnecting", tone: "warning" },
-  disconnected: { label: "Offline", tone: "danger" },
+  disconnected: { label: "Not connected", tone: "danger" },
   stale: { label: "Needs reload", tone: "danger" },
+  offline: { label: "Offline", tone: "danger" },
 };
 
 /** The single home of connection health: a dot next to the assistant name, labelled on hover. */
