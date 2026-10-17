@@ -39,6 +39,10 @@ route in `extension-src/lib/server.mts`, and the read in the host (for example `
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).
 
+**Skills.** Follow `.github/skills/customization-workflow` for every change, plus
+`add-view-or-panel` for UI, `add-data-endpoint` for outside data and `theme-and-identity` for names,
+colors and the phone app's branding.
+
 ## Keep it safe
 
 - Loopback only: never bind the provider or gateway to anything but `127.0.0.1`.
