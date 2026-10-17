@@ -3,6 +3,7 @@ import { useDisclosure } from "@mantine/hooks";
 import { useState } from "react";
 import { requestReload } from "../../api";
 import { IconButton } from "../../layout/IconButton";
+import { isRemote } from "../../remote";
 import type { Connection } from "../../useConnection";
 import { ReloadIcon } from "../../views/icons";
 
@@ -12,20 +13,20 @@ type State =
   | { kind: "done" }
   | { kind: "failed"; message: string };
 
-// The gateway never forwards a reload, so the button lives only where the provider is served directly.
-const isLoopback = () => ["127.0.0.1", "localhost", "[::1]"].includes(window.location.hostname);
-
 /**
  * Reloads this session's extensions so a rebuilt canvas takes effect without restarting Copilot.
+ * On the phone it also offers a page refresh, since an installed app has no reload button.
  * Always behind a confirm; the canvas goes away with the old extension and is reopened from Copilot.
  */
 export function ReloadExtensions({ connection }: { connection: Connection }) {
   const [opened, { open, close }] = useDisclosure(false);
   const [state, setState] = useState<State>({ kind: "idle" });
   const context = connection.context;
-  if (!context || !isLoopback()) return null;
+  const remote = isRemote();
+  if (!context && !remote) return null;
 
   const confirm = async () => {
+    if (!context) return;
     setState({ kind: "busy" });
     const outcome = await requestReload(context);
     if (outcome.kind === "scheduled") setState({ kind: "done" });
@@ -37,18 +38,29 @@ export function ReloadExtensions({ connection }: { connection: Connection }) {
     if (state.kind !== "busy") setState({ kind: "idle" });
   };
 
+  const explanation =
+    state.kind === "done"
+      ? remote
+        ? "Reloading. This phone disconnects until the canvas is open again in Copilot on your computer; then refresh here."
+        : "Reloading. This canvas closes with the old extension; open it again from Copilot to see your changes."
+      : remote
+        ? "Refresh this page to pick up the latest canvas, or reload the session's extensions after a rebuild. Reloading disconnects this phone until the canvas is open again on your computer."
+        : "Restart this session's extensions so a rebuilt canvas takes effect. Your conversation is kept; other sessions are not affected.";
+
   return (
     <>
-      <IconButton label="Reload extensions" onClick={open}>
+      <IconButton label={remote ? "Restart" : "Reload extensions"} onClick={open}>
         <ReloadIcon />
       </IconButton>
-      <Modal opened={opened} onClose={dismiss} title="Reload extensions" centered size="sm">
+      <Modal
+        opened={opened}
+        onClose={dismiss}
+        title={remote ? "Restart" : "Reload extensions"}
+        centered
+        size="sm"
+      >
         <Stack gap="md">
-          <Text size="sm">
-            {state.kind === "done"
-              ? "Reloading. This canvas closes with the old extension; open it again from Copilot to see your changes."
-              : "Restart this session's extensions so a rebuilt canvas takes effect. Your conversation is kept; other sessions are not affected."}
-          </Text>
+          <Text size="sm">{explanation}</Text>
           {state.kind === "failed" && (
             <Text size="sm" c="red" role="alert">
               {state.message}
@@ -58,9 +70,14 @@ export function ReloadExtensions({ connection }: { connection: Connection }) {
             <Button variant="default" size="xs" onClick={dismiss}>
               {state.kind === "done" ? "Close" : "Cancel"}
             </Button>
-            {state.kind !== "done" && (
+            {remote && (
+              <Button variant="light" size="xs" onClick={() => window.location.reload()}>
+                Refresh page
+              </Button>
+            )}
+            {state.kind !== "done" && context && (
               <Button size="xs" loading={state.kind === "busy"} onClick={() => void confirm()}>
-                Reload
+                Reload extensions
               </Button>
             )}
           </Group>

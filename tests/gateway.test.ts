@@ -139,6 +139,27 @@ it("refuses a stale or missing generation on send and never forwards it", async 
   expect((await send(GENERATION)).status).toBe(200);
 });
 
+it("forwards a reload only when pinned to the live provider run", async () => {
+  publish(GENERATION);
+  const reload = (generation?: string) =>
+    call(
+      "/api/reload",
+      {
+        "content-type": "application/json",
+        origin: `http://127.0.0.1:${gatewayPort}`,
+        ...(generation ? { "x-provider-generation": generation } : {}),
+      },
+      "POST",
+      "{}",
+    );
+  expect((await reload()).status).toBe(409);
+  expect((await reload("generation-old-0000000")).status).toBe(409);
+  expect(upstreamPaths).toEqual([]);
+  expect((await reload(GENERATION)).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/reload`]);
+  expect((await call("/api/reload")).status).toBe(405);
+});
+
 it("rejects a bad Host or Origin with 403", async () => {
   publish(GENERATION);
   expect((await call("/api/bootstrap", { host: "evil.example.test" })).status).toBe(403);

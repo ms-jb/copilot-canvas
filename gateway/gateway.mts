@@ -59,9 +59,10 @@ const ROUTES: Record<string, string> = {
   [`/${API.controls}`]: "POST",
   [`/${API.respond}`]: "POST",
   [`/${API.share}`]: "GET",
+  [`/${API.reload}`]: "POST",
 };
 // Writes must be pinned to the provider run the page was loaded from.
-const PINNED_WRITES = new Set<string>([API.send, API.controls, API.respond]);
+const PINNED_WRITES = new Set<string>([API.send, API.controls, API.respond, API.reload]);
 
 const NOT_CONNECTED_PAGE = `<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
