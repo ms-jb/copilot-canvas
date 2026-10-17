@@ -4,11 +4,11 @@
 // Every Copilot session with the extension loaded publishes its own provider state file; the
 // gateway follows the live one whose canvas was opened most recently.
 
-import { rmSync } from "node:fs";
+import { rmSync, readFileSync } from "node:fs";
 import http from "node:http";
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { dirname, resolve } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import qrcode from "qrcode-generator";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
@@ -17,9 +17,17 @@ import {
   HEADERS,
   HTTP_STATUS_BY_CODE,
   LIMITS,
+  SSE_EVENTS,
   validateIdentity,
 } from "../extension-src/shared/contract.mts";
-import { gatewayStatePath, loadConfig, sessionsDir } from "../extension-src/shared/config.mts";
+import type { Notice, PushSender } from "./push.mts";
+import { createNotifier, isAllowedPushEndpoint, openPushStore, parseSse } from "./push.mts";
+import {
+  gatewayStatePath,
+  loadConfig,
+  runtimeDir,
+  sessionsDir,
+} from "../extension-src/shared/config.mts";
 import {
   buildGatewayState,
   readGatewayState,
@@ -32,6 +40,7 @@ import {
   SENSITIVE_RESPONSE_HEADERS,
   checkOrigin,
   isAllowedHost,
+  isJsonContentType,
 } from "../extension-src/shared/security.mts";
 
 const LOOPBACK = "127.0.0.1";
@@ -39,6 +48,13 @@ const WATCH_INTERVAL_MS = 500;
 // Provider selection (file scan + identity probe) is reused for this long.
 const SELECTION_TTL_MS = 500;
 const UPSTREAM_TIMEOUT_MS = LIMITS.sendTimeoutMs + 5000;
+// Notifications: how often to check the stream to the live provider, and how long a silent stream
+// (no events or keepalives) may stay open before it is replaced.
+const PUSH_WATCH_MS = 2000;
+const PUSH_STREAM_IDLE_MS = 45_000;
+const PUSH_TEST_INTERVAL_MS = 5000;
+const PUSH_BODY_MAX_BYTES = 4096;
+const SERVICE_WORKER = readFileSync(new URL("./sw.js", import.meta.url));
 
 // Only these request headers reach the provider (no cookies, authorization or x-forwarded-*).
 const FORWARDED_HEADERS = [
@@ -81,6 +97,8 @@ export interface GatewayOptions {
   sessionsDir?: string;
   /** A single provider state file to use instead of scanning `sessionsDir`. */
   statePath?: string;
+  /** Phone notifications: the private file for keys and subscriptions. Omit to turn them off. */
+  push?: { statePath: string; assistantName: string; sender?: PushSender };
 }
 
 export interface Gateway {
@@ -161,6 +179,162 @@ export function createGateway(options: GatewayOptions): Gateway {
     })();
     selection = { at: now, result };
     return result;
+  }
+
+  // Phone notifications: follow the live provider's event stream and push when the user is needed.
+  const push = options.push && {
+    store: openPushStore(options.push.statePath, options.push.sender),
+    notifier: createNotifier(options.push.assistantName),
+    fallback: { title: options.push.assistantName, body: "Open the canvas to see what's new." },
+  };
+  let latest: Notice | null = null;
+  let lastTestAt = -Infinity;
+  let stream: { generation: string; request: http.ClientRequest } | null = null;
+
+  function notify(notice: Notice | null) {
+    if (!notice || !push) return;
+    latest = notice;
+    void push.store.sendAll();
+  }
+
+  function openStream(state: ProviderState) {
+    if (!push) return;
+    const target = new URL(state.origin);
+    const request = http.get({
+      host: LOOPBACK,
+      port: target.port,
+      path: state.capabilityPath + API.events,
+      agent: false,
+      headers: { host: target.host, origin: target.origin, accept: "text/event-stream" },
+      timeout: PUSH_STREAM_IDLE_MS,
+    });
+    stream = { generation: state.generation, request };
+    const drop = () => {
+      if (stream?.request === request) stream = null;
+    };
+    request.on("timeout", () => request.destroy());
+    request.on("error", drop);
+    request.on("close", drop);
+    request.on("response", (reply) => {
+      if (reply.statusCode !== 200) return request.destroy();
+      let buffer = "";
+      reply.setEncoding("utf8");
+      reply.on("data", (chunk: string) => {
+        const { frames, rest } = parseSse(buffer + chunk);
+        buffer = rest.slice(-LIMITS.maxBodyBytes);
+        for (const { event, data } of frames) {
+          try {
+            const value = JSON.parse(data);
+            if (event === SSE_EVENTS.snapshot) {
+              const { snapshot } = value;
+              notify(
+                push.notifier.snapshot(value.generation, snapshot.status, snapshot.prompts ?? []),
+              );
+            } else if (event === SSE_EVENTS.status) notify(push.notifier.status(value.status));
+            else if (event === SSE_EVENTS.prompts) notify(push.notifier.prompts(value.prompts));
+          } catch {
+            // A malformed frame is skipped; the next snapshot resynchronizes.
+          }
+        }
+      });
+    });
+  }
+
+  // Keep exactly one healthy stream to the live provider while anyone is subscribed.
+  const pushWatcher =
+    push &&
+    setInterval(() => {
+      if (push.store.endpoints().length === 0) {
+        stream?.request.destroy();
+        return;
+      }
+      void selectProvider().then((state) => {
+        if (stream && stream.generation === state?.generation) return;
+        stream?.request.destroy();
+        if (state) openStream(state);
+      });
+    }, PUSH_WATCH_MS);
+  if (pushWatcher) pushWatcher.unref();
+
+  function sendJson(response: ServerResponse, status: number, value: unknown) {
+    const body = Buffer.from(JSON.stringify(value));
+    response.writeHead(status, {
+      ...SENSITIVE_RESPONSE_HEADERS,
+      "content-type": "application/json; charset=utf-8",
+      "content-length": body.length,
+    });
+    response.end(body);
+  }
+
+  /** Gateway-local notification routes. Returns false for any other path. */
+  async function handlePush(
+    request: IncomingMessage,
+    response: ServerResponse,
+    pathname: string,
+    method: string,
+  ): Promise<boolean> {
+    if (!push) return false;
+    const path = pathname.slice(1);
+    const reads = new Map<string, () => void>([
+      [
+        "sw.js",
+        () => {
+          response.writeHead(200, {
+            ...SENSITIVE_RESPONSE_HEADERS,
+            "content-type": "text/javascript; charset=utf-8",
+            "content-length": SERVICE_WORKER.length,
+          });
+          response.end(SERVICE_WORKER);
+        },
+      ],
+      [API.pushKey, () => sendJson(response, 200, { publicKey: push.store.publicKey })],
+      [API.pushLatest, () => sendJson(response, 200, latest ?? push.fallback)],
+    ]);
+    const writes = new Set<string>([API.pushSubscribe, API.pushUnsubscribe, API.pushTest]);
+    const read = reads.get(path);
+    if (!read && !writes.has(path)) return false;
+    const expected = read ? "GET" : "POST";
+    if (method !== expected) {
+      sendError(request, response, ERROR_CODES.methodNotAllowed, "Method not allowed.");
+      return true;
+    }
+    if (read) {
+      read();
+      return true;
+    }
+
+    if (!isJsonContentType(request.headers["content-type"])) {
+      sendError(request, response, ERROR_CODES.unsupportedMediaType, "Expected JSON.");
+      return true;
+    }
+    const body = await readBody(request, PUSH_BODY_MAX_BYTES);
+    let endpoint: unknown;
+    try {
+      endpoint = body
+        ? (JSON.parse(body.toString("utf8")) as { endpoint?: unknown }).endpoint
+        : null;
+    } catch {
+      endpoint = null;
+    }
+    if (path === API.pushTest) {
+      const now = Date.now();
+      if (now - lastTestAt < PUSH_TEST_INTERVAL_MS) {
+        sendError(request, response, ERROR_CODES.badRequest, "Wait a few seconds and try again.");
+        return true;
+      }
+      lastTestAt = now;
+      latest = { title: options.push?.assistantName ?? "Copilot", body: "Notifications are on." };
+      sendJson(response, 200, { ok: true, sent: await push.store.sendAll() });
+      return true;
+    }
+    if (!isAllowedPushEndpoint(endpoint)) {
+      sendError(request, response, ERROR_CODES.badRequest, "Not a supported push service.");
+      return true;
+    }
+    if (path === API.pushSubscribe) push.store.add(endpoint);
+    else push.store.remove(endpoint);
+    sendJson(response, 200, { ok: true });
+    return true;
   }
 
   function sendError(
@@ -332,6 +506,7 @@ export function createGateway(options: GatewayOptions): Gateway {
 
     // Query strings are dropped; encoded or relative path tricks never match the allow-list.
     const pathname = (request.url ?? "").split("?")[0] ?? "";
+    if (await handlePush(request, response, pathname, method)) return;
     const isAsset = ASSET_PATH.test(pathname) && !pathname.split("/").includes("..");
     const allowedMethod = isAsset ? "GET" : ROUTES[pathname];
     if (!allowedMethod) return sendError(request, response, ERROR_CODES.notFound, "Not found.");
@@ -383,6 +558,8 @@ export function createGateway(options: GatewayOptions): Gateway {
       }),
     close: () =>
       new Promise((done) => {
+        if (pushWatcher) clearInterval(pushWatcher);
+        stream?.request.destroy();
         server.close(() => done());
         server.closeAllConnections();
       }),
@@ -425,6 +602,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     allowedOrigin: config.gatewayAllowedOrigin,
     statePath: process.env.GATEWAY_STATE_FILE || undefined,
     sessionsDir: sessionsDir(config),
+    // Notifications need the phone's https origin; keys and subscriptions stay in the runtime folder.
+    push: config.gatewayAllowedOrigin
+      ? { statePath: join(runtimeDir(config), "push.json"), assistantName: config.assistantName }
+      : undefined,
   });
   const { port } = await gateway.listen();
   console.log(`gateway listening on 127.0.0.1:${port}`);

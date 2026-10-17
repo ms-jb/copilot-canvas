@@ -85,7 +85,8 @@ npm run phone
 It creates (once) a private dev tunnel that only you can sign in to, starts the gateway, and prints
 the link and a QR code; the canvas's **Open on phone** button shows the same code. Keep it running,
 and your computer awake, while you use your phone. On the phone, the canvas walks you through
-adding it to your home screen so it opens like an app.
+adding it to your home screen so it opens like an app. In the installed app, tap the bell to get a
+notification when Copilot needs you or finishes (on iPhone this needs iOS 16.4 or later).
 
 <details>
 <summary>What it does, step by step</summary>
@@ -128,6 +129,10 @@ flowchart LR
 - **Safe rendering.** Messages render without raw HTML; only web and email links open.
 - **Quiet gateway.** It never logs messages or tokens. Anyone who can reach your tunnel can act as
   you, so keep it owner-only.
+- **Notifications carry no content.** Phone pushes are sent empty through your browser's push
+  service; the phone then asks your own gateway for a one-line status ("Waiting for your
+  permission"). Keys and subscriptions stay in the runtime folder on your computer, and the gateway
+  only contacts known push services.
 - **Reloads are pinned too.** Reloading extensions from the phone goes through the same generation,
   CSRF and session checks as a message. The phone reconnects once the canvas is open again on your
   computer.
@@ -180,7 +185,7 @@ it.
 | ---------------- | ----------------------------------------------------------- |
 | `extension-src/` | extension host, compiled to `extension/`                    |
 | `ui/`            | React + Mantine canvas; views and panels in `ui/src/views/` |
-| `gateway/`       | optional phone gateway                                      |
+| `gateway/`       | optional phone gateway and notifications                    |
 | `scripts/`       | install, phone, sync and the development preview            |
 | `extension/`     | generated, committed, installable output (do not hand-edit) |
 

@@ -69,6 +69,8 @@ and paths (Windows or macOS).
      send a message from the phone. Confirm it arrives in this conversation.
    - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
      phone and browser, and it then opens like an app.
+   - Then offer notifications: in the installed app, tap the bell, **Turn on**, then **Send test**.
+     Confirm the test arrives. Pushes carry no content.
 
 ## Part 2: Make it yours
 
@@ -95,5 +97,6 @@ and paths (Windows or macOS).
 - **"Not connected" on the phone:** the canvas was closed. Open it again in Copilot, then refresh the
   phone.
 - **Undo:** stop `npm run phone`; `devtunnel delete <tunnel-id>` (the id is in
-  `~/.copilot/canvas-runtime/copilot-canvas/phone.json`); remove `~/.copilot/extensions/copilot-canvas`;
+  `~/.copilot/canvas-runtime/copilot-canvas/phone.json`); remove `~/.copilot/extensions/copilot-canvas`
+  and `~/.copilot/canvas-runtime/copilot-canvas` (tunnel id, notification keys and subscriptions);
   delete `<FOLDER>`.

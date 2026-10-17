@@ -1,4 +1,5 @@
 import { InstallApp } from "../components/share/InstallApp";
+import { Notifications } from "../components/share/Notifications";
 import { OpenOnPhone } from "../components/share/OpenOnPhone";
 import { ReloadExtensions } from "../components/share/ReloadExtensions";
 import type { Connection } from "../useConnection";
@@ -37,6 +38,7 @@ export function TopBar(props: TopBarProps) {
       <div className={classes.actions}>
         <OpenOnPhone connection={connection} />
         <InstallApp />
+        <Notifications assistantName={connection.config?.assistantName ?? "Copilot"} />
         <ReloadExtensions connection={connection} />
         <IconButton
           label={asideOpen ? "Hide details" : "Show details"}

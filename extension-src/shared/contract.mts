@@ -249,6 +249,12 @@ export const API = Object.freeze({
   share: "api/share",
   respond: "api/respond",
   reload: "api/reload",
+  // Served by the gateway itself (phone only), never forwarded to the provider.
+  pushKey: "api/push/key",
+  pushSubscribe: "api/push/subscribe",
+  pushUnsubscribe: "api/push/unsubscribe",
+  pushTest: "api/push/test",
+  pushLatest: "api/push/latest",
 });
 
 export const HEADERS = Object.freeze({

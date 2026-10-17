@@ -87,7 +87,8 @@ export function InstallApp() {
       <Modal opened={opened} onClose={dismiss} title="Add to your home screen" centered size="sm">
         <Stack gap="md">
           <Text size="sm">
-            Open the canvas like an app: full screen, one tap from your home screen.
+            Open the canvas like an app: full screen, one tap from your home screen, and able to
+            notify you when Copilot needs you.
           </Text>
           {prompt ? (
             <Button onClick={() => void install()}>Install</Button>
