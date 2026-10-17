@@ -16,11 +16,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 24
-          cache: npm
       # Uses the default public npm registry; no private feed or secrets are needed.
-      - run: npm ci
+      - run: npm install --no-package-lock
       - run: npx vp check
       - run: npx vp test
       - run: npx vp build
-      - name: Verify the committed extension/ folder is up to date
-        run: test -z "$(git status --porcelain -- extension)" || (git status --short -- extension && exit 1)

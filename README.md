@@ -42,8 +42,9 @@ paste the folder URL `https://github.com/<owner>/<repo>/tree/<ref>/extension`, o
 - `npx vp test` – small unit tests (contract, transcript, markdown, Host/Origin, gateway)
 - `npx vp build` – build the renderer and compile the host into `extension/`
 
-Rebuild and commit `extension/` after changing `extension-src/`, `ui/` or `template.config.json`;
-CI fails if it is out of date.
+Rebuild and commit `extension/` after changing `extension-src/`, `ui/` or `template.config.json`.
+The template ships without a lockfile; commit your own `package-lock.json` once you start a
+project from it.
 
 ## Customize
 
