@@ -9,7 +9,12 @@ import { createRequestPolicy } from "./request-policy.mjs";
 import { createRoutes } from "./routes.mjs";
 import { errorMessage, sendError } from "./responses.mjs";
 /** Creates a provider; `start()` listens on 127.0.0.1 with an OS-assigned port by default. */
-export function createProviderServer({ config, bridge, uiDir, log = () => { }, getShareInfo = () => ({ publicUrl: null }), getSourceDir = () => "", port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
+export function createProviderServer({ config, bridge, uiDir, log = () => { }, getShareInfo = () => ({ publicUrl: null }), getSourceDir = () => "", getSessions = async () => ({
+    sessionId: bridge.sessionId,
+    source: "unavailable",
+    checkedAt: new Date().toISOString(),
+    sessions: [],
+}), port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
     const capabilityPath = `/${config.canvasId}/${token}/`;
     let listenPort = 0;
     let startPromise = null;
@@ -36,6 +41,7 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
         log,
         getSourceDir,
         getShareInfo,
+        getSessions,
         policy,
         assets,
         events,

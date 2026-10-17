@@ -3,6 +3,7 @@ import type {
   SessionControls,
   SessionStatus,
   TranscriptEntry,
+  QueueState,
 } from "../../shared/contract.mts";
 import type { TranscriptChange } from "../../shared/transcript.mts";
 import { describeSessionError } from "../logging.mts";
@@ -12,10 +13,12 @@ export type BridgeEvent =
   | { seq: number; type: "entry"; entry: TranscriptEntry }
   | { seq: number; type: "status"; status: SessionStatus }
   | { seq: number; type: "controls"; controls: SessionControls }
+  | { seq: number; type: "queue"; queue: QueueState }
   | { seq: number; type: "prompts"; prompts: PendingPrompt[] };
 type Change =
   | TranscriptChange
   | { type: "controls"; controls: SessionControls }
+  | { type: "queue"; queue: QueueState }
   | { type: "prompts"; prompts: PendingPrompt[] };
 
 /** One sequence for transcript, controls and prompts; streaming entries alone are coalesced. */

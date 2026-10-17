@@ -26,6 +26,9 @@ it("keeps the public contract exports stable without exposing domain helpers", (
   expect(Object.keys(contract).sort()).toEqual([
     "ACTIVITIES",
     "API",
+    "APP_SESSION_ID",
+    "ATTACHMENT_EXTENSIONS",
+    "ATTACHMENT_LIMITS",
     "CONTEXT_TIERS",
     "CONTRACT_VERSION",
     "ENTRY_KINDS",
@@ -34,15 +37,21 @@ it("keeps the public contract exports stable without exposing domain helpers", (
     "HTTP_STATUS_BY_CODE",
     "IDENTITY_APP",
     "LIMITS",
+    "MAX_SESSIONS",
     "PHASES",
     "PLAN_ACTIONS",
     "SEND_STATUS",
     "SESSION_MODES",
     "SSE_EVENTS",
     "WAITING_FOR",
+    "attachmentByteLength",
+    "isAttachmentMimeType",
     "isPlainObject",
+    "isSafeAttachmentName",
     "makeError",
     "toPublicOrigin",
+    "transcriptAttachments",
+    "validateAttachments",
     "validateBootstrap",
     "validateControls",
     "validateControlsPayload",
@@ -54,13 +63,17 @@ it("keeps the public contract exports stable without exposing domain helpers", (
     "validateRespondPayload",
     "validateSendPayload",
     "validateServerEvent",
+    "validateSessions",
     "validateSnapshot",
     "validateStatus",
   ]);
 });
 
 it("accepts a valid send payload and rejects malformed ones", () => {
-  expect(validateSendPayload(payload)).toEqual({ ok: true, value: payload });
+  expect(validateSendPayload(payload)).toEqual({
+    ok: true,
+    value: { ...payload, mode: "immediate" },
+  });
   for (const bad of [
     null,
     { ...payload, extra: 1 },

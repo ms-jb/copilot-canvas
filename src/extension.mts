@@ -14,6 +14,7 @@ import type { SessionBridge } from "./host/bridge.mts";
 import type { LogLevel } from "./host/logging.mts";
 import { createChatCanvas } from "./host/canvas.mts";
 import { startProvider } from "./host/provider.mts";
+import { createSessionsReader } from "./host/sessions/reader.mts";
 
 // Structured canvas error exported by the SDK; declared here because the shared ambient typings omit it.
 declare module "@github/copilot-sdk/extension" {
@@ -49,6 +50,7 @@ try {
 }
 
 let bridge: SessionBridge | null = null;
+let getSessions: ReturnType<typeof createSessionsReader> | undefined;
 let resolveBridge: (value: SessionBridge) => void = () => {};
 const bridgeReady = new Promise<SessionBridge>((resolve) => {
   resolveBridge = resolve;
@@ -72,6 +74,7 @@ const chat = createChatCanvas({
       sessionId: session?.sessionId ?? "",
       uiDir,
       log,
+      serverOptions: { getSessions },
     });
   },
 });
@@ -85,6 +88,18 @@ session = joined;
 for (const [message, level] of earlyLogs.splice(0)) log(message, level);
 
 bridge = createSessionBridge(joined, { log });
+getSessions = createSessionsReader({
+  session: joined,
+  sessionId: joined.sessionId,
+  currentState: () => {
+    const phase = bridge?.getSnapshot().snapshot.status.phase;
+    return phase === "working"
+      ? "busy"
+      : phase === "waiting" || phase === "idle"
+        ? phase
+        : "unknown";
+  },
+});
 await Promise.race([
   bridge.ready,
   new Promise<void>((resolve) => setTimeout(resolve, 10000).unref()),

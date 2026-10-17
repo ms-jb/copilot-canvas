@@ -5,8 +5,10 @@ import {
   ERROR_CODES,
   IDENTITY_APP,
   toPublicOrigin,
+  validateSessions,
 } from "../../shared/contract.mts";
 import type { Bootstrap, Identity, ShareInfo } from "../../shared/contract.mts";
+import type { SessionsInfo } from "../../shared/contract.mts";
 import type { TemplateConfig } from "../../shared/node/config.mts";
 import type { Bridge } from "../session/bridge.mts";
 import type { Logger } from "../logging.mts";
@@ -25,6 +27,7 @@ export function createRoutes({
   log,
   getSourceDir,
   getShareInfo,
+  getSessions,
   policy,
   assets,
   events,
@@ -36,6 +39,7 @@ export function createRoutes({
   log: Logger;
   getSourceDir: () => string;
   getShareInfo: () => ShareInfo;
+  getSessions: () => Promise<SessionsInfo>;
   policy: RequestPolicy;
   assets: ReturnType<typeof createAssetHandler>;
   events: ReturnType<typeof createEventStream>;
@@ -121,6 +125,14 @@ export function createRoutes({
       case API.share:
         if (method !== "GET") return notAllowed(res, "GET");
         return handleShare(res);
+      case API.sessions: {
+        if (method !== "GET") return notAllowed(res, "GET");
+        const body = await getSessions().catch(() => null);
+        if (!validateSessions(body)) {
+          return sendError(res, ERROR_CODES.internal, "Session list is unavailable.");
+        }
+        return sendJson(res, 200, body);
+      }
       default:
         return sendError(res, ERROR_CODES.notFound, "Not found.");
     }

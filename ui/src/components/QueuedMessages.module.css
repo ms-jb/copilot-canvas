@@ -1,0 +1,40 @@
+.queue {
+  margin-block: var(--cc-space-2);
+  padding: var(--cc-space-2) var(--cc-space-3);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-surface-raised);
+}
+
+.heading,
+.label {
+  font-size: var(--cc-text-xs);
+  color: var(--cc-text-muted);
+}
+
+.heading {
+  font-weight: 600;
+}
+
+.list {
+  max-height: min(180px, 25dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding-block: var(--cc-space-1);
+}
+
+.item + .item {
+  border-top: 1px solid var(--cc-border);
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: var(--cc-text-sm);
+}

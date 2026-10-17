@@ -1,9 +1,11 @@
 import { ERROR_CODES, SEND_STATUS } from "../../shared/contract.mjs";
 import { describeSessionError } from "../logging.mjs";
+import { createAttachmentStaging } from "./attachments.mjs";
 const MAX_TRACKED_REQUESTS = 500;
 /** Owns send admission and uncertainty; never retries a native call automatically. */
 export function createSendController(session, { log, sendTimeoutMs, admit, }) {
     const requests = new Set();
+    const staging = createAttachmentStaging();
     const cancelTimers = new Set();
     let disposed = false;
     function remember(requestId) {
@@ -14,7 +16,7 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
                 requests.delete(oldest);
         }
     }
-    async function send(text, requestId) {
+    async function send(text, requestId, attachments = [], mode = "immediate") {
         if (disposed) {
             return {
                 ok: false,
@@ -35,8 +37,31 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
             };
         }
         remember(requestId);
+        let lease;
+        try {
+            if (attachments.length)
+                lease = staging.stage(attachments);
+        }
+        catch (error) {
+            requests.delete(requestId);
+            return {
+                ok: false,
+                status: SEND_STATUS.rejected,
+                code: ERROR_CODES.badRequest,
+                message: error instanceof Error ? error.message : "Could not prepare the attachments.",
+                requestId,
+            };
+        }
         const attempt = Promise.resolve()
-            .then(() => session.send({ prompt: text }))
+            .then(() => {
+            if (disposed)
+                throw new Error("The session is no longer connected.");
+            return session.send({
+                prompt: text,
+                mode,
+                ...(lease ? { attachments: lease.attachments.slice() } : {}),
+            });
+        })
             .then((messageId) => ({ messageId }), (error) => ({ error }));
         let timer;
         let cancel = () => { };
@@ -46,6 +71,7 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
             timer = setTimeout(cancel, sendTimeoutMs);
         });
         const winner = await Promise.race([attempt, timedOut]);
+        lease?.release();
         clearTimeout(timer);
         cancelTimers.delete(cancel);
         if (winner === "timeout") {
@@ -54,7 +80,7 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
                 if ("error" in late)
                     log(`Late send failure: ${describeSessionError(late.error)}`, "warning");
                 else
-                    admit(late.messageId, requestId);
+                    admit(late.messageId, requestId, mode);
             });
             return {
                 ok: false,
@@ -74,7 +100,7 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
                 requestId,
             };
         }
-        admit(winner.messageId, requestId);
+        admit(winner.messageId, requestId, mode);
         const outcome = { ok: true, status: SEND_STATUS.accepted, requestId };
         if (typeof winner.messageId === "string")
             outcome.messageId = winner.messageId;
@@ -84,6 +110,7 @@ export function createSendController(session, { log, sendTimeoutMs, admit, }) {
         send,
         dispose() {
             disposed = true;
+            staging.dispose();
             for (const cancel of Array.from(cancelTimers))
                 cancel();
             cancelTimers.clear();

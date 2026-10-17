@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
+  ATTACHMENT_LIMITS,
   ERROR_CODES,
   SEND_STATUS,
   validateControlsPayload,
@@ -77,7 +78,13 @@ export function createPostRoutes(bridge: Bridge, policy: RequestPolicy, log: Log
     sendJson(res, 200, { ok: true, status: "stopped" });
   }
   async function handleSend(req: IncomingMessage, res: ServerResponse): Promise<void> {
-    const payload = await policy.readPost(req, res, SEND_STATUS.rejected, validateSendPayload);
+    const payload = await policy.readPost(
+      req,
+      res,
+      SEND_STATUS.rejected,
+      validateSendPayload,
+      ATTACHMENT_LIMITS.maxSendBodyBytes,
+    );
     if (!payload) return;
     const { requestId, text } = payload;
     // Synchronous guard: record the requestId before the first await below.
@@ -91,7 +98,7 @@ export function createPostRoutes(bridge: Bridge, policy: RequestPolicy, log: Log
     rememberOutcome(requestId, record);
     let outcome: SendOutcome;
     try {
-      outcome = await bridge.send(text, requestId);
+      outcome = await bridge.send(text, requestId, payload.attachments, payload.mode);
     } catch (error) {
       log(`Send failed: ${errorMessage(error)}`, "warning");
       outcome = {

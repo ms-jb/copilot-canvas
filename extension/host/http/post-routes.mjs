@@ -1,4 +1,4 @@
-import { ERROR_CODES, SEND_STATUS, validateControlsPayload, validateReloadPayload, validateRespondPayload, validateSendPayload, } from "../../shared/contract.mjs";
+import { ATTACHMENT_LIMITS, ERROR_CODES, SEND_STATUS, validateControlsPayload, validateReloadPayload, validateRespondPayload, validateSendPayload, } from "../../shared/contract.mjs";
 import { ControlError } from "../controls/rpc-adapter.mjs";
 import { errorMessage, sendError, sendJson, sendRejected, statusFor } from "./responses.mjs";
 const MAX_TRACKED_SENDS = 500;
@@ -58,7 +58,7 @@ export function createPostRoutes(bridge, policy, log) {
         sendJson(res, 200, { ok: true, status: "stopped" });
     }
     async function handleSend(req, res) {
-        const payload = await policy.readPost(req, res, SEND_STATUS.rejected, validateSendPayload);
+        const payload = await policy.readPost(req, res, SEND_STATUS.rejected, validateSendPayload, ATTACHMENT_LIMITS.maxSendBodyBytes);
         if (!payload)
             return;
         const { requestId, text } = payload;
@@ -75,7 +75,7 @@ export function createPostRoutes(bridge, policy, log) {
         rememberOutcome(requestId, record);
         let outcome;
         try {
-            outcome = await bridge.send(text, requestId);
+            outcome = await bridge.send(text, requestId, payload.attachments, payload.mode);
         }
         catch (error) {
             log(`Send failed: ${errorMessage(error)}`, "warning");

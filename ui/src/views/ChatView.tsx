@@ -5,14 +5,17 @@ import { Composer, type ComposerNotice } from "../components/Composer";
 import { PendingPrompts } from "../features/prompts/PendingPrompts";
 import { useStopOnEscape } from "../components/stopOnEscape";
 import { Transcript, type PendingMessage } from "../components/Transcript";
+import { QueuedMessages } from "../components/QueuedMessages";
 import { onSuggestedPrompt } from "../composerDraft";
-import { resolvePending } from "../shared";
+import { resolvePending, transcriptAttachments, type SendMode } from "../shared";
+import { useAttachments } from "../features/attachments/useAttachments";
 import styles from "./ChatView.module.css";
 import type { ViewProps } from "./types";
 
 interface UncertainSend {
   requestId: string;
   text: string;
+  attachmentIds: number[];
 }
 
 export function ChatView({ connection }: ViewProps) {
@@ -21,6 +24,8 @@ export function ChatView({ connection }: ViewProps) {
   // Nothing can reach the session: keep drafts, but don't let a send or an answer start.
   const locked = phase === "stale" || phase === "offline";
   const [draft, setDraft] = useState("");
+  const attachments = useAttachments();
+  const removeAttachments = attachments.remove;
   const [pending, setPending] = useState<PendingMessage[]>([]);
   const [notice, setNotice] = useState<ComposerNotice | null>(null);
   const [busy, setBusy] = useState(false);
@@ -48,8 +53,8 @@ export function ChatView({ connection }: ViewProps) {
 
   // Optimistic copies disappear as soon as the transcript confirms them, so a message never shows twice.
   const visiblePending = useMemo(
-    () => resolvePending(pending, view.entries),
-    [pending, view.entries],
+    () => resolvePending(pending, view.entries, view.queue?.removedRequestIds),
+    [pending, view.entries, view.queue],
   );
 
   useEffect(() => {
@@ -66,7 +71,8 @@ export function ChatView({ connection }: ViewProps) {
     setUncertain(null);
     setNotice(null);
     setDraft((current) => (current === uncertain.text ? "" : current));
-  }, [uncertain, view.entries]);
+    removeAttachments(uncertain.attachmentIds);
+  }, [uncertain, view.entries, removeAttachments]);
 
   const pickPrompt = (text: string) => {
     setDraft(text);
@@ -76,20 +82,39 @@ export function ChatView({ connection }: ViewProps) {
   // Suggestions from elsewhere in the shell (for example the aside) land in this composer.
   useEffect(() => onSuggestedPrompt(pickPrompt), []);
 
-  const submit = async () => {
+  const submit = async (mode: SendMode = "immediate") => {
     const text = draft;
-    if (inFlight.current || !context || locked || text.trim().length === 0) return;
+    if (
+      inFlight.current ||
+      attachments.reading ||
+      !context ||
+      locked ||
+      (text.trim().length === 0 && attachments.items.length === 0)
+    )
+      return;
     inFlight.current = true;
     setBusy(true);
     setNotice(null);
     setUncertain(null);
 
     const requestId = makeRequestId();
+    const sentItems = attachments.items;
+    const files = sentItems.map((item) => item.file);
     const createdAt = new Date().toISOString();
-    setPending((current) => [...current, { requestId, text, state: "sending", createdAt }]);
+    setPending((current) => [
+      ...current,
+      {
+        requestId,
+        text,
+        state: "sending",
+        createdAt,
+        attachments: transcriptAttachments(files),
+        mode,
+      },
+    ]);
 
     try {
-      const outcome = await sendMessage(context, requestId, text);
+      const outcome = await sendMessage(context, requestId, text, files, mode);
       switch (outcome.kind) {
         case "accepted":
           setPending((current) =>
@@ -100,6 +125,7 @@ export function ChatView({ connection }: ViewProps) {
             ),
           );
           setDraft("");
+          attachments.remove(sentItems.map((item) => item.id));
           break;
         case "rejected":
           setPending((current) => current.filter((item) => item.requestId !== requestId));
@@ -112,7 +138,7 @@ export function ChatView({ connection }: ViewProps) {
         case "uncertain":
           // Keep the draft and never resend automatically; the user decides after checking.
           setPending((current) => current.filter((item) => item.requestId !== requestId));
-          setUncertain({ requestId, text });
+          setUncertain({ requestId, text, attachmentIds: sentItems.map((item) => item.id) });
           setNotice({ kind: "uncertain", message: outcome.message });
           break;
       }
@@ -126,7 +152,7 @@ export function ChatView({ connection }: ViewProps) {
     <div className={styles.chat} ref={root}>
       <Transcript
         entries={view.entries}
-        pending={visiblePending}
+        pending={visiblePending.filter((item) => item.mode !== "enqueue")}
         assistantName={assistantName}
         description={config?.description}
         onPickPrompt={pickPrompt}
@@ -142,13 +168,14 @@ export function ChatView({ connection }: ViewProps) {
               onStale={markStale}
             />
             <ActivityBar status={view.status} promptShown={view.prompts.length > 0} />
+            <QueuedMessages messages={visiblePending.filter((item) => item.mode === "enqueue")} />
           </div>
         </div>
         <Composer
           connection={connection}
           value={draft}
           onChange={setDraft}
-          onSubmit={() => void submit()}
+          onSubmit={(mode) => void submit(mode)}
           busy={busy}
           disabled={locked || context === null}
           notice={notice}
@@ -156,6 +183,7 @@ export function ChatView({ connection }: ViewProps) {
           inputRef={input}
           onStop={onStop}
           stopping={stopping}
+          attachments={attachments}
         />
       </div>
     </div>

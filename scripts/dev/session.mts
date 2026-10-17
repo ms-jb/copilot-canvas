@@ -26,6 +26,8 @@ export interface MockSession {
   prompts: PendingPrompt[];
   seq: number;
   clients: Set<ServerResponse>;
+  queued: { requestId: string; deliver: () => void }[];
+  removedRequestIds: string[];
 }
 
 function createSession(scenario: Scenario): MockSession {
@@ -61,6 +63,8 @@ function createSession(scenario: Scenario): MockSession {
     prompts,
     seq: 0,
     clients: new Set(),
+    queued: [],
+    removedRequestIds: [],
   };
 }
 
@@ -98,6 +102,7 @@ export function upsert(session: MockSession, entry: TranscriptEntry) {
 export function setStatus(session: MockSession, status: SessionStatus) {
   session.status = status;
   broadcast(session, "status", { status });
+  if (status.phase === "idle") session.queued.shift()?.deliver();
 }
 
 export function setPrompts(session: MockSession, prompts: PendingPrompt[]) {

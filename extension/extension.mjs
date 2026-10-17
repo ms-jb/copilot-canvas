@@ -9,6 +9,7 @@ import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/node/config.
 import { createSessionBridge } from "./host/bridge.mjs";
 import { createChatCanvas } from "./host/canvas.mjs";
 import { startProvider } from "./host/provider.mjs";
+import { createSessionsReader } from "./host/sessions/reader.mjs";
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 const uiDir = join(extensionDir, "ui");
 let session = null;
@@ -30,6 +31,7 @@ catch (error) {
     config = resolveConfig(DEFAULT_CONFIG, {});
 }
 let bridge = null;
+let getSessions;
 let resolveBridge = () => { };
 const bridgeReady = new Promise((resolve) => {
     resolveBridge = resolve;
@@ -52,6 +54,7 @@ const chat = createChatCanvas({
             sessionId: session?.sessionId ?? "",
             uiDir,
             log,
+            serverOptions: { getSessions },
         });
     },
 });
@@ -63,6 +66,18 @@ session = joined;
 for (const [message, level] of earlyLogs.splice(0))
     log(message, level);
 bridge = createSessionBridge(joined, { log });
+getSessions = createSessionsReader({
+    session: joined,
+    sessionId: joined.sessionId,
+    currentState: () => {
+        const phase = bridge?.getSnapshot().snapshot.status.phase;
+        return phase === "working"
+            ? "busy"
+            : phase === "waiting" || phase === "idle"
+                ? phase
+                : "unknown";
+    },
+});
 await Promise.race([
     bridge.ready,
     new Promise((resolve) => setTimeout(resolve, 10000).unref()),

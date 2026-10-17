@@ -71,6 +71,9 @@ export function createEventStream({
         case "prompts":
           writeSse(client, SSE_EVENTS.prompts, { seq: event.seq, prompts: event.prompts });
           break;
+        case "queue":
+          writeSse(client, SSE_EVENTS.queue, { seq: event.seq, queue: event.queue });
+          break;
       }
     });
     const { seq, snapshot, controls } = bridge.getSnapshot();

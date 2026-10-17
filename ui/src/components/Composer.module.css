@@ -127,6 +127,40 @@
   color: var(--cc-danger);
 }
 
+.attach {
+  position: relative;
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cc-radius-md);
+  background: transparent;
+  color: var(--cc-text-muted);
+  cursor: pointer;
+}
+
+.attach:hover:not(:disabled) {
+  background: var(--cc-surface-sunken);
+}
+
+.attach:focus-visible {
+  outline: 2px solid var(--cc-focus);
+}
+
+.attach:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.attach::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
 /* 36px visual, 44px hit area. */
 .send {
   position: relative;
@@ -141,6 +175,9 @@
   background: var(--cc-accent);
   color: var(--cc-accent-contrast);
   cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
   transition:
     background-color var(--cc-duration) var(--cc-ease),
     opacity var(--cc-duration) var(--cc-ease);
@@ -183,12 +220,14 @@
     font-size: var(--cc-text-lg);
   }
 
-  .send {
+  .send,
+  .attach {
     width: 44px;
     height: 44px;
   }
 
-  .send::after {
+  .send::after,
+  .attach::after {
     inset: 0;
   }
 }
@@ -197,7 +236,12 @@
   .composer {
     padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
       max(var(--cc-space-2), env(safe-area-inset-right));
-    padding-bottom: calc(var(--cc-space-2) + env(safe-area-inset-bottom));
+    padding-bottom: calc(var(--cc-space-1) + env(safe-area-inset-bottom));
+  }
+
+  .footer {
+    padding-bottom: var(--cc-space-1);
+    gap: var(--cc-space-1);
   }
 }
 

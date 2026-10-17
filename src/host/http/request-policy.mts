@@ -15,10 +15,14 @@ type BodyResult = { body: string } | { tooLarge: true } | { failed: true };
 export const isRead = (method: string | undefined): boolean =>
   method === "GET" || method === "HEAD";
 
-function readBody(req: IncomingMessage, res: ServerResponse): Promise<BodyResult> {
+function readBody(
+  req: IncomingMessage,
+  res: ServerResponse,
+  maxBytes: number,
+): Promise<BodyResult> {
   return new Promise((resolveBody) => {
     const declared = Number(req.headers["content-length"]);
-    if (Number.isFinite(declared) && declared > LIMITS.maxBodyBytes) {
+    if (Number.isFinite(declared) && declared > maxBytes) {
       resolveBody({ tooLarge: true });
       return;
     }
@@ -33,7 +37,7 @@ function readBody(req: IncomingMessage, res: ServerResponse): Promise<BodyResult
     };
     const onData = (chunk: Buffer): void => {
       total += chunk.length;
-      if (total > LIMITS.maxBodyBytes) {
+      if (total > maxBytes) {
         finish({ tooLarge: true });
         return;
       }
@@ -94,6 +98,7 @@ export function createRequestPolicy({
     req: IncomingMessage,
     res: ServerResponse,
     status: string,
+    maxBytes: number,
   ): Promise<{ value: unknown } | undefined> {
     const fail = (code: string, message: string, extra?: OutgoingHttpHeaders): undefined => {
       sendError(res, code, message, status, extra);
@@ -109,7 +114,7 @@ export function createRequestPolicy({
     if (!isJsonContentType(req.headers["content-type"])) {
       return fail(ERROR_CODES.unsupportedMediaType, "Content-Type must be application/json.");
     }
-    const read = await readBody(req, res);
+    const read = await readBody(req, res, maxBytes);
     if ("failed" in read) return undefined;
     if ("tooLarge" in read) {
       return fail(ERROR_CODES.payloadTooLarge, "Request body is too large.", {
@@ -128,8 +133,9 @@ export function createRequestPolicy({
     res: ServerResponse,
     status: string,
     validate: (value: unknown) => ValidationResult<T>,
+    maxBytes: number = LIMITS.maxBodyBytes,
   ): Promise<T | undefined> {
-    const parsed = await readJsonPost(req, res, status);
+    const parsed = await readJsonPost(req, res, status, maxBytes);
     if (!parsed) return undefined;
     const validation = validate(parsed.value);
     if (!validation.ok) {

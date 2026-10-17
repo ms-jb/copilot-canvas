@@ -8,6 +8,7 @@ import type {
   SessionControls,
   SessionStatus,
   TranscriptEntry,
+  QueueState,
 } from "./contract.mts";
 
 export interface ViewState {
@@ -18,6 +19,7 @@ export interface ViewState {
   controls: SessionControls;
   /** Pending requests the user can answer from the canvas, oldest first. */
   prompts: PendingPrompt[];
+  queue?: QueueState;
 }
 
 export interface PendingRef {
@@ -82,6 +84,7 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
       status: event.snapshot.status,
       controls: event.controls,
       prompts: event.snapshot.prompts ?? [],
+      ...(event.snapshot.queue ? { queue: event.snapshot.queue } : {}),
     };
   }
   if (data.seq <= state.seq) {
@@ -104,6 +107,10 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
       const event = data as EventData<"prompts">;
       return { ...state, seq: event.seq, prompts: event.prompts };
     }
+    case "queue": {
+      const event = data as EventData<"queue">;
+      return { ...state, seq: event.seq, queue: event.queue };
+    }
     default:
       return state;
   }
@@ -116,9 +123,11 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
 export function resolvePending<T extends PendingRef>(
   pending: T[],
   entries: TranscriptEntry[],
+  removedRequestIds: readonly string[] = [],
 ): T[] {
   return pending.filter(
     (item) =>
+      !removedRequestIds.includes(item.requestId) &&
       !entries.some(
         (entry) =>
           entry.kind === "user" &&

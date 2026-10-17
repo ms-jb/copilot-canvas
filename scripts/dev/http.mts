@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import {
   API,
+  ATTACHMENT_LIMITS,
   CONTRACT_VERSION,
   ERROR_CODES,
   HEADERS,
@@ -8,6 +9,7 @@ import {
   IDENTITY_APP,
   LIMITS,
   toPublicOrigin,
+  transcriptAttachments,
   validateControlsPayload,
   validateReloadPayload,
   validateRespondPayload,
@@ -20,6 +22,7 @@ import { applyChange, broadcast, fits, setPrompts, setStatus, upsert } from "./s
 import type { MockSessions } from "./session.mts";
 import { sleep } from "./scenarios.mts";
 import type { MockScenarios } from "./scenarios.mts";
+import { mockSessionList } from "./sessions-fixture.mts";
 
 function json(res: ServerResponse, status: number, body: unknown) {
   res.writeHead(status, {
@@ -33,12 +36,15 @@ export function error(res: ServerResponse, code: string, message: string) {
   json(res, HTTP_STATUS_BY_CODE[code] ?? 500, { ok: false, code, message });
 }
 
-async function readJson(req: IncomingMessage): Promise<unknown> {
+async function readJson(
+  req: IncomingMessage,
+  maxBytes: number = LIMITS.maxBodyBytes,
+): Promise<unknown> {
   const chunks: Buffer[] = [];
   let size = 0;
   for await (const chunk of req as AsyncIterable<Buffer>) {
     size += chunk.length;
-    if (size > LIMITS.maxBodyBytes) return undefined;
+    if (size > maxBytes) return undefined;
     chunks.push(chunk);
   }
   try {
@@ -105,7 +111,12 @@ export function createMockHandler(options: {
             defaultView: config.defaultView,
             sourceDir: repoRoot,
           },
-          snapshot: { entries: session.entries, status: session.status, prompts: session.prompts },
+          snapshot: {
+            entries: session.entries,
+            status: session.status,
+            prompts: session.prompts,
+            queue: { removedRequestIds: session.removedRequestIds },
+          },
           controls: session.controls,
         });
       case API.share: {
@@ -114,6 +125,8 @@ export function createMockHandler(options: {
           raw === "off" ? null : (toPublicOrigin(raw) ?? "https://example.devtunnels.ms");
         return json(res, 200, { publicUrl });
       }
+      case API.sessions:
+        return json(res, 200, mockSessionList(scenarioOf(req), session.status.phase));
       case API.events: {
         res.writeHead(200, {
           "content-type": "text/event-stream; charset=utf-8",
@@ -128,6 +141,7 @@ export function createMockHandler(options: {
               entries: session.entries,
               status: session.status,
               prompts: session.prompts,
+              queue: { removedRequestIds: session.removedRequestIds },
             },
             controls: session.controls,
           })}\n\n`,
@@ -143,7 +157,7 @@ export function createMockHandler(options: {
       }
       case API.send: {
         if (!checkWrite(req, res)) return;
-        const parsed = validateSendPayload(await readJson(req));
+        const parsed = validateSendPayload(await readJson(req, ATTACHMENT_LIMITS.maxSendBodyBytes));
         if (!parsed.ok) return error(res, parsed.code, parsed.message);
         const messageId = `mock-msg-${sessions.nextId()}`;
         json(res, 200, {
@@ -153,17 +167,24 @@ export function createMockHandler(options: {
           messageId,
         });
         const { text, requestId } = parsed.value;
-        enqueue(session, async () => {
+        const attachments = transcriptAttachments(parsed.value.attachments);
+        const deliver = () => {
           upsert(session, {
             id: `user:${messageId}`,
             kind: "user",
             text,
+            ...(attachments.length ? { attachments } : {}),
             timestamp: new Date().toISOString(),
             requestId,
           });
           const reply = `This is a **preview**, so your message was not sent anywhere. In a real session, Copilot would answer here.\n\nYou wrote:\n\n> ${text.split("\n").join("\n> ")}`;
-          await runTurn(session, reply, "read_notes", false);
-        });
+          enqueue(session, async () => {
+            await runTurn(session, reply, "read_notes", false);
+          });
+        };
+        if (parsed.value.mode === "enqueue" && session.status.phase !== "idle") {
+          session.queued.push({ requestId, deliver });
+        } else deliver();
         return;
       }
       case API.controls: {
@@ -215,7 +236,12 @@ export function createMockHandler(options: {
         if (!checkWrite(req, res)) return;
         const parsed = validateReloadPayload(await readJson(req));
         if (!parsed.ok) return error(res, parsed.code, parsed.message);
-        // The preview shows the result of a stop; a scripted turn may still finish its steps.
+        // A Stop drops only queued sends. A scripted turn already running may still finish.
+        session.removedRequestIds = [
+          ...session.removedRequestIds,
+          ...session.queued.splice(0).map((item) => item.requestId),
+        ].slice(-500);
+        broadcast(session, "queue", { queue: { removedRequestIds: session.removedRequestIds } });
         setPrompts(session, []);
         setStatus(session, { phase: "idle" });
         return json(res, 200, { ok: true, status: "stopped" });

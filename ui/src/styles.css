@@ -127,6 +127,14 @@ body,
   margin: 0;
 }
 
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    overscroll-behavior-x: none;
+  }
+}
+
 body {
   overflow: hidden;
   background: var(--cc-bg);

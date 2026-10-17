@@ -5,6 +5,8 @@ import type {
   PromptResponse,
   SessionControls,
   Snapshot,
+  SendAttachment,
+  SendMode,
 } from "../../shared/contract.mts";
 import { createTranscriptStore } from "../../shared/transcript.mts";
 import type { SessionEventLike, TranscriptStore } from "../../shared/transcript.mts";
@@ -19,20 +21,27 @@ import type { Logger } from "../logging.mts";
 import { createEventSequencer } from "./event-sequencer.mts";
 import type { BridgeEvent } from "./event-sequencer.mts";
 import { createSendController } from "./send-controller.mts";
+import type { NativeAttachment } from "./attachments.mts";
 import type { SendOutcome } from "./send-controller.mts";
 import { createSessionActions } from "./actions.mts";
 import type { ExtensionsRpcLike } from "./actions.mts";
+import { createQueueTracker, type QueueRpcLike } from "./queue.mts";
 
 /** The slice of the SDK session the bridge uses. Tests can pass a fake. */
 export interface SessionLike {
   sessionId: string;
   on(handler: (event: SessionEventLike) => void): () => void;
   getEvents(): Promise<readonly SessionEventLike[]>;
-  send(options: { prompt: string }): Promise<string>;
+  send(options: {
+    prompt: string;
+    attachments?: NativeAttachment[];
+    mode?: SendMode;
+  }): Promise<string>;
   readonly rpc?: ControlsRpcLike &
     PromptsRpcLike & {
       extensions?: ExtensionsRpcLike;
       abort?: (params: { reason?: string }) => Promise<unknown>;
+      queue?: QueueRpcLike;
     };
 }
 /** What the provider server needs from a bridge. */
@@ -40,7 +49,12 @@ export interface Bridge {
   sessionId: string;
   getSnapshot(): { seq: number; snapshot: Snapshot; controls: SessionControls };
   subscribe(listener: (event: BridgeEvent) => void): () => void;
-  send(text: string, requestId: string): Promise<SendOutcome>;
+  send(
+    text: string,
+    requestId: string,
+    attachments?: SendAttachment[],
+    mode?: SendMode,
+  ): Promise<SendOutcome>;
   /** Rejects with a `ControlError` from controls.mts. */
   applyControl(change: ControlChange): Promise<SessionControls>;
   /** Schedules a reload shortly. False when this Copilot cannot. */
@@ -79,17 +93,30 @@ export function createSessionBridge(
 ): SessionBridge {
   let disposed = false;
   const events = createEventSequencer({ log, coalesceMs });
+  const queue = createQueueTracker(session.rpc?.queue, (state) => {
+    if (!disposed) events.emitNow({ type: "queue", queue: state });
+  });
   const sends = createSendController(session, {
     log,
     sendTimeoutMs,
-    admit(messageId, requestId) {
+    admit(messageId, requestId, mode) {
       if (typeof messageId === "string" && messageId.length > 0) {
         events.emit(store.tagRequest(messageId, requestId));
+        if (mode === "enqueue") queue.admitted(messageId, requestId);
       }
     },
   });
   const actions = createSessionActions(session, log);
   function onSessionEvent(event: SessionEventLike): void {
+    if (!event.agentId) {
+      if (event.type === "user.message") {
+        const id = event.data?.messageId ?? event.id;
+        if (typeof id === "string") queue.confirmed(id);
+      }
+      if (["abort", "session.idle", "pending_messages.modified"].includes(event.type)) {
+        void queue.refresh();
+      }
+    }
     try {
       events.emit(store.applyEvent(event));
     } catch (error) {
@@ -123,14 +150,18 @@ export function createSessionBridge(
     ready,
     getSnapshot: () => ({
       seq: events.seq,
-      snapshot: { ...store.snapshot(), prompts: prompts.list() },
+      snapshot: { ...store.snapshot(), prompts: prompts.list(), queue: queue.snapshot() },
       controls: controls.get(),
     }),
     subscribe: events.subscribe,
     send: sends.send,
     applyControl: (change) => controls.apply(change),
     reloadExtensions: actions.reloadExtensions,
-    stop: actions.stop,
+    stop: async () => {
+      const outcome = await actions.stop();
+      if (outcome === "stopped") void queue.refresh();
+      return outcome;
+    },
     respond: (requestId, response) => prompts.respond(requestId, response),
     refreshPrompts: () => prompts.refresh(),
     dispose() {
@@ -148,6 +179,7 @@ export function createSessionBridge(
       prompts.dispose();
       events.dispose();
       sends.dispose();
+      queue.dispose();
     },
   };
 }

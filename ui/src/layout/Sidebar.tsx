@@ -1,4 +1,5 @@
 import { Skeleton } from "@mantine/core";
+import { SessionsSection } from "../features/sessions/SessionsSection";
 import type { Connection } from "../useConnection";
 import { CloseIcon } from "../views/icons";
 import { views } from "../views/registry";
@@ -41,23 +42,26 @@ export function Sidebar({ connection, activeViewId, onNavigate, onClose }: Sideb
         )}
       </div>
 
-      <nav aria-label="Views" className={classes.nav}>
-        <ul className={classes.navList}>
-          {views.map((view) => (
-            <li key={view.id}>
-              <a
-                href={`#/${view.id}`}
-                className={classes.navLink}
-                aria-current={view.id === activeViewId ? "page" : undefined}
-                onClick={onNavigate}
-              >
-                <view.icon size={18} />
-                <span>{view.title}</span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <div className={classes.nav}>
+        <nav aria-label="Views">
+          <ul className={classes.navList}>
+            {views.map((view) => (
+              <li key={view.id}>
+                <a
+                  href={`#/${view.id}`}
+                  className={classes.navLink}
+                  aria-current={view.id === activeViewId ? "page" : undefined}
+                  onClick={onNavigate}
+                >
+                  <view.icon size={18} />
+                  <span>{view.title}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+        <SessionsSection connection={connection} />
+      </div>
     </div>
   );
 }

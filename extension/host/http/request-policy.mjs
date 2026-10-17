@@ -2,10 +2,10 @@ import { ERROR_CODES, HEADERS, LIMITS } from "../../shared/contract.mjs";
 import { checkOrigin, isAllowedHost, isJsonContentType, loopbackHost, loopbackOrigin, timingSafeEqualStrings, } from "../../shared/node/security.mjs";
 import { baseHeaders, sendError } from "./responses.mjs";
 export const isRead = (method) => method === "GET" || method === "HEAD";
-function readBody(req, res) {
+function readBody(req, res, maxBytes) {
     return new Promise((resolveBody) => {
         const declared = Number(req.headers["content-length"]);
-        if (Number.isFinite(declared) && declared > LIMITS.maxBodyBytes) {
+        if (Number.isFinite(declared) && declared > maxBytes) {
             resolveBody({ tooLarge: true });
             return;
         }
@@ -21,7 +21,7 @@ function readBody(req, res) {
         };
         const onData = (chunk) => {
             total += chunk.length;
-            if (total > LIMITS.maxBodyBytes) {
+            if (total > maxBytes) {
                 finish({ tooLarge: true });
                 return;
             }
@@ -65,7 +65,7 @@ export function createRequestPolicy({ capabilityPath, generation, csrfToken, get
         return pathname.slice(capabilityPath.length);
     }
     /** Shared CSRF, generation, media-type, size and JSON checks for every state-changing POST. */
-    async function readJsonPost(req, res, status) {
+    async function readJsonPost(req, res, status, maxBytes) {
         const fail = (code, message, extra) => {
             sendError(res, code, message, status, extra);
             return undefined;
@@ -80,7 +80,7 @@ export function createRequestPolicy({ capabilityPath, generation, csrfToken, get
         if (!isJsonContentType(req.headers["content-type"])) {
             return fail(ERROR_CODES.unsupportedMediaType, "Content-Type must be application/json.");
         }
-        const read = await readBody(req, res);
+        const read = await readBody(req, res, maxBytes);
         if ("failed" in read)
             return undefined;
         if ("tooLarge" in read) {
@@ -96,8 +96,8 @@ export function createRequestPolicy({ capabilityPath, generation, csrfToken, get
         }
     }
     /** Payload validation and session binding are inseparable from POST admission. */
-    async function readPost(req, res, status, validate) {
-        const parsed = await readJsonPost(req, res, status);
+    async function readPost(req, res, status, validate, maxBytes = LIMITS.maxBodyBytes) {
+        const parsed = await readJsonPost(req, res, status, maxBytes);
         if (!parsed)
             return undefined;
         const validation = validate(parsed.value);

@@ -46,6 +46,7 @@ export function applyServerEvent(state, name, data) {
             status: event.snapshot.status,
             controls: event.controls,
             prompts: event.snapshot.prompts ?? [],
+            ...(event.snapshot.queue ? { queue: event.snapshot.queue } : {}),
         };
     }
     if (data.seq <= state.seq) {
@@ -68,6 +69,10 @@ export function applyServerEvent(state, name, data) {
             const event = data;
             return { ...state, seq: event.seq, prompts: event.prompts };
         }
+        case "queue": {
+            const event = data;
+            return { ...state, seq: event.seq, queue: event.queue };
+        }
         default:
             return state;
     }
@@ -76,8 +81,9 @@ export function applyServerEvent(state, name, data) {
  * Drops pending composer drafts that the transcript already confirms, so an optimistic bubble
  * and its confirmed copy are never shown together.
  */
-export function resolvePending(pending, entries) {
-    return pending.filter((item) => !entries.some((entry) => entry.kind === "user" &&
-        (entry.requestId === item.requestId ||
-            (item.messageId !== undefined && entry.id === `user:${item.messageId}`))));
+export function resolvePending(pending, entries, removedRequestIds = []) {
+    return pending.filter((item) => !removedRequestIds.includes(item.requestId) &&
+        !entries.some((entry) => entry.kind === "user" &&
+            (entry.requestId === item.requestId ||
+                (item.messageId !== undefined && entry.id === `user:${item.messageId}`))));
 }

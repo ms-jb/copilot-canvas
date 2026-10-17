@@ -1,5 +1,7 @@
 import { validatePrompts } from "./prompts.mjs";
 import { isPlainObject } from "./validation.mjs";
+import { validateQueueState } from "./queue.mjs";
+import { ATTACHMENT_LIMITS, validateTranscriptAttachment, } from "./attachments.mjs";
 export const PHASES = Object.freeze(["idle", "working", "waiting"]);
 export const ACTIVITIES = Object.freeze([
     "thinking",
@@ -32,6 +34,11 @@ export function validateEntry(entry) {
         return false;
     if (entry.requestId !== undefined && typeof entry.requestId !== "string")
         return false;
+    if (entry.attachments !== undefined &&
+        (!Array.isArray(entry.attachments) ||
+            entry.attachments.length > ATTACHMENT_LIMITS.maxCount ||
+            !entry.attachments.every(validateTranscriptAttachment)))
+        return false;
     return true;
 }
 export function validateStatus(status) {
@@ -54,5 +61,6 @@ export function validateSnapshot(snapshot) {
         Array.isArray(snapshot.entries) &&
         snapshot.entries.every(validateEntry) &&
         validateStatus(snapshot.status) &&
-        (snapshot.prompts === undefined || validatePrompts(snapshot.prompts)));
+        (snapshot.prompts === undefined || validatePrompts(snapshot.prompts)) &&
+        (snapshot.queue === undefined || validateQueueState(snapshot.queue)));
 }

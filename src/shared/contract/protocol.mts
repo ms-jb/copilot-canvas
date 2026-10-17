@@ -1,7 +1,9 @@
 import { type SessionControls, validateControls } from "./controls.mts";
+import { type SendAttachment, validateAttachments } from "./attachments.mts";
 import { ERROR_CODES, type SendStatus } from "./errors.mts";
 import { LIMITS } from "./limits.mts";
 import { type PendingPrompt, validatePrompts } from "./prompts.mts";
+import { type QueueState, validateQueueState } from "./queue.mts";
 import {
   type SessionStatus,
   type Snapshot,
@@ -54,10 +56,14 @@ export interface ReloadPayload {
   sessionId: string;
 }
 
+export type SendMode = "immediate" | "enqueue";
+
 export interface SendPayload {
   requestId: string;
   sessionId: string;
   text: string;
+  attachments?: SendAttachment[];
+  mode: SendMode;
 }
 
 export interface SendResult {
@@ -77,6 +83,7 @@ export type ServerEvent =
   | { name: "entry"; data: { seq: number; entry: TranscriptEntry } }
   | { name: "status"; data: { seq: number; status: SessionStatus } }
   | { name: "controls"; data: { seq: number; controls: SessionControls } }
+  | { name: "queue"; data: { seq: number; queue: QueueState } }
   | { name: "prompts"; data: { seq: number; prompts: PendingPrompt[] } };
 
 // Paths are relative to the provider's capability prefix (or to the gateway root).
@@ -87,6 +94,7 @@ export const API = Object.freeze({
   send: "api/send",
   controls: "api/controls",
   share: "api/share",
+  sessions: "api/sessions",
   respond: "api/respond",
   reload: "api/reload",
   stop: "api/stop",
@@ -110,19 +118,20 @@ export const SSE_EVENTS = Object.freeze({
   status: "status",
   controls: "controls",
   prompts: "prompts",
+  queue: "queue",
 } as const);
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 
 /**
- * Validates the body of POST api/send. Accepts exactly { requestId, sessionId, text };
+ * Validates POST api/send: { requestId, sessionId, text, attachments?, mode? };
  * unknown keys are rejected.
  */
 export function validateSendPayload(body: unknown): ValidationResult<SendPayload> {
   if (!isPlainObject(body)) {
     return makeError(ERROR_CODES.badRequest, "Body must be a JSON object.");
   }
-  const allowed = new Set(["requestId", "sessionId", "text"]);
+  const allowed = new Set(["requestId", "sessionId", "text", "attachments", "mode"]);
   for (const key of Object.keys(body)) {
     if (!allowed.has(key)) {
       return makeError(ERROR_CODES.badRequest, `Unexpected field: ${key}.`);
@@ -138,8 +147,18 @@ export function validateSendPayload(body: unknown): ValidationResult<SendPayload
   if (typeof text !== "string") {
     return makeError(ERROR_CODES.badRequest, "text must be a string.");
   }
-  if (text.trim().length === 0) {
-    return makeError(ERROR_CODES.badRequest, "text must not be empty.");
+  const mode = body.mode === undefined ? "immediate" : body.mode;
+  if (mode !== "immediate" && mode !== "enqueue") {
+    return makeError(ERROR_CODES.badRequest, "mode must be immediate or enqueue.");
+  }
+  const parsedAttachments = validateAttachments(body.attachments ?? []);
+  if (body.attachments === null || !parsedAttachments.ok) {
+    return parsedAttachments.ok
+      ? makeError(ERROR_CODES.badRequest, "attachments must be an array.")
+      : parsedAttachments;
+  }
+  if (text.trim().length === 0 && parsedAttachments.value.length === 0) {
+    return makeError(ERROR_CODES.badRequest, "Add text or an attachment.");
   }
   if (text.length > LIMITS.maxPromptChars) {
     return makeError(
@@ -147,7 +166,16 @@ export function validateSendPayload(body: unknown): ValidationResult<SendPayload
       `text exceeds ${LIMITS.maxPromptChars} characters.`,
     );
   }
-  return { ok: true, value: { requestId, sessionId, text } };
+  return {
+    ok: true,
+    value: {
+      requestId,
+      sessionId,
+      text,
+      mode,
+      ...(body.attachments === undefined ? {} : { attachments: parsedAttachments.value }),
+    },
+  };
 }
 
 /** Validates the body of POST api/reload or api/stop: { sessionId }. */
@@ -180,6 +208,8 @@ export function validateServerEvent(name: string, data: unknown): boolean {
       return validateControls(data.controls);
     case SSE_EVENTS.prompts:
       return validatePrompts(data.prompts);
+    case SSE_EVENTS.queue:
+      return validateQueueState(data.queue);
     default:
       return false;
   }

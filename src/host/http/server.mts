@@ -3,6 +3,7 @@ import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { ERROR_CODES, LIMITS } from "../../shared/contract.mts";
 import type { ShareInfo } from "../../shared/contract.mts";
+import type { SessionsInfo } from "../../shared/contract.mts";
 import type { TemplateConfig } from "../../shared/node/config.mts";
 import { loopbackOrigin } from "../../shared/node/security.mts";
 import type { Bridge } from "../session/bridge.mts";
@@ -18,6 +19,7 @@ export interface ProviderServerOptions {
   bridge: Bridge;
   /** Public root origin for "Open on phone" (read on each request). Defaults to none. */
   getShareInfo?: () => ShareInfo;
+  getSessions?: () => Promise<SessionsInfo>;
   /** The user's source clone for suggested prompts, read on each bootstrap; "" when unknown. */
   getSourceDir?: () => string;
   /** Built renderer directory (index.html + assets/). Missing => placeholder page. */
@@ -51,6 +53,12 @@ export function createProviderServer({
   log = () => {},
   getShareInfo = () => ({ publicUrl: null }),
   getSourceDir = () => "",
+  getSessions = async () => ({
+    sessionId: bridge.sessionId,
+    source: "unavailable",
+    checkedAt: new Date().toISOString(),
+    sessions: [],
+  }),
   port: requestedPort = 0,
   generation = randomBytes(16).toString("base64url"),
   csrfToken = randomBytes(32).toString("base64url"),
@@ -84,6 +92,7 @@ export function createProviderServer({
     log,
     getSourceDir,
     getShareInfo,
+    getSessions,
     policy,
     assets,
     events,

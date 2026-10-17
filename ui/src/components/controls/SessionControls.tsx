@@ -1,10 +1,12 @@
-import type { JSX } from "react";
+import { Popover } from "@mantine/core";
+import { useState, type JSX } from "react";
 import { SESSION_MODES, type ControlChange, type SessionControls as Controls } from "../../shared";
 import type { Connection } from "../../useConnection";
 import { ControlPicker, type PickerOption } from "./ControlPicker";
 import { MODE_LABELS, activeModel, effectiveEffort, effortLabel, modelLabel } from "./labels";
 import styles from "./SessionControls.module.css";
 import { useControlChange } from "./useControlChange";
+import { useLayoutMode } from "../../layout/useLayoutMode";
 
 /** Shows a requested value while it is in flight or waiting for the turn to end. */
 function displayed(controls: Controls, change: ControlChange | null): Controls {
@@ -45,6 +47,8 @@ const MODE_OPTIONS: PickerOption[] = SESSION_MODES.map((mode) => ({
  * its pill until it lands; only a failed change is announced, as an alert.
  */
 export function SessionControls({ connection }: { connection: Connection }): JSX.Element | null {
+  const phone = useLayoutMode() === "phone";
+  const [opened, setOpened] = useState(false);
   const { pending, deferred, error, apply } = useControlChange(connection);
   const live = connection.view.controls;
   const requested = pending ?? deferred;
@@ -60,7 +64,7 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
 
   if (!showMode && !available.model && !available.reasoningEffort && !tierOffered) return null;
 
-  return (
+  const settings = (
     <div className={styles.composer}>
       {error && (
         <p className={styles.error} role="alert">
@@ -70,6 +74,7 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
       <div className={styles.row} role="group" aria-label="Session settings">
         {showMode && controls.mode && (
           <ControlPicker
+            withinPortal={!phone}
             label="Mode"
             value={controls.mode}
             display={MODE_LABELS[controls.mode].label}
@@ -81,6 +86,7 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
         )}
         {available.model && (
           <ControlPicker
+            withinPortal={!phone}
             label="Model"
             value={controls.modelId}
             display={modelLabel(controls) ?? "Choose model"}
@@ -93,6 +99,7 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
         )}
         {available.reasoningEffort && (
           <ControlPicker
+            withinPortal={!phone}
             label="Reasoning effort"
             value={effort}
             display={
@@ -124,5 +131,41 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
         )}
       </div>
     </div>
+  );
+  if (!phone) return settings;
+  return (
+    <Popover
+      opened={opened}
+      onChange={setOpened}
+      position="top-start"
+      width={280}
+      offset={8}
+      trapFocus
+      returnFocus
+    >
+      <Popover.Target>
+        <button
+          type="button"
+          className={styles.tune}
+          aria-label={error ? "Session settings: change failed" : "Session settings"}
+          title="Session settings"
+          aria-expanded={opened}
+          onClick={() => setOpened((current) => !current)}
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+            <path
+              d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-7 0v6"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.7"
+              strokeLinecap="round"
+            />
+          </svg>
+        </button>
+      </Popover.Target>
+      <Popover.Dropdown className={`${styles.dropdown} ${styles.phoneSettings}`}>
+        {settings}
+      </Popover.Dropdown>
+    </Popover>
   );
 }

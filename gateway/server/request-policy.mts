@@ -23,6 +23,7 @@ const ROUTES: Record<string, string> = {
   [`/${API.controls}`]: "POST",
   [`/${API.respond}`]: "POST",
   [`/${API.share}`]: "GET",
+  [`/${API.sessions}`]: "GET",
   [`/${API.reload}`]: "POST",
   [`/${API.stop}`]: "POST",
 };

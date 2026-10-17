@@ -32,7 +32,7 @@ export interface Connection {
   markStale: () => void;
 }
 
-const SSE_EVENT_NAMES = ["snapshot", "entry", "status", "controls", "prompts"] as const;
+const SSE_EVENT_NAMES = ["snapshot", "entry", "status", "controls", "prompts", "queue"] as const;
 const RETRY_BASE_MS = 1000;
 const RETRY_MAX_MS = 15000;
 // EventSource retries on its own; after this long without a connection we call it "not connected".
@@ -167,6 +167,7 @@ export function useConnection(): Connection {
           status: bootstrap.snapshot.status,
           controls: bootstrap.controls,
           prompts: bootstrap.snapshot.prompts ?? [],
+          ...(bootstrap.snapshot.queue ? { queue: bootstrap.snapshot.queue } : {}),
         });
         setPhase("connecting");
         open();

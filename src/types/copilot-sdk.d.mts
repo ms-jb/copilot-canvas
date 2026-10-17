@@ -63,6 +63,14 @@ declare module "@github/copilot-sdk/extension" {
   }
 
   export interface SessionRpc {
+    queue?: { pendingItems?: () => Promise<unknown> };
+    tools?: {
+      execute?: (request: {
+        name: string;
+        arguments: Record<string, never>;
+        toolCallId: string;
+      }) => Promise<unknown>;
+    };
     mode?: SessionModeRpc;
     model?: SessionModelRpc;
     permissions?: SessionPermissionsRpc;
@@ -125,7 +133,11 @@ declare module "@github/copilot-sdk/extension" {
   export interface CopilotSession {
     readonly sessionId: string;
     readonly rpc?: SessionRpc;
-    send(options: { prompt: string }): Promise<string>;
+    send(options: {
+      prompt: string;
+      mode?: "immediate" | "enqueue";
+      attachments?: { type: "blob"; data: string; mimeType: string; displayName?: string }[];
+    }): Promise<string>;
     getEvents(): Promise<SessionEvent[]>;
     on(handler: (event: SessionEvent) => void): () => void;
     on(eventType: string, handler: (event: SessionEvent) => void): () => void;

@@ -3,6 +3,7 @@
 // Pure and synchronous so it can be unit-tested without the SDK.
 import { LIMITS } from "./contract.mjs";
 import { upsertEntry } from "./entries.mjs";
+import { transcriptAttachments } from "./contract/attachments.mjs";
 const HIDDEN_USER_SOURCE_PREFIXES = ["skill-", "agent-", "system", "hook", "workflow", "autopilot"];
 const SYSTEM_TAG = /^\s*<(system[_-]notification|system[_-]reminder)\b/i;
 const MAX_SEEN_EVENTS = 5000;
@@ -13,7 +14,9 @@ export function isVisibleUserMessage(event) {
     if (!event || event.agentId)
         return false;
     const data = event.data ?? {};
-    if (typeof data.content !== "string" || data.content.trim().length === 0)
+    if (typeof data.content !== "string")
+        return false;
+    if (data.content.trim().length === 0 && transcriptAttachments(data.attachments).length === 0)
         return false;
     if (data.isAutopilotContinuation === true)
         return false;
@@ -78,11 +81,13 @@ export function createTranscriptStore({ maxEntries = LIMITS.maxEntries, } = {}) 
                 if (!isVisibleUserMessage(event))
                     break;
                 const messageId = typeof data.messageId === "string" ? data.messageId : undefined;
+                const attachments = transcriptAttachments(data.attachments);
                 const entry = {
                     id: `user:${messageId ?? event.id}`,
                     kind: "user",
                     text: data.content,
                     timestamp: event.timestamp,
+                    ...(attachments.length ? { attachments } : {}),
                 };
                 const requestId = messageId ? requestByMessage.get(messageId) : undefined;
                 if (requestId)

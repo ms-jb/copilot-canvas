@@ -1,7 +1,7 @@
 import http from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
-import { ERROR_CODES, LIMITS } from "../../src/shared/contract.mts";
+import { API, ATTACHMENT_LIMITS, ERROR_CODES, LIMITS } from "../../src/shared/contract.mts";
 import { createProviderSelector } from "./provider-discovery.mts";
 import { createProxy } from "./proxy.mts";
 import { createPushRoutes } from "./push-routes.mts";
@@ -74,7 +74,10 @@ export function createGateway(options: GatewayOptions): Gateway {
     }
     let body: Buffer | undefined;
     if (PINNED_WRITES.has(path)) {
-      const read = await readBody(request, LIMITS.maxBodyBytes);
+      const read = await readBody(
+        request,
+        path === API.send ? ATTACHMENT_LIMITS.maxSendBodyBytes : LIMITS.maxBodyBytes,
+      );
       if (!read)
         return sendError(
           request,

@@ -5,6 +5,7 @@
 import { LIMITS } from "./contract.mts";
 import type { SessionStatus, Snapshot, TranscriptEntry } from "./contract.mts";
 import { upsertEntry } from "./entries.mts";
+import { transcriptAttachments } from "./contract/attachments.mts";
 
 /** The subset of a session event this store reads. Real SDK events satisfy it structurally. */
 export interface SessionEventLike {
@@ -39,7 +40,9 @@ const MAX_TOOL_NAME = 80;
 export function isVisibleUserMessage(event: SessionEventLike | null | undefined): boolean {
   if (!event || event.agentId) return false;
   const data = event.data ?? {};
-  if (typeof data.content !== "string" || data.content.trim().length === 0) return false;
+  if (typeof data.content !== "string") return false;
+  if (data.content.trim().length === 0 && transcriptAttachments(data.attachments).length === 0)
+    return false;
   if (data.isAutopilotContinuation === true) return false;
   if (typeof data.source === "string") {
     const source = data.source.toLowerCase();
@@ -105,11 +108,13 @@ export function createTranscriptStore({
       case "user.message": {
         if (!isVisibleUserMessage(event)) break;
         const messageId = typeof data.messageId === "string" ? data.messageId : undefined;
+        const attachments = transcriptAttachments(data.attachments);
         const entry: TranscriptEntry = {
           id: `user:${messageId ?? event.id}`,
           kind: "user",
           text: data.content,
           timestamp: event.timestamp,
+          ...(attachments.length ? { attachments } : {}),
         };
         const requestId = messageId ? requestByMessage.get(messageId) : undefined;
         if (requestId) entry.requestId = requestId;

@@ -7,20 +7,37 @@ import { describeSessionError } from "../logging.mjs";
 import { createEventSequencer } from "./event-sequencer.mjs";
 import { createSendController } from "./send-controller.mjs";
 import { createSessionActions } from "./actions.mjs";
+import { createQueueTracker } from "./queue.mjs";
 export function createSessionBridge(session, { store = createTranscriptStore(), log = () => { }, controls = createControlsService(session, { log }), prompts = createPromptService(session, { log }), coalesceMs = 50, sendTimeoutMs = LIMITS.sendTimeoutMs, } = {}) {
     let disposed = false;
     const events = createEventSequencer({ log, coalesceMs });
+    const queue = createQueueTracker(session.rpc?.queue, (state) => {
+        if (!disposed)
+            events.emitNow({ type: "queue", queue: state });
+    });
     const sends = createSendController(session, {
         log,
         sendTimeoutMs,
-        admit(messageId, requestId) {
+        admit(messageId, requestId, mode) {
             if (typeof messageId === "string" && messageId.length > 0) {
                 events.emit(store.tagRequest(messageId, requestId));
+                if (mode === "enqueue")
+                    queue.admitted(messageId, requestId);
             }
         },
     });
     const actions = createSessionActions(session, log);
     function onSessionEvent(event) {
+        if (!event.agentId) {
+            if (event.type === "user.message") {
+                const id = event.data?.messageId ?? event.id;
+                if (typeof id === "string")
+                    queue.confirmed(id);
+            }
+            if (["abort", "session.idle", "pending_messages.modified"].includes(event.type)) {
+                void queue.refresh();
+            }
+        }
         try {
             events.emit(store.applyEvent(event));
         }
@@ -60,14 +77,19 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         ready,
         getSnapshot: () => ({
             seq: events.seq,
-            snapshot: { ...store.snapshot(), prompts: prompts.list() },
+            snapshot: { ...store.snapshot(), prompts: prompts.list(), queue: queue.snapshot() },
             controls: controls.get(),
         }),
         subscribe: events.subscribe,
         send: sends.send,
         applyControl: (change) => controls.apply(change),
         reloadExtensions: actions.reloadExtensions,
-        stop: actions.stop,
+        stop: async () => {
+            const outcome = await actions.stop();
+            if (outcome === "stopped")
+                void queue.refresh();
+            return outcome;
+        },
         respond: (requestId, response) => prompts.respond(requestId, response),
         refreshPrompts: () => prompts.refresh(),
         dispose() {
@@ -87,6 +109,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
             prompts.dispose();
             events.dispose();
             sends.dispose();
+            queue.dispose();
         },
     };
 }

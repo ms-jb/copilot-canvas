@@ -1,8 +1,8 @@
-import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, } from "../../shared/contract.mjs";
+import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, validateSessions, } from "../../shared/contract.mjs";
 import { createPostRoutes } from "./post-routes.mjs";
 import { isRead } from "./request-policy.mjs";
 import { errorMessage, notAllowed, sendError, sendJson } from "./responses.mjs";
-export function createRoutes({ config, bridge, generation, csrfToken, log, getSourceDir, getShareInfo, policy, assets, events, }) {
+export function createRoutes({ config, bridge, generation, csrfToken, log, getSourceDir, getShareInfo, getSessions, policy, assets, events, }) {
     const posts = createPostRoutes(bridge, policy, log);
     function handleBootstrap(res) {
         const { snapshot, controls } = bridge.getSnapshot();
@@ -98,6 +98,15 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 if (method !== "GET")
                     return notAllowed(res, "GET");
                 return handleShare(res);
+            case API.sessions: {
+                if (method !== "GET")
+                    return notAllowed(res, "GET");
+                const body = await getSessions().catch(() => null);
+                if (!validateSessions(body)) {
+                    return sendError(res, ERROR_CODES.internal, "Session list is unavailable.");
+                }
+                return sendJson(res, 200, body);
+            }
             default:
                 return sendError(res, ERROR_CODES.notFound, "Not found.");
         }

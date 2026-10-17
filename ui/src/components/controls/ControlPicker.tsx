@@ -56,6 +56,7 @@ export function ControlPicker(props: {
   disabled?: boolean;
   busy?: boolean;
   searchLabel?: string;
+  withinPortal?: boolean;
 }) {
   const { label, value, display, options, onChange, disabled, busy } = props;
   const [search, setSearch] = useState("");
@@ -82,6 +83,7 @@ export function ControlPicker(props: {
 
   return (
     <Combobox
+      withinPortal={props.withinPortal}
       store={combobox}
       position="top-start"
       width={280}

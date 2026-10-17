@@ -121,6 +121,17 @@ it("forwards allow-listed paths to the provider capability path", async () => {
   expect(upstreamPaths).toEqual([`${CAPABILITY}api/bootstrap`]);
 });
 
+it("forwards only GET for the sessions list", async () => {
+  publish(GENERATION);
+  expect((await call("/api/sessions")).status).toBe(200);
+  expect(
+    (await call("/api/sessions", { origin: `http://127.0.0.1:${gatewayPort}` }, "POST", "{}"))
+      .status,
+  ).toBe(405);
+  expect((await call("/api/sessions", {}, "HEAD")).status).toBe(405);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/sessions`]);
+});
+
 it("follows the live provider whose canvas was opened most recently", async () => {
   publish(GENERATION, "session-a", CAPABILITY, "2026-01-01T00:00:01.000Z");
   publish(GENERATION_B, "session-b", CAPABILITY_B, "2026-01-01T00:00:02.000Z");
@@ -179,4 +190,22 @@ it("returns 404 for paths outside the allow-list", async () => {
     expect((await call(path)).status).toBe(404);
   }
   expect(upstreamPaths).toEqual([]);
+});
+
+it("allows larger attachment sends only with a pinned generation, not on other writes", async () => {
+  publish(GENERATION);
+  const headers = {
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${gatewayPort}`,
+    "x-provider-generation": GENERATION,
+  };
+  const body = JSON.stringify({ text: "A".repeat(70000) });
+  expect(
+    (await call("/api/send", { ...headers, "x-provider-generation": "stale" }, "POST", body))
+      .status,
+  ).toBe(409);
+  expect((await call("/api/controls", headers, "POST", body)).status).toBe(413);
+  expect(upstreamPaths).toEqual([]);
+  expect((await call("/api/send", headers, "POST", body)).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/send`]);
 });

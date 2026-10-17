@@ -4,6 +4,18 @@
 // Domain modules import each other directly, never this facade.
 
 export {
+  ATTACHMENT_EXTENSIONS,
+  ATTACHMENT_LIMITS,
+  attachmentByteLength,
+  isAttachmentMimeType,
+  isSafeAttachmentName,
+  transcriptAttachments,
+  validateAttachments,
+  type AttachmentMimeType,
+  type SendAttachment,
+  type TranscriptAttachment,
+} from "./contract/attachments.mts";
+export {
   CONTEXT_TIERS,
   SESSION_MODES,
   type ContextTier,
@@ -22,6 +34,15 @@ export {
   type SendStatus,
 } from "./contract/errors.mts";
 export { LIMITS } from "./contract/limits.mts";
+export type { QueueState } from "./contract/queue.mts";
+export {
+  APP_SESSION_ID,
+  MAX_SESSIONS,
+  validateSessions,
+  type SessionActivity,
+  type SessionsInfo,
+  type SessionSummary,
+} from "./contract/sessions.mts";
 export {
   PLAN_ACTIONS,
   type FormField,
@@ -53,6 +74,7 @@ export {
   type PanelConfig,
   type ReloadPayload,
   type SendPayload,
+  type SendMode,
   type SendResult,
   type ServerEvent,
   type ShareInfo,

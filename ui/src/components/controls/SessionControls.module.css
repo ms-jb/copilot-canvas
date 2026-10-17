@@ -171,6 +171,46 @@
   color: var(--cc-text-muted);
 }
 
+.tune {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cc-radius-md);
+  background: transparent;
+  color: var(--cc-text-muted);
+  cursor: pointer;
+}
+
+.tune:hover,
+.tune[aria-expanded="true"] {
+  background: var(--cc-surface-sunken);
+  color: var(--cc-text);
+}
+
+.tune:focus-visible {
+  outline: 2px solid var(--cc-focus);
+}
+
+.phoneSettings .row {
+  flex-direction: column;
+  align-items: stretch;
+  overflow: visible;
+}
+
+.phoneSettings .pill {
+  max-width: none;
+  width: 100%;
+  min-height: 44px;
+  justify-content: space-between;
+}
+
+.phoneSettings .options {
+  max-height: min(300px, 45dvh);
+}
+
 /* A failed change is the only feedback shown here. */
 .error {
   margin: 0;

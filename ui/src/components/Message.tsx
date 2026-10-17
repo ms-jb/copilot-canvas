@@ -2,6 +2,8 @@ import { MarkdownView } from "../MarkdownView";
 import { AlertIcon } from "./ChatIcons";
 import styles from "./Message.module.css";
 import { Timestamp } from "./Timestamp";
+import { AttachmentList } from "../features/attachments/AttachmentList";
+import type { TranscriptAttachment } from "../shared";
 
 interface UserMessageProps {
   text: string;
@@ -10,9 +12,16 @@ interface UserMessageProps {
   pendingLabel?: string;
   /** Follows another turn of yours, so it sits closer to it. */
   continued?: boolean;
+  attachments?: TranscriptAttachment[];
 }
 
-export function UserMessage({ text, timestamp, pendingLabel, continued }: UserMessageProps) {
+export function UserMessage({
+  text,
+  timestamp,
+  pendingLabel,
+  continued,
+  attachments,
+}: UserMessageProps) {
   return (
     <article
       className={styles.user}
@@ -20,7 +29,10 @@ export function UserMessage({ text, timestamp, pendingLabel, continued }: UserMe
       data-pending={pendingLabel ? "true" : undefined}
       data-continued={continued || undefined}
     >
-      <div className={styles.bubble}>{text}</div>
+      <div className={styles.bubble}>
+        {text}
+        {attachments && attachments.length > 0 && <AttachmentList attachments={attachments} />}
+      </div>
       <div className={styles.meta}>
         {pendingLabel ? (
           <span className={styles.pending}>{pendingLabel}</span>

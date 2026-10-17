@@ -1,4 +1,4 @@
-import { API, ERROR_CODES, LIMITS } from "../shared";
+import { API, ERROR_CODES, LIMITS, type SendAttachment, type SendMode } from "../shared";
 import { field, postJson, type SendContext } from "./http";
 
 export type SendOutcome =
@@ -29,6 +29,8 @@ export async function sendMessage(
   context: SendContext,
   requestId: string,
   text: string,
+  attachments: SendAttachment[] = [],
+  mode: SendMode = "immediate",
 ): Promise<SendOutcome> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), LIMITS.sendTimeoutMs + 5000);
@@ -37,7 +39,13 @@ export async function sendMessage(
     result = await postJson(
       context,
       API.send,
-      { requestId, sessionId: context.sessionId, text },
+      {
+        requestId,
+        sessionId: context.sessionId,
+        text,
+        mode,
+        ...(attachments.length ? { attachments } : {}),
+      },
       controller.signal,
     );
   } catch {

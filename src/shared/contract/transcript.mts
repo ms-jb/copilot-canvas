@@ -1,5 +1,11 @@
 import { type PendingPrompt, validatePrompts } from "./prompts.mts";
 import { isPlainObject } from "./validation.mts";
+import { type QueueState, validateQueueState } from "./queue.mts";
+import {
+  ATTACHMENT_LIMITS,
+  type TranscriptAttachment,
+  validateTranscriptAttachment,
+} from "./attachments.mts";
 
 export type EntryKind = "user" | "assistant" | "error";
 export type Phase = "idle" | "working" | "waiting";
@@ -16,6 +22,7 @@ export interface TranscriptEntry {
   streaming?: boolean;
   /** Set on user entries once the host has matched the acknowledged messageId to a composer requestId. */
   requestId?: string;
+  attachments?: TranscriptAttachment[];
 }
 
 export interface SessionStatus {
@@ -32,6 +39,7 @@ export interface Snapshot {
   status: SessionStatus;
   /** Requests the session is waiting on that can be answered from the canvas, oldest first. */
   prompts?: PendingPrompt[];
+  queue?: QueueState;
 }
 
 export const PHASES: readonly Phase[] = Object.freeze(["idle", "working", "waiting"] as const);
@@ -60,6 +68,13 @@ export function validateEntry(entry: unknown): entry is TranscriptEntry {
   if (typeof entry.timestamp !== "string") return false;
   if (entry.streaming !== undefined && typeof entry.streaming !== "boolean") return false;
   if (entry.requestId !== undefined && typeof entry.requestId !== "string") return false;
+  if (
+    entry.attachments !== undefined &&
+    (!Array.isArray(entry.attachments) ||
+      entry.attachments.length > ATTACHMENT_LIMITS.maxCount ||
+      !entry.attachments.every(validateTranscriptAttachment))
+  )
+    return false;
   return true;
 }
 
@@ -82,6 +97,7 @@ export function validateSnapshot(snapshot: unknown): snapshot is Snapshot {
     Array.isArray(snapshot.entries) &&
     snapshot.entries.every(validateEntry) &&
     validateStatus(snapshot.status) &&
-    (snapshot.prompts === undefined || validatePrompts(snapshot.prompts))
+    (snapshot.prompts === undefined || validatePrompts(snapshot.prompts)) &&
+    (snapshot.queue === undefined || validateQueueState(snapshot.queue))
   );
 }

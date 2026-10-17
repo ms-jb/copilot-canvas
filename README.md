@@ -56,12 +56,38 @@ The full playbook Copilot follows is in [SETUP.md](SETUP.md).
 ## What you see
 
 - **Your conversation** in the center, with timestamps, formatting and code.
+- **Send now or queue.** Tap Send or press Enter to steer the current turn. Hold Send for half
+  a second (mouse or touch), or press Alt+Enter, to queue the message for after the turn.
+  Queued messages appear above the composer until the transcript confirms them. Normal sends
+  show **Steering** while awaiting that confirmation. With an empty draft during a running turn,
+  the same button offers **Stop**. If Stop drops queued messages, they leave the list after
+  Copilot's queue confirms their removal. On older hosts without queue read-back, or when that
+  read fails, the list stays unchanged rather than guessing. Reloading the page clears the
+  local pending display, not Copilot's native queue.
 - **What Copilot is doing** (thinking, responding, running a tool, waiting on you) above the box you
   type in.
 - **Decisions** (permission requests, questions and plan approvals) answered right in the canvas, so
   you never have to switch windows.
-- **Session settings** (mode, model, reasoning effort) as buttons by the box you type in.
+- **Session settings** (mode, model, reasoning effort, context) as buttons by the box you type in.
+  On phones, one **Session settings** button opens the same controls.
+- **Attachments** from the attach button or clipboard paste, including screenshots. Add up to four
+  PNG, JPEG, GIF, WebP, PDF or UTF-8 text files (TXT, LOG, MD, CSV, JSON), up to 5 MiB each and
+  12 MiB in total. Remove any item before sending. Drafts stay in this page's memory, not browser
+  storage, and are uploaded only when you press Send. The host checks their type and keeps them
+  in private session memory until delivery, failure, timeout or shutdown (at most ten minutes),
+  then releases its copy. Copilot may retain sent attachments in session history.
+  Small inline images from session events appear as thumbnails; other attachments show their
+  filename. After an uncertain send, check the transcript before sending again. Nothing retries
+  automatically. Reloading the page discards unsent attachments.
 - **Your own panels** on the right, starting with a few ideas you can tap.
+- **Sessions** below the views in the left rail, also in the phone navigation drawer.
+  The canvas reads the app's session status through the joined SDK and shows up to 30 sessions,
+  newest first when update times are available. An app-reported session opens in Copilot from
+  the desktop canvas without changing the canvas binding. Phone rows are read-only.
+  If app status is unavailable, the list uses local `~/.copilot/session-state/*/workspace.yaml`
+  names, project names and update times. Other sessions' activity stays **unknown**, and links
+  are disabled rather than guessed. No conversation journals, messages or credentials are read.
+  Reads refresh on open/focus and every 30 seconds while visible. Errors mark old data as not live.
 
 ## Make it yours
 

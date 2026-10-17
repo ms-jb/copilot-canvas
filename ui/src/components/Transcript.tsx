@@ -7,7 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { TranscriptEntry } from "../shared";
+import type { SendMode, TranscriptAttachment, TranscriptEntry } from "../shared";
 import { ArrowDownIcon } from "./ChatIcons";
 import { markContinuations, type Author } from "./grouping";
 import { AssistantMessage, Avatar, ErrorMessage, UserMessage } from "./Message";
@@ -23,6 +23,8 @@ export interface PendingMessage {
   state: "sending" | "accepted";
   /** ISO time the user pressed send. */
   createdAt: string;
+  attachments?: TranscriptAttachment[];
+  mode?: SendMode;
 }
 
 interface TranscriptProps {
@@ -85,7 +87,14 @@ function EntryView({
 }) {
   switch (entry.kind) {
     case "user":
-      return <UserMessage text={entry.text} timestamp={entry.timestamp} continued={continued} />;
+      return (
+        <UserMessage
+          text={entry.text}
+          timestamp={entry.timestamp}
+          continued={continued}
+          attachments={entry.attachments}
+        />
+      );
     case "error":
       return <ErrorMessage text={entry.text} timestamp={entry.timestamp} />;
     default:
@@ -196,8 +205,13 @@ export function Transcript({
           text={message.text}
           timestamp={message.createdAt}
           continued={continued}
+          attachments={message.attachments}
           pendingLabel={
-            message.state === "sending" ? "Sending…" : "Sent, waiting for confirmation…"
+            message.state === "sending"
+              ? "Sending…"
+              : message.mode === "enqueue"
+                ? "Queued"
+                : "Steering"
           }
         />
       ),

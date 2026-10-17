@@ -2,6 +2,7 @@
 export { ApiError, getJson, postJson } from "./connection/http";
 export type { ApiErrorKind, SendContext } from "./connection/http";
 export { fetchBootstrap, fetchIdentity } from "./connection/bootstrap";
+export { fetchSessions } from "./connection/sessions";
 export {
   makeRequestId,
   sendMessage,
