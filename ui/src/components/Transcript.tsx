@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { TranscriptEntry } from "../shared";
 import { ArrowDownIcon } from "./ChatIcons";
+import { markContinuations, type Author } from "./grouping";
 import { AssistantMessage, Avatar, ErrorMessage, UserMessage } from "./Message";
 import { DaySeparator } from "./Timestamp";
 import { dayKey, toDate } from "./timeFormat";
@@ -69,10 +70,22 @@ function EmptyState({
   );
 }
 
-function EntryView({ entry, assistantName }: { entry: TranscriptEntry; assistantName: string }) {
+function authorOf(entry: TranscriptEntry): Author {
+  return entry.kind === "user" || entry.kind === "error" ? entry.kind : "assistant";
+}
+
+function EntryView({
+  entry,
+  assistantName,
+  continued,
+}: {
+  entry: TranscriptEntry;
+  assistantName: string;
+  continued: boolean;
+}) {
   switch (entry.kind) {
     case "user":
-      return <UserMessage text={entry.text} timestamp={entry.timestamp} />;
+      return <UserMessage text={entry.text} timestamp={entry.timestamp} continued={continued} />;
     case "error":
       return <ErrorMessage text={entry.text} timestamp={entry.timestamp} />;
     default:
@@ -82,6 +95,7 @@ function EntryView({ entry, assistantName }: { entry: TranscriptEntry; assistant
           timestamp={entry.timestamp}
           streaming={entry.streaming}
           assistantName={assistantName}
+          continued={continued}
         />
       );
   }
@@ -157,26 +171,31 @@ export function Transcript({
   }, [pendingCount, scrollToBottom]);
 
   const empty = entries.length === 0 && pending.length === 0;
-  const rows = [
+  const rows = markContinuations([
     ...entries.map((entry) => ({
       key: entry.id,
       timestamp: entry.timestamp,
-      node: <EntryView entry={entry} assistantName={assistantName} />,
+      author: authorOf(entry),
+      render: (continued: boolean) => (
+        <EntryView entry={entry} assistantName={assistantName} continued={continued} />
+      ),
     })),
     ...pending.map((message) => ({
       key: `pending:${message.requestId}`,
       timestamp: message.createdAt,
-      node: (
+      author: "user" as const,
+      render: (continued: boolean) => (
         <UserMessage
           text={message.text}
           timestamp={message.createdAt}
+          continued={continued}
           pendingLabel={
             message.state === "sending" ? "Sending…" : "Sent, waiting for confirmation…"
           }
         />
       ),
     })),
-  ];
+  ]).map(({ key, timestamp, render, continued }) => ({ key, timestamp, node: render(continued) }));
 
   return (
     <div className={styles.wrap}>

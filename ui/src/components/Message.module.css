@@ -64,6 +64,35 @@
   min-width: 0;
 }
 
+/* Grouped turns: a follow-up from the same author sits close to the one before it. */
+.user[data-continued],
+.assistant[data-continued] {
+  margin-top: calc(var(--cc-space-2) - var(--turn-gap, var(--cc-space-5)));
+}
+
+.assistant[data-continued] {
+  position: relative;
+}
+
+.hoverTime {
+  position: absolute;
+  top: 0;
+  inset-inline-end: 0;
+  padding: 3px var(--cc-space-2);
+  border: 1px solid var(--cc-border);
+  border-radius: 999px;
+  background: var(--cc-surface-raised);
+  box-shadow: var(--cc-shadow-sm);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--cc-duration) var(--cc-ease);
+}
+
+.assistant:hover .hoverTime,
+.assistant:focus-within .hoverTime {
+  opacity: 1;
+}
+
 .avatar {
   flex: none;
   display: inline-grid;
@@ -135,5 +164,11 @@
 
   .body {
     padding-inline-start: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hoverTime {
+    transition: none;
   }
 }
