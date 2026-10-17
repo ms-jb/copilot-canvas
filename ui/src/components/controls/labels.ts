@@ -1,4 +1,4 @@
-import type { ContextTier, ModelOption, SessionControls, SessionMode } from "../../shared";
+import type { ModelOption, SessionControls, SessionMode } from "../../shared";
 
 export const MODE_LABELS: Readonly<Record<SessionMode, { label: string; hint: string }>> = {
   interactive: { label: "Interactive", hint: "Works with you turn by turn" },
@@ -21,10 +21,6 @@ export function effortLabel(effort: string): string {
   if (known) return known;
   const words = effort.replace(/[_-]+/g, " ").trim();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : effort;
-}
-
-export function tierLabel(tier: ContextTier): string {
-  return tier === "long_context" ? "Long context" : "Standard context";
 }
 
 export function activeModel(controls: SessionControls): ModelOption | undefined {

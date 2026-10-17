@@ -5,7 +5,7 @@ import { devMock } from "./scripts/dev-mock.mts";
 import { syncExtension } from "./scripts/sync-extension.mts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
-const ignore = ["_ref/**", ".impeccable/**", "extension/**", "node_modules/**"];
+const ignore = ["extension/**", "node_modules/**"];
 
 export default defineConfig({
   root: "ui",

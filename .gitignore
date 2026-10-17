@@ -1,8 +1,6 @@
 node_modules/
 dist/
-_ref/
 .runtime/
 *.log
 .env*
-.impeccable/
 package-lock.json
