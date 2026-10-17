@@ -1,4 +1,4 @@
-import type { PendingPrompt } from "../../extension-src/shared/contract.mts";
+import type { PendingPrompt } from "../../src/shared/contract.mts";
 import { SCRIPT, samplePermission } from "./fixtures.mts";
 import { setPrompts, setStatus, upsert } from "./session.mts";
 import type { MockSession, MockSessions } from "./session.mts";

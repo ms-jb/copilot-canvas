@@ -8,12 +8,12 @@ import {
   loadConfig,
   runtimeDir,
   sessionsDir,
-} from "../extension-src/shared/config.mts";
+} from "../src/shared/node/config.mts";
 import {
   buildGatewayState,
   readGatewayState,
   writePrivateJson,
-} from "../extension-src/shared/runtime-state.mts";
+} from "../src/shared/node/runtime-state.mts";
 import { createGateway } from "./server/gateway.mts";
 
 export { createGateway };

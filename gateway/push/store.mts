@@ -1,6 +1,6 @@
 import { generateKeyPairSync, createPrivateKey } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { writePrivateJson } from "../../extension-src/shared/runtime-state.mts";
+import { writePrivateJson } from "../../src/shared/node/runtime-state.mts";
 import { isAllowedPushEndpoint, sendPush, vapidAuthorization } from "./web-push.mts";
 import type { PushSender } from "./web-push.mts";
 

@@ -1,4 +1,4 @@
-// Builds `extension/` from `extension-src/`: compiles the host `.mts` to `.mjs` with the local
+// Builds `extension/` from `src/`: compiles the host `.mts` to `.mjs` with the local
 // TypeScript and copies template.config.json. `extension/ui` belongs to the Vite build and is kept.
 
 import { spawnSync } from "node:child_process";
@@ -12,6 +12,7 @@ export async function syncExtension(root = repoRoot): Promise<void> {
   const target = join(root, "extension");
   await mkdir(target, { recursive: true });
   for (const entry of await readdir(target)) {
+    // Remove stale compiler output (including former layouts); config is copied again below.
     if (entry !== "ui") await rm(join(target, entry), { recursive: true, force: true });
   }
 

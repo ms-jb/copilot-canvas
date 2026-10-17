@@ -1,7 +1,7 @@
 import http from "node:http";
-import { API, validateIdentity } from "../../extension-src/shared/contract.mts";
-import { readLiveProviders, readProviderState } from "../../extension-src/shared/runtime-state.mts";
-import type { ProviderState } from "../../extension-src/shared/runtime-state.mts";
+import { API, validateIdentity } from "../../src/shared/contract.mts";
+import { readLiveProviders, readProviderState } from "../../src/shared/node/runtime-state.mts";
+import type { ProviderState } from "../../src/shared/node/runtime-state.mts";
 import { LOOPBACK } from "./request-policy.mts";
 
 // Provider selection (file scan + identity probe) is reused for this long.

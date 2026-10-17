@@ -13,5 +13,5 @@
     "allowImportingTsExtensions": true,
     "types": ["node"]
   },
-  "include": ["ui/src", "tests", "scripts", "gateway", "extension-src", "vite.config.ts"]
+  "include": ["ui/src", "tests", "scripts", "gateway", "src", "vite.config.ts"]
 }

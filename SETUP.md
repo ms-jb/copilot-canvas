@@ -94,6 +94,9 @@ questions and making choices while a build runs; they never wait on code.
      the user should see;
    - its limits: it does not run `npm run install-ext`, commit, push, start other agents or ask the
      user anything. If it needs a decision, it stops and reports the question.
+   - source layout: host readers and services belong in `src/host/`, browser-safe shared code in
+     `src/shared/`, and Node-only helpers in `src/shared/node/`. The renderer consumes shared code
+     through `ui/src/shared.ts`; never put host or gateway imports in a UI component.
 
    Run one builder at a time: builders share `<FOLDER>` and the installed canvas. Keep a list of the
    next canvas ideas instead. A one-line change to `template.config.json` (name, first view) needs no

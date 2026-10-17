@@ -1,6 +1,6 @@
 import type { OutgoingHttpHeaders, ServerResponse } from "node:http";
 import { ERROR_CODES, HTTP_STATUS_BY_CODE, SEND_STATUS } from "../../shared/contract.mts";
-import { SENSITIVE_RESPONSE_HEADERS } from "../../shared/security.mts";
+import { SENSITIVE_RESPONSE_HEADERS } from "../../shared/node/security.mts";
 
 export const statusFor = (code: string): number => HTTP_STATUS_BY_CODE[code] ?? 500;
 export const errorMessage = (error: unknown): string =>

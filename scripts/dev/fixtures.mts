@@ -3,7 +3,7 @@ import type {
   PendingPrompt,
   SessionControls,
   TranscriptEntry,
-} from "../../extension-src/shared/contract.mts";
+} from "../../src/shared/contract.mts";
 
 export const SESSION_ID = "dev-mock-session";
 export const CSRF_TOKEN = "dev-mock-csrf";

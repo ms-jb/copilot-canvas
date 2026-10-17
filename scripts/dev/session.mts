@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { ERROR_CODES } from "../../extension-src/shared/contract.mts";
+import { ERROR_CODES } from "../../src/shared/contract.mts";
 import type {
   ControlChange,
   PendingPrompt,
@@ -7,7 +7,7 @@ import type {
   SessionControls,
   SessionStatus,
   TranscriptEntry,
-} from "../../extension-src/shared/contract.mts";
+} from "../../src/shared/contract.mts";
 import {
   SCRIPT,
   initialControls,

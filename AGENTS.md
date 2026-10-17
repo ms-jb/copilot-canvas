@@ -7,23 +7,29 @@ in a session without this repository and the user has no copy yet, follow [SETUP
 
 ## Where things live
 
-| To change                       | Edit                                                               |
-| ------------------------------- | ------------------------------------------------------------------ |
-| A view in the left sidebar      | a component in `ui/src/views/`, listed in `views` in `registry.ts` |
-| A panel in the right-hand aside | a component in `ui/src/views/panels/`, listed in `asidePanels`     |
-| Assistant name, first view      | `template.config.json` (`assistantName`, `defaultView`)            |
-| Colors and spacing              | `ui/src/styles.css` (`--cc-*` tokens) and `ui/src/theme.ts`        |
-| Phone app name and icon         | `ui/public/assets/manifest.webmanifest` and the icons beside it    |
-| Data from outside the canvas    | a read-only endpoint on the host (below)                           |
+| To change                        | Edit                                                               |
+| -------------------------------- | ------------------------------------------------------------------ |
+| A view in the left sidebar       | a component in `ui/src/views/`, listed in `views` in `registry.ts` |
+| A panel in the right-hand aside  | a component in `ui/src/views/panels/`, listed in `asidePanels`     |
+| Assistant name, first view       | `template.config.json` (`assistantName`, `defaultView`)            |
+| Colors and spacing               | `ui/src/styles.css` (`--cc-*` tokens) and `ui/src/theme.ts`        |
+| Phone app name and icon          | `ui/public/assets/manifest.webmanifest` and the icons beside it    |
+| Data from outside the canvas     | a read-only endpoint in `src/host/` (below)                        |
+| Shared wire types and validators | `src/shared/contract.mts` and `src/shared/contract/`               |
+| Node configuration and runtime   | `src/shared/node/` (never imported by the renderer)                |
 
 Views and panels take `ViewProps` (`connection`: transcript, status, settings, config). Use Mantine
 components and the existing `--cc-*` tokens so additions match the rest of the canvas.
 
 **Data.** The page can only call its own provider. For outside data (pull requests, calendar), add a
-`GET` endpoint: the path in `API` and its response shape in `extension-src/shared/contract.mts`, the
-route in `extension-src/lib/server.mts`, and the read in the host (for example `gh` through
+`GET` endpoint: the path in `API` and its response shape in `src/shared/contract.mts`, the
+route in `src/host/http/routes.mts`, and the read in the host (for example `gh` through
 `execFile` with a timeout, never a shell string). Keep tokens in the host. Add it to the gateway's
 `ROUTES` only if it should work on the phone, and only for reads.
+
+Keep browser-safe shared modules independent of host, gateway and Node code. The renderer imports
+them only through `ui/src/shared.ts`. The gateway may use `src/shared/node/`, but never `src/host/`.
+`vite.config.ts` enforces these import boundaries and runtime-cycle checks on top of Vite+ defaults.
 
 ## The loop
 
@@ -42,6 +48,10 @@ rest and keeps guiding them meanwhile (see `customization-workflow`).
    During setup, go back to the `SETUP.md` Part 3 stage where the user stopped.
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).
+
+**Structure.** Read [ARCHITECTURE.md](ARCHITECTURE.md) before you add a folder or move code: it has
+the layering rules (enforced by lint), where shared code goes and how to keep modules small and
+testable.
 
 **Skills.** Follow `.github/skills/customization-workflow` for every change, plus
 `add-view-or-panel` for UI, `add-data-endpoint` for outside data and `theme-and-identity` for names,

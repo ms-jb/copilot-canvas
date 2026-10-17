@@ -5,10 +5,10 @@
 import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/config.mjs";
-import { createSessionBridge } from "./lib/bridge.mjs";
-import { createChatCanvas } from "./lib/canvas.mjs";
-import { startProvider } from "./lib/provider.mjs";
+import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/node/config.mjs";
+import { createSessionBridge } from "./host/bridge.mjs";
+import { createChatCanvas } from "./host/canvas.mjs";
+import { startProvider } from "./host/provider.mjs";
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 const uiDir = join(extensionDir, "ui");
 let session = null;

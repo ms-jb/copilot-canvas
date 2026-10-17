@@ -11,7 +11,7 @@ import {
   writeFileSync,
 } from "node:fs";
 import { dirname, join } from "node:path";
-import { CONTRACT_VERSION, IDENTITY_APP, isPlainObject, toPublicOrigin } from "./contract.mts";
+import { CONTRACT_VERSION, IDENTITY_APP, isPlainObject, toPublicOrigin } from "../contract.mts";
 
 export interface ProviderState {
   app: string;

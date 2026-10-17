@@ -1,5 +1,5 @@
-import type { SessionLike } from "../../extension-src/lib/bridge.mts";
-import type { SessionEventLike } from "../../extension-src/shared/transcript.mts";
+import type { SessionLike } from "../../src/host/bridge.mts";
+import type { SessionEventLike } from "../../src/shared/transcript.mts";
 
 export function deferred<T>() {
   let resolve!: (value: T) => void;

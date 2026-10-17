@@ -7,7 +7,7 @@ import {
   toPublicOrigin,
 } from "../../shared/contract.mts";
 import type { Bootstrap, Identity, ShareInfo } from "../../shared/contract.mts";
-import type { TemplateConfig } from "../../shared/config.mts";
+import type { TemplateConfig } from "../../shared/node/config.mts";
 import type { Bridge } from "../session/bridge.mts";
 import type { Logger } from "../logging.mts";
 import type { createAssetHandler } from "./assets.mts";

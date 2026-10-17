@@ -1,11 +1,7 @@
 import { expect, it } from "vite-plus/test";
-import type { TranscriptEntry } from "../extension-src/shared/contract.mts";
-import {
-  applyServerEvent,
-  createViewState,
-  NO_CONTROLS,
-} from "../extension-src/shared/entries.mts";
-import { createTranscriptStore } from "../extension-src/shared/transcript.mts";
+import type { TranscriptEntry } from "../src/shared/contract.mts";
+import { applyServerEvent, createViewState, NO_CONTROLS } from "../src/shared/entries.mts";
+import { createTranscriptStore } from "../src/shared/transcript.mts";
 
 let n = 0;
 function event(

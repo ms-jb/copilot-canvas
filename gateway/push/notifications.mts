@@ -1,4 +1,4 @@
-import type { PendingPrompt, SessionStatus } from "../../extension-src/shared/contract.mts";
+import type { PendingPrompt, SessionStatus } from "../../src/shared/contract.mts";
 
 // A status change and its prompt arrive separately; one request should buzz the phone once.
 const WAITING_DEDUPE_MS = 3000;

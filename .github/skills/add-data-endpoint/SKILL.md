@@ -17,12 +17,12 @@ Reads do not authorize sending, editing, scheduling or other external writes.
   what sign-in is needed; do not ask for a token in chat or put one in config.
 - Return only display fields. Set limits for item count, text length, upstream
   pagination, execution time and response size before implementing the reader.
-- Keep a new host reader under `extension-src/lib/`, separate from HTTP routing.
+- Keep a new host reader under `src/host/`, separate from HTTP routing.
   Make its external read replaceable in tests so tests need no live account.
 
 ## 2. Extend the shared contract
 
-- In `extension-src/shared/contract.mts`, add the relative path to `API`, a
+- In `src/shared/contract.mts`, add the relative path to `API`, a
   response type and a runtime validator. Existing paths use `api/...`, without
   a leading slash or provider token.
 - Read `validateBootstrap` and `validateIdentity` for validation conventions.
@@ -46,7 +46,7 @@ Reads do not authorize sending, editing, scheduling or other external writes.
 - If repeated reads need caching, keep it in the host with a short explicit TTL.
   Separate account/scope entries, share concurrent refreshes and discard expired
   data unless the response explicitly labels it stale. Avoid tight retry loops.
-- In `extension-src/lib/http/routes.mts`, add a case to `route` inside
+- In `src/host/http/routes.mts`, add a case to `route` inside
   `createRoutes`, after the existing Host, Origin and capability checks.
   Follow `API.share` for the GET-only method check using `notAllowed`.
 - Return through `sendJson` or `sendError` so sensitive-response headers remain.
@@ -54,7 +54,7 @@ Reads do not authorize sending, editing, scheduling or other external writes.
   Map upstream failures to short, safe messages; do not log raw command output,
   headers, tokens, private records or credential-bearing error strings.
 - Preserve `readJsonPost`, `staleGeneration` and the session checks in
-  `extension-src/lib/http/request-policy.mts`. The new read is not a reason to alter POST security.
+  `src/host/http/request-policy.mts`. The new read is not a reason to alter POST security.
 
 ## 4. Connect the UI and optional phone route
 

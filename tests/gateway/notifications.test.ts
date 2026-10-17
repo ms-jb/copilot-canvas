@@ -1,5 +1,5 @@
 import { expect, it } from "vite-plus/test";
-import type { PendingPrompt, SessionStatus } from "../../extension-src/shared/contract.mts";
+import type { PendingPrompt, SessionStatus } from "../../src/shared/contract.mts";
 import { createNotifier, createPresence, parseSse } from "../../gateway/push.mts";
 import { APPLE, FCM } from "./fixtures.mts";
 

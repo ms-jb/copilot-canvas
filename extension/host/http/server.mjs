@@ -2,7 +2,7 @@
 import { randomBytes } from "node:crypto";
 import { createServer } from "node:http";
 import { ERROR_CODES, LIMITS } from "../../shared/contract.mjs";
-import { loopbackOrigin } from "../../shared/security.mjs";
+import { loopbackOrigin } from "../../shared/node/security.mjs";
 import { createAssetHandler } from "./assets.mjs";
 import { createEventStream } from "./event-stream.mjs";
 import { createRequestPolicy } from "./request-policy.mjs";

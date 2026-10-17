@@ -9,7 +9,7 @@ import type { ChildProcess } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { loadConfig, runtimeDir } from "../extension-src/shared/config.mts";
+import { loadConfig, runtimeDir } from "../src/shared/node/config.mts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 

@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import { createPromptService } from "../../extension-src/lib/prompts.mts";
-import { ERROR_CODES } from "../../extension-src/shared/contract.mts";
+import { createPromptService } from "../../src/host/prompts.mts";
+import { ERROR_CODES } from "../../src/shared/contract.mts";
 import { deferred, fakeSession, promptEvent } from "./fixtures";
 
 afterEach(() => vi.useRealTimers());

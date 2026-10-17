@@ -1,6 +1,6 @@
 import type { IncomingMessage } from "node:http";
-import { API, HEADERS } from "../../extension-src/shared/contract.mts";
-import { checkOrigin, isAllowedHost } from "../../extension-src/shared/security.mts";
+import { API, HEADERS } from "../../src/shared/contract.mts";
+import { checkOrigin, isAllowedHost } from "../../src/shared/node/security.mts";
 
 export const LOOPBACK = "127.0.0.1";
 

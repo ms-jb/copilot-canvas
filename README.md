@@ -174,9 +174,12 @@ Still stuck? [Open an issue](https://github.com/ms-jb/copilot-canvas/issues/new/
 
 [![CI](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml)
 
-For people working on the template itself; [AGENTS.md](AGENTS.md) covers customizing a copy. Requires
-Node.js 22.18+ (24 recommended) and npm. Scripts and the gateway run as TypeScript through Node's type
-stripping, so code must be erasable TypeScript (no enums or namespaces).
+For people working on the template itself; [AGENTS.md](AGENTS.md) covers customizing a copy and
+[ARCHITECTURE.md](ARCHITECTURE.md) covers the structure and its rules. Requires
+Node.js 22.18+ (24 recommended). The examples use npm; other package managers can run the same
+package scripts. Shared code uses source layers, not package-manager-specific workspaces.
+Scripts and the gateway run as TypeScript through Node's type stripping, so code must be erasable
+TypeScript (no enums or namespaces).
 
 ```bash
 npx vp dev           # canvas with a built-in preview of the extension, no Copilot needed
@@ -201,13 +204,24 @@ Append a query to the `npx vp dev` page to preview other states:
 `DEV_PUBLIC_URL=https://...` changes the preview's Open on phone origin; `DEV_PUBLIC_URL=off` hides
 it.
 
-| Folder           | Contents                                                    |
-| ---------------- | ----------------------------------------------------------- |
-| `extension-src/` | extension host, compiled to `extension/`                    |
-| `ui/`            | React + Mantine canvas; views and panels in `ui/src/views/` |
-| `gateway/`       | optional phone gateway and notifications                    |
-| `scripts/`       | install, phone, sync and the development preview            |
-| `extension/`     | generated, committed, installable output (do not hand-edit) |
+| Folder             | Contents                                                          |
+| ------------------ | ----------------------------------------------------------------- |
+| `src/`             | compiler root; `extension.mts` emits `extension/extension.mjs`    |
+| `src/host/`        | session, controls, prompts and HTTP services behind small facades |
+| `src/shared/`      | browser-safe contract, validators and transcript state            |
+| `src/shared/node/` | Node-only configuration, runtime files and security helpers       |
+| `src/types/`       | platform SDK declarations                                         |
+| `ui/`              | React + Mantine canvas; views and panels in `ui/src/views/`       |
+| `gateway/`         | optional phone gateway and notifications                          |
+| `scripts/`         | install, phone, sync and the development preview                  |
+| `tests/`           | unit and service tests, including host and gateway subfolders     |
+| `extension/`       | generated, committed, installable output (do not hand-edit)       |
+
+The renderer imports shared code only through `ui/src/shared.ts`. Host and gateway code never
+import the UI; the gateway consumes the shared contract and Node helpers, not host internals.
+Browser-safe shared modules have no dependency on application or Node code. `vp check` keeps
+Vite+'s default lint rules and adds runtime import-cycle detection and these layer boundaries.
+Tests may cross boundaries. Generated `extension/` output is excluded from lint and formatting.
 
 - Settings live in `template.config.json`, which ships with the extension, so keep secrets out of
   it. `ASSISTANT_NAME`, `EXTENSION_NAME`, `CANVAS_ID` (keep it stable), `GATEWAY_PORT` and

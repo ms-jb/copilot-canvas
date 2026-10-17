@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { Plugin } from "vite-plus";
-import { API, ERROR_CODES } from "../../extension-src/shared/contract.mts";
-import { loadConfig } from "../../extension-src/shared/config.mts";
+import { API, ERROR_CODES } from "../../src/shared/contract.mts";
+import { loadConfig } from "../../src/shared/node/config.mts";
 import { COOKIE } from "./fixtures.mts";
 import { createSessions } from "./session.mts";
 import { createScenarios } from "./scenarios.mts";

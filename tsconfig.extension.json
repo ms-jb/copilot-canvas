@@ -3,7 +3,7 @@
     "target": "ES2023",
     "lib": ["ES2023"],
     "module": "NodeNext",
-    "rootDir": "extension-src",
+    "rootDir": "src",
     "outDir": "extension",
     "strict": true,
     "skipLibCheck": true,
@@ -12,5 +12,5 @@
     "rewriteRelativeImportExtensions": true,
     "types": ["node"]
   },
-  "include": ["extension-src"]
+  "include": ["src"]
 }

@@ -1,4 +1,4 @@
-import { LIMITS } from "../../extension-src/shared/contract.mts";
+import { LIMITS } from "../../src/shared/contract.mts";
 import { createNotifier, createPresence } from "../push/notifications.mts";
 import type { Notice } from "../push/notifications.mts";
 import { openPushStore } from "../push/store.mts";

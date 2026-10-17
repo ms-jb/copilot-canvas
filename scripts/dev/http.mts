@@ -12,8 +12,8 @@ import {
   validateReloadPayload,
   validateRespondPayload,
   validateSendPayload,
-} from "../../extension-src/shared/contract.mts";
-import type { loadConfig } from "../../extension-src/shared/config.mts";
+} from "../../src/shared/contract.mts";
+import type { loadConfig } from "../../src/shared/node/config.mts";
 import { COOKIE, CSRF_TOKEN, SCENARIOS, SESSION_ID } from "./fixtures.mts";
 import type { Scenario } from "./fixtures.mts";
 import { applyChange, broadcast, fits, setPrompts, setStatus, upsert } from "./session.mts";

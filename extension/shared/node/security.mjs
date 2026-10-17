@@ -1,5 +1,5 @@
 // Request validation shared by the provider and the gateway: Host/Origin allow-lists,
-// constant-time comparison and a few small helpers. Pure, no I/O.
+// constant-time comparison and a few small helpers. Node only, no I/O.
 import { timingSafeEqual } from "node:crypto";
 export function loopbackHost(port) {
     return `127.0.0.1:${port}`;

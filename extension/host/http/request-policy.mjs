@@ -1,5 +1,5 @@
 import { ERROR_CODES, HEADERS, LIMITS } from "../../shared/contract.mjs";
-import { checkOrigin, isAllowedHost, isJsonContentType, loopbackHost, loopbackOrigin, timingSafeEqualStrings, } from "../../shared/security.mjs";
+import { checkOrigin, isAllowedHost, isJsonContentType, loopbackHost, loopbackOrigin, timingSafeEqualStrings, } from "../../shared/node/security.mjs";
 import { baseHeaders, sendError } from "./responses.mjs";
 export const isRead = (method) => method === "GET" || method === "HEAD";
 function readBody(req, res) {

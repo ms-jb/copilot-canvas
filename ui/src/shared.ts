@@ -1,5 +1,5 @@
 // Single place where the renderer imports the shared wire contract, so the relative path to
-// `extension-src/shared` lives in one file.
+// `src/shared` lives in one file.
 export {
   API,
   ERROR_CODES,
@@ -12,7 +12,7 @@ export {
   validateBootstrap,
   validateIdentity,
   validateServerEvent,
-} from "../../extension-src/shared/contract.mts";
+} from "../../src/shared/contract.mts";
 export type {
   Activity,
   Bootstrap,
@@ -42,11 +42,11 @@ export type {
   ShareInfo,
   TranscriptEntry,
   WaitingFor,
-} from "../../extension-src/shared/contract.mts";
+} from "../../src/shared/contract.mts";
 export {
   NO_CONTROLS,
   applyServerEvent,
   createViewState,
   resolvePending,
-} from "../../extension-src/shared/entries.mts";
-export type { ViewState } from "../../extension-src/shared/entries.mts";
+} from "../../src/shared/entries.mts";
+export type { ViewState } from "../../src/shared/entries.mts";

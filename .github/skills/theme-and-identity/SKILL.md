@@ -19,7 +19,7 @@ request also needs a new destination or panel.
   Verify a changed default without an old `#/<id>` hash.
 - Keep `canvasId` stable. A display-name change is not a new extension identity;
   normally leave `extensionName` unchanged too.
-- `resolveConfig` in `extension-src/shared/config.mts` applies environment
+- `resolveConfig` in `src/shared/node/config.mts` applies environment
   overrides. If the installed name differs from the JSON, check `ASSISTANT_NAME`
   before changing unrelated UI code or configuration defaults.
 - Choose whether the assistant's name and the installed phone app's name should

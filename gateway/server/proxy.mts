@@ -1,8 +1,8 @@
 import http from "node:http";
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from "node:http";
-import { API, ERROR_CODES, LIMITS } from "../../extension-src/shared/contract.mts";
-import type { ProviderState } from "../../extension-src/shared/runtime-state.mts";
-import { SENSITIVE_RESPONSE_HEADERS } from "../../extension-src/shared/security.mts";
+import { API, ERROR_CODES, LIMITS } from "../../src/shared/contract.mts";
+import type { ProviderState } from "../../src/shared/node/runtime-state.mts";
+import { SENSITIVE_RESPONSE_HEADERS } from "../../src/shared/node/security.mts";
 import type { SelectProvider } from "./provider-discovery.mts";
 import { FORWARDED_HEADERS, LOOPBACK } from "./request-policy.mts";
 import { sendError, sendNotConnected } from "./http.mts";

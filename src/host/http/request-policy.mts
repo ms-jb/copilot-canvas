@@ -8,7 +8,7 @@ import {
   loopbackHost,
   loopbackOrigin,
   timingSafeEqualStrings,
-} from "../../shared/security.mts";
+} from "../../shared/node/security.mts";
 import { baseHeaders, sendError } from "./responses.mts";
 
 type BodyResult = { body: string } | { tooLarge: true } | { failed: true };

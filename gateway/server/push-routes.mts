@@ -1,10 +1,7 @@
 import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { API, ERROR_CODES } from "../../extension-src/shared/contract.mts";
-import {
-  SENSITIVE_RESPONSE_HEADERS,
-  isJsonContentType,
-} from "../../extension-src/shared/security.mts";
+import { API, ERROR_CODES } from "../../src/shared/contract.mts";
+import { SENSITIVE_RESPONSE_HEADERS, isJsonContentType } from "../../src/shared/node/security.mts";
 import { isAllowedPushEndpoint } from "../push/web-push.mts";
 import { readBody, sendError, sendJson } from "./http.mts";
 import type { PushState } from "./push-state.mts";

@@ -7,13 +7,13 @@ import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/exte
 import type { CopilotSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/config.mts";
-import type { TemplateConfig } from "./shared/config.mts";
-import { createSessionBridge } from "./lib/bridge.mts";
-import type { SessionBridge } from "./lib/bridge.mts";
-import type { LogLevel } from "./lib/logging.mts";
-import { createChatCanvas } from "./lib/canvas.mts";
-import { startProvider } from "./lib/provider.mts";
+import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/node/config.mts";
+import type { TemplateConfig } from "./shared/node/config.mts";
+import { createSessionBridge } from "./host/bridge.mts";
+import type { SessionBridge } from "./host/bridge.mts";
+import type { LogLevel } from "./host/logging.mts";
+import { createChatCanvas } from "./host/canvas.mts";
+import { startProvider } from "./host/provider.mts";
 
 // Structured canvas error exported by the SDK; declared here because the shared ambient typings omit it.
 declare module "@github/copilot-sdk/extension" {

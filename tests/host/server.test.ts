@@ -1,9 +1,9 @@
 import { request } from "node:http";
 import { afterEach, beforeEach, expect, it, vi } from "vite-plus/test";
-import type { Bridge } from "../../extension-src/lib/bridge.mts";
-import { createProviderServer } from "../../extension-src/lib/server.mts";
-import type { ProviderServer } from "../../extension-src/lib/server.mts";
-import { API, ERROR_CODES, HEADERS } from "../../extension-src/shared/contract.mts";
+import type { Bridge } from "../../src/host/bridge.mts";
+import { createProviderServer } from "../../src/host/server.mts";
+import type { ProviderServer } from "../../src/host/server.mts";
+import { API, ERROR_CODES, HEADERS } from "../../src/shared/contract.mts";
 
 let server: ProviderServer;
 let bridge: Bridge;

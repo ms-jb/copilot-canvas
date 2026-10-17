@@ -2,7 +2,7 @@
 // Each holds the provider's loopback address and capability path: keep them owner-only, never log them.
 import { chmodSync, mkdirSync, readFileSync, readdirSync, renameSync, rmSync, writeFileSync, } from "node:fs";
 import { dirname, join } from "node:path";
-import { CONTRACT_VERSION, IDENTITY_APP, isPlainObject, toPublicOrigin } from "./contract.mjs";
+import { CONTRACT_VERSION, IDENTITY_APP, isPlainObject, toPublicOrigin } from "../contract.mjs";
 const ORIGIN_PATTERN = /^http:\/\/127\.0\.0\.1:\d{1,5}$/;
 const CAPABILITY_PATH_PATTERN = /^\/[A-Za-z0-9_-]{8,128}\/[A-Za-z0-9_-]{32,128}\/$/;
 /** Returns the parsed state if it is well-formed and loopback-only, otherwise null. */

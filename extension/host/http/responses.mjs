@@ -1,5 +1,5 @@
 import { ERROR_CODES, HTTP_STATUS_BY_CODE, SEND_STATUS } from "../../shared/contract.mjs";
-import { SENSITIVE_RESPONSE_HEADERS } from "../../shared/security.mjs";
+import { SENSITIVE_RESPONSE_HEADERS } from "../../shared/node/security.mjs";
 export const statusFor = (code) => HTTP_STATUS_BY_CODE[code] ?? 500;
 export const errorMessage = (error) => error instanceof Error ? error.message : "error";
 export function baseHeaders(contentType) {

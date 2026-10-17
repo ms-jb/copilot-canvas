@@ -2,11 +2,8 @@ import http from "node:http";
 import type { AddressInfo } from "node:net";
 import { join } from "node:path";
 import { beforeEach, expect, it } from "vite-plus/test";
-import { CONTRACT_VERSION, IDENTITY_APP } from "../../extension-src/shared/contract.mts";
-import {
-  buildProviderState,
-  writeProviderState,
-} from "../../extension-src/shared/runtime-state.mts";
+import { CONTRACT_VERSION, IDENTITY_APP } from "../../src/shared/contract.mts";
+import { buildProviderState, writeProviderState } from "../../src/shared/node/runtime-state.mts";
 import { createGateway } from "../../gateway/gateway.mts";
 import type { Gateway } from "../../gateway/gateway.mts";
 import { APPLE, FCM, usePushDirectory } from "./fixtures.mts";

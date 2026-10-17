@@ -4,8 +4,8 @@
 // never log its contents.
 
 import { dirname } from "node:path";
-import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/config.mts";
-import type { Env, TemplateConfig } from "../shared/config.mts";
+import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/node/config.mts";
+import type { Env, TemplateConfig } from "../shared/node/config.mts";
 import { toPublicOrigin } from "../shared/contract.mts";
 import type { ShareInfo } from "../shared/contract.mts";
 import {
@@ -15,8 +15,8 @@ import {
   readProviderState,
   removeProviderState,
   writeProviderState,
-} from "../shared/runtime-state.mts";
-import type { ProviderState } from "../shared/runtime-state.mts";
+} from "../shared/node/runtime-state.mts";
+import type { ProviderState } from "../shared/node/runtime-state.mts";
 import type { Bridge } from "./bridge.mts";
 import type { Logger } from "./logging.mts";
 import { createProviderServer } from "./server.mts";

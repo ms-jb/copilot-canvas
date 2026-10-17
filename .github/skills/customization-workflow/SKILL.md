@@ -18,7 +18,7 @@ replacement for the implementation skills:
   and setup steps rather than treating the template checkout as their copy.
 - If setup already selected a folder, keep working there in this conversation.
   A `PanelConfig.sourceDir` hint can help locate it, but verify the checkout:
-  `extension-src/shared/config.mts` documents that the install hint can be stale.
+  `src/shared/node/config.mts` documents that the install hint can be stale.
 - Inspect `git status --short` and `git remote -v` before editing. Preserve
   unrelated work. Change source files in that copy, not a downloaded install.
 - **Guide in the user's conversation; let a builder write the code.** The
@@ -103,7 +103,7 @@ it is not a substitute for a UI build. Never hand-edit generated output.
 - Do not open native app panels, My work tabs or another canvas instead of editing this app.
 - Do not auto-answer permissions, questions or plans; require explicit user taps.
 - Do not bind servers beyond `127.0.0.1`, relax owner-only tunnel access, or
-  weaken CSRF, generation and session checks in `extension-src/lib/server.mts`.
+  weaken CSRF, generation and session checks in `src/host/server.mts`.
 - Do not put secrets in the repo, `template.config.json`, generated output or chat.
 - Do not add heavy dependencies or use `install-ext --force` to overwrite an
   unrelated extension. Explain the conflict and get the user's decision instead.

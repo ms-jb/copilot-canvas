@@ -4,7 +4,7 @@
 // request for any other session is refused rather than showing the wrong transcript.
 
 import type { SessionStatus } from "../shared/contract.mts";
-import type { TemplateConfig } from "../shared/config.mts";
+import type { TemplateConfig } from "../shared/node/config.mts";
 import type { Logger } from "./logging.mts";
 
 export interface CanvasOpenContext {

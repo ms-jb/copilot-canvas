@@ -1,6 +1,6 @@
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from "node:http";
-import { API, ERROR_CODES, HTTP_STATUS_BY_CODE } from "../../extension-src/shared/contract.mts";
-import { SENSITIVE_RESPONSE_HEADERS } from "../../extension-src/shared/security.mts";
+import { API, ERROR_CODES, HTTP_STATUS_BY_CODE } from "../../src/shared/contract.mts";
+import { SENSITIVE_RESPONSE_HEADERS } from "../../src/shared/node/security.mts";
 
 const NOT_CONNECTED_PAGE = `<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">

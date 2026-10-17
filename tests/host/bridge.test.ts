@@ -1,6 +1,6 @@
 import { afterEach, expect, it, vi } from "vite-plus/test";
-import { createSessionBridge } from "../../extension-src/lib/bridge.mts";
-import { ERROR_CODES } from "../../extension-src/shared/contract.mts";
+import { createSessionBridge } from "../../src/host/bridge.mts";
+import { ERROR_CODES } from "../../src/shared/contract.mts";
 import { deferred, fakeSession } from "./fixtures";
 
 afterEach(() => vi.useRealTimers());

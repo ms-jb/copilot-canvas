@@ -3,9 +3,9 @@
 // session id. The file holds the loopback origin and capability path for the optional gateway:
 // never log its contents.
 import { dirname } from "node:path";
-import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/config.mjs";
+import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/node/config.mjs";
 import { toPublicOrigin } from "../shared/contract.mjs";
-import { buildProviderState, isProcessAlive, readGatewayState, readProviderState, removeProviderState, writeProviderState, } from "../shared/runtime-state.mjs";
+import { buildProviderState, isProcessAlive, readGatewayState, readProviderState, removeProviderState, writeProviderState, } from "../shared/node/runtime-state.mjs";
 import { createProviderServer } from "./server.mjs";
 /**
  * Public root origin for "Open on phone": the running gateway's published origin, else the

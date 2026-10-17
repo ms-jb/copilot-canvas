@@ -1,6 +1,6 @@
 import http from "node:http";
-import { API, LIMITS, SSE_EVENTS } from "../../extension-src/shared/contract.mts";
-import type { ProviderState } from "../../extension-src/shared/runtime-state.mts";
+import { API, LIMITS, SSE_EVENTS } from "../../src/shared/contract.mts";
+import type { ProviderState } from "../../src/shared/node/runtime-state.mts";
 import type { Notice } from "../push/notifications.mts";
 import { parseSse } from "../streams/sse.mts";
 import type { SelectProvider } from "./provider-discovery.mts";

@@ -4,7 +4,7 @@ import {
   isAllowedHost,
   loopbackHost,
   loopbackOrigin,
-} from "../extension-src/shared/security.mts";
+} from "../src/shared/node/security.mts";
 
 const hosts = [loopbackHost(4000), "localhost:4000"];
 const origins = [loopbackOrigin(4000)];

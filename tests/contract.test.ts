@@ -1,5 +1,5 @@
 import { expect, it } from "vite-plus/test";
-import * as contract from "../extension-src/shared/contract.mts";
+import * as contract from "../src/shared/contract.mts";
 import {
   CONTRACT_VERSION,
   IDENTITY_APP,
@@ -11,7 +11,7 @@ import {
   validateRespondPayload,
   validateSendPayload,
   validateServerEvent,
-} from "../extension-src/shared/contract.mts";
+} from "../src/shared/contract.mts";
 
 const entry = { id: "user:1", kind: "user", text: "hi", timestamp: "2026-01-01T00:00:00.000Z" };
 const snapshot = { entries: [entry], status: { phase: "idle" } };

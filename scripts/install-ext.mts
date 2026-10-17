@@ -8,7 +8,7 @@ import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { copilotHome, INSTALL_MARKER, loadConfig } from "../extension-src/shared/config.mts";
+import { copilotHome, INSTALL_MARKER, loadConfig } from "../src/shared/node/config.mts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
 

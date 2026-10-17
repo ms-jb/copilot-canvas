@@ -1,6 +1,6 @@
 import { expect, it, vi } from "vite-plus/test";
-import { createControlsService } from "../../extension-src/lib/controls.mts";
-import type { SessionMode } from "../../extension-src/shared/contract.mts";
+import { createControlsService } from "../../src/host/controls.mts";
+import type { SessionMode } from "../../src/shared/contract.mts";
 import { deferred, fakeSession } from "./fixtures";
 
 it("serializes changes through confirmation and supplies the confirmed expected mode", async () => {
