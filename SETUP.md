@@ -35,7 +35,8 @@ and paths (Windows or macOS).
 1. **Get the source** into `<FOLDER>`, never inside the checkout this session started in:
    - If `<FOLDER>` exists, use it only if it is a git checkout of `copilot-canvas`; otherwise ask.
    - With `gh auth status` signed in to github.com: `gh repo fork ms-jb/copilot-canvas --clone=false`
-     (reuses an existing fork), then `gh repo clone <login>/copilot-canvas <FOLDER>`.
+     (reuses an existing fork), then `gh repo clone <login>/copilot-canvas <FOLDER>`. If they own
+     `ms-jb/copilot-canvas` (GitHub can't fork your own repository), clone it directly instead.
    - Without it: `git clone https://github.com/ms-jb/copilot-canvas <FOLDER>`. They can fork later.
    - Run `npm install` in `<FOLDER>`. It needs Node.js 22.18+ (24 recommended); if Node is missing,
      install it with the platform's package manager (`winget install OpenJS.NodeJS.LTS`,
