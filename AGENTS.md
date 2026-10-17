@@ -25,7 +25,7 @@ components and the existing `--cc-*` tokens so additions match the rest of the c
 `GET` endpoint: the path in `API` and its response shape in `src/shared/contract.mts`, the
 route in `src/host/http/routes.mts`, and the read in the host (for example `gh` through
 `execFile` with a timeout, never a shell string). Keep tokens in the host. Add it to the gateway's
-`ROUTES` only if it should work on the phone, and only for reads.
+`ROUTES` only if it should work on the phone, and only for reads, then restart `npm run phone`.
 
 Keep browser-safe shared modules independent of host, gateway and Node code. The renderer imports
 them only through `ui/src/shared.ts`. The gateway may use `src/shared/node/`, but never `src/host/`.

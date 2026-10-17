@@ -39,10 +39,12 @@ platform's shell and paths (Windows or macOS).
      (reuses an existing fork), then `gh repo clone <login>/copilot-canvas <FOLDER>`. If they own
      `ms-jb/copilot-canvas` (GitHub can't fork your own repository), clone it directly instead.
    - Without it: `git clone https://github.com/ms-jb/copilot-canvas <FOLDER>`. They can fork later.
-   - Run `npm install` in `<FOLDER>`. It needs Node.js 22.18+ (24 recommended); if Node is missing,
-     install it with the platform's package manager (`winget install OpenJS.NodeJS.LTS`,
-     `brew install node`) after asking. If the registry fails, use `npm config get registry`; never edit
-     `.npmrc` or install anything globally.
+   - Run `npm install` in `<FOLDER>`. It needs Node.js 22.18+ (24 recommended). If Node is missing or
+     older, check where `node` resolves first: when a version manager provides it (`pnpm env`, nvm, fnm,
+     Volta, mise), upgrade through that manager, since a second install would compete on `PATH`.
+     Otherwise install it with the platform's package manager (`winget install OpenJS.NodeJS.LTS`,
+     `brew install node`). Ask first either way. If the registry fails, use `npm config get registry`;
+     never edit `.npmrc` or install anything globally.
 2. **Install and open the canvas.**
    - Look in `~/.copilot/extensions/` for other folders whose `template.config.json` has
      `"canvasId": "chat-panel"` and that are not named `copilot-canvas` (for example `extension`, from
@@ -188,6 +190,9 @@ how each piece works and can ask for the next one on their own.
 - **The canvas shows another copy's changes:** another folder in `~/.copilot/extensions` has the same
   canvas id; remove it.
 - **The phone link stopped working:** the computer slept or `npm run phone` stopped. Start it again.
+- **A new panel works on desktop but is "Not found" on the phone:** the gateway reads its route list
+  when `npm run phone` starts. Restart it after a change to `gateway/`, and make sure the canvas was
+  reloaded so the provider serves the new route too.
 - **"Not connected" on the phone:** the canvas was closed. Open it again in Copilot, then refresh the
   phone.
 - **Undo:** stop `npm run phone`; `devtunnel delete <tunnel-id>` (the id is in
