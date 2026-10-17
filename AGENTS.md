@@ -32,7 +32,9 @@ route in `extension-src/lib/server.mts`, and the read in the host (for example `
 3. Install: `npm run install-ext` (builds, then installs from this copy).
 4. Ask the user to tap **Reload extensions** (the circular arrow in the canvas's top bar) and to open
    the canvas again. Confirm the change is visible.
-5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first.
+5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. If
+   `origin` is still `ms-jb/copilot-canvas` and they don't own it, remind them a push needs their own
+   fork first (`gh repo fork --remote` makes the fork `origin`).
 6. Suggest one or two next tweaks that build on what they just asked for. Customizing never ends.
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).

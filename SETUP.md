@@ -53,17 +53,22 @@ and paths (Windows or macOS).
      where that copy is, so later tweaks rebuild from it.
    - `open_canvas` with the canvas id from the result and a stable `instanceId`. Confirm it shows this
      conversation.
-3. **Phone** (skip if they chose to):
+3. **Phone** (skip if they chose to). Start this as soon as `npm install` finishes, alongside step 2,
+   so the user can move to their phone early:
    - Install the dev tunnel CLI if missing (`winget install Microsoft.devtunnel`,
      `brew install --cask devtunnel`).
    - If `devtunnel user show` is not signed in, run `devtunnel user login -d` and show the device code and
      link. The user finishes it in a browser with the account they will use on their phone.
-   - In `<FOLDER>`, start `npm run phone` as a long-lived, detached background process. It creates or
-     reuses their owner-only tunnel, refuses one with extra access, hosts it and starts the gateway, then
-     prints the phone link and a QR code. Read the link from its output.
-   - Reopen the canvas so its **Open on phone** button appears. Ask the user to scan the QR code, sign
-     in, and send a message from the phone. Confirm it arrives in this conversation.
-   - Offer **Add to Home Screen** on the phone: the canvas installs like an app.
+   - In `<FOLDER>`, start `npm run phone` with `NO_COLOR=1` as a long-lived, detached background
+     process. It creates or reuses their owner-only tunnel, refuses one with extra access, hosts it and
+     starts the gateway, then prints `Open on phone: <link>` and a QR code.
+   - **The moment that appears, post the link and the QR code in chat** (the QR exactly as printed, in a
+     plain code block) and ask the user to scan it and sign in. Don't wait for the rest of setup: the
+     phone shows "Not connected" and reconnects on its own once the canvas is open.
+   - Once the canvas is open, reopen it so its **Open on phone** button appears, and ask the user to
+     send a message from the phone. Confirm it arrives in this conversation.
+   - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
+     phone and browser, and it then opens like an app.
 
 ## Part 2: Make it yours
 
@@ -71,9 +76,11 @@ and paths (Windows or macOS).
    what they want at a glance (open pull requests, today's agenda, a scratchpad, a checklist), what to
    call the assistant, and anything off-limits. If WorkIQ or `gh` is available, offer to look at the
    last few weeks of their calendar or GitHub activity (aggregates only, read-only) to suggest panels.
-2. **Build in their copy.** Register `<FOLDER>` as a project and start a session there, so its
-   `AGENTS.md` applies. Brief it with their choices. It follows `AGENTS.md`: change the canvas
-   source, run the checks, `npm run install-ext`, then the user taps **Reload extensions** in the canvas.
+2. **Build in their copy, in this session.** Keep working in this conversation so the user can follow
+   along and approve each step from their phone; another session's prompts would wait at the
+   computer. Read `<FOLDER>/AGENTS.md` and follow its loop with `<FOLDER>` as the working folder:
+   change the canvas source, run the checks, `npm run install-ext`, then the user taps **Reload
+   extensions** in the canvas (it works on the phone too).
 3. **Hand over the habit.** Tell them that customizing never ends: they can ask for a change from any
    chat, or tap a suggestion in the canvas's empty right-hand side. Suggest two or three next tweaks
    based on what they picked.

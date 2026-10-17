@@ -38,9 +38,10 @@ by asking.
 2. Copilot asks you one question: go ahead, skip the phone, or pick another folder.
 3. It makes your own copy of Copilot Canvas (a fork on your GitHub account, so your changes are
    yours; sharing them is up to you), installs it and opens it next to your chat.
-4. For your phone, it shows a QR code. Scan it, sign in with the same account, and say hello. You
-   can add it to your home screen like an app.
-5. Then it asks what you'd like to see and builds your first panels.
+4. For your phone, it shows a QR code. Scan it, sign in with the same account, and say hello. The
+   canvas then walks you through adding it to your home screen like an app.
+5. Then, in the same chat, it asks what you'd like to see and builds your first panels. You can
+   follow along and approve each step from your phone.
 
 The full playbook Copilot follows is in [SETUP.md](SETUP.md).
 
@@ -83,8 +84,8 @@ npm run phone
 
 It creates (once) a private dev tunnel that only you can sign in to, starts the gateway, and prints
 the link and a QR code; the canvas's **Open on phone** button shows the same code. Keep it running,
-and your computer awake, while you use your phone. On the phone, **Add to Home Screen** installs the
-canvas like an app.
+and your computer awake, while you use your phone. On the phone, the canvas walks you through
+adding it to your home screen so it opens like an app.
 
 <details>
 <summary>What it does, step by step</summary>
@@ -127,7 +128,9 @@ flowchart LR
 - **Safe rendering.** Messages render without raw HTML; only web and email links open.
 - **Quiet gateway.** It never logs messages or tokens. Anyone who can reach your tunnel can act as
   you, so keep it owner-only.
-- **Reload from your computer only.** Reloading extensions is never reachable through the tunnel.
+- **Reloads are pinned too.** Reloading extensions from the phone goes through the same generation,
+  CSRF and session checks as a message. The phone reconnects once the canvas is open again on your
+  computer.
 
 ## Troubleshooting
 
@@ -198,11 +201,6 @@ it.
 ![Vite+](https://img.shields.io/badge/Vite%2B-1-646cff?logo=vite&logoColor=white)
 ![Vitest](https://img.shields.io/badge/Vitest-5-6e9f18?logo=vitest&logoColor=white)
 ![npm](https://img.shields.io/badge/npm-11-cb3837?logo=npm&logoColor=white)
-
-## Contributing
-
-Bugs, ideas and questions go to [Issues](https://github.com/ms-jb/copilot-canvas/issues). See
-[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
 
 ## License
 

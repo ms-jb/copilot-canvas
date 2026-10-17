@@ -15,7 +15,7 @@ const SUGGESTIONS = [
 function buildPrompt(ask: string, sourceDir: string | undefined): string {
   const where = sourceDir
     ? `my Copilot Canvas source at ${sourceDir}`
-    : `my Copilot Canvas fork (if I don't have one yet, set it up first with ${SETUP_URL})`;
+    : `my Copilot Canvas copy (if I don't have one yet, set it up first with ${SETUP_URL})`;
   return (
     `In ${where}, add ${ask} to the canvas's right-hand aside. Change the canvas code itself ` +
     "(see ui/src/views/registry.ts and AGENTS.md), then rebuild and reinstall it. Don't open a " +

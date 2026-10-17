@@ -141,6 +141,12 @@ If the second review runs long, move it to Wednesday. The demo outline is the on
     },
     { id: "assistant:sample-2", kind: "assistant", timestamp: at(now, -41), text: FORMAT_REPLY },
     {
+      id: "assistant:sample-2b",
+      kind: "assistant",
+      timestamp: at(now, -40),
+      text: "I also checked the edge case: anything under a minute rounds to **0m**.",
+    },
+    {
       id: "user:sample-3",
       kind: "user",
       text: "Thanks. What should a ten minute demo cover?",

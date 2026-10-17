@@ -100,3 +100,12 @@ export function ReloadIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function InstallIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <rect x="6" y="2.5" width="12" height="19" rx="2.5" />
+      <path d="M12 7v7M9 11l3 3 3-3" />
+    </Icon>
+  );
+}

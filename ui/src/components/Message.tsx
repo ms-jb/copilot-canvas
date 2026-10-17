@@ -8,14 +8,17 @@ interface UserMessageProps {
   timestamp: string;
   /** Delivery note for an optimistic message the transcript has not confirmed yet. */
   pendingLabel?: string;
+  /** Follows another turn of yours, so it sits closer to it. */
+  continued?: boolean;
 }
 
-export function UserMessage({ text, timestamp, pendingLabel }: UserMessageProps) {
+export function UserMessage({ text, timestamp, pendingLabel, continued }: UserMessageProps) {
   return (
     <article
       className={styles.user}
       aria-label="You"
       data-pending={pendingLabel ? "true" : undefined}
+      data-continued={continued || undefined}
     >
       <div className={styles.bubble}>{text}</div>
       <div className={styles.meta}>
@@ -34,6 +37,8 @@ interface AssistantMessageProps {
   timestamp: string;
   streaming?: boolean;
   assistantName: string;
+  /** Follows another assistant turn, so it skips the avatar and name and shows its time on hover. */
+  continued?: boolean;
 }
 
 export function AssistantMessage({
@@ -41,18 +46,24 @@ export function AssistantMessage({
   timestamp,
   streaming,
   assistantName,
+  continued,
 }: AssistantMessageProps) {
   return (
     <article
       className={styles.assistant}
       aria-label={assistantName}
       aria-busy={streaming || undefined}
+      data-continued={continued || undefined}
     >
-      <header className={styles.header}>
-        <Avatar name={assistantName} />
-        <span className={styles.author}>{assistantName}</span>
-        <Timestamp value={timestamp} />
-      </header>
+      {continued ? (
+        <Timestamp value={timestamp} className={styles.hoverTime} />
+      ) : (
+        <header className={styles.header}>
+          <Avatar name={assistantName} />
+          <span className={styles.author}>{assistantName}</span>
+          <Timestamp value={timestamp} />
+        </header>
+      )}
       <div className={styles.body}>
         <MarkdownView text={text} streaming={streaming} />
       </div>

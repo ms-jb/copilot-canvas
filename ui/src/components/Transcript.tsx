@@ -9,6 +9,7 @@ import {
 } from "react";
 import type { TranscriptEntry } from "../shared";
 import { ArrowDownIcon } from "./ChatIcons";
+import { markContinuations, type Author } from "./grouping";
 import { AssistantMessage, Avatar, ErrorMessage, UserMessage } from "./Message";
 import { DaySeparator } from "./Timestamp";
 import { dayKey, toDate } from "./timeFormat";
@@ -38,7 +39,7 @@ const PIN_THRESHOLD_PX = 48;
 const EXAMPLE_PROMPTS = [
   "Summarize what we have done in this session",
   "What should I work on next?",
-  "Help me make this canvas my own: suggest panels and tweaks, then build them in my fork",
+  "Help me make this canvas my own: suggest panels and tweaks, then build them in my copy",
 ];
 
 function EmptyState({
@@ -69,10 +70,22 @@ function EmptyState({
   );
 }
 
-function EntryView({ entry, assistantName }: { entry: TranscriptEntry; assistantName: string }) {
+function authorOf(entry: TranscriptEntry): Author {
+  return entry.kind === "user" || entry.kind === "error" ? entry.kind : "assistant";
+}
+
+function EntryView({
+  entry,
+  assistantName,
+  continued,
+}: {
+  entry: TranscriptEntry;
+  assistantName: string;
+  continued: boolean;
+}) {
   switch (entry.kind) {
     case "user":
-      return <UserMessage text={entry.text} timestamp={entry.timestamp} />;
+      return <UserMessage text={entry.text} timestamp={entry.timestamp} continued={continued} />;
     case "error":
       return <ErrorMessage text={entry.text} timestamp={entry.timestamp} />;
     default:
@@ -82,15 +95,23 @@ function EntryView({ entry, assistantName }: { entry: TranscriptEntry; assistant
           timestamp={entry.timestamp}
           streaming={entry.streaming}
           assistantName={assistantName}
+          continued={continued}
         />
       );
   }
 }
 
 /** Interleaves day separators wherever the local calendar date changes between turns. */
-function withDaySeparators(rows: { key: string; timestamp: string; node: ReactNode }[]) {
+function withDaySeparators(
+  rows: {
+    key: string;
+    timestamp: string;
+    continued: boolean;
+    render: (continued: boolean) => ReactNode;
+  }[],
+) {
   let previousDay: string | null = null;
-  return rows.map(({ key, timestamp, node }) => {
+  return rows.map(({ key, timestamp, continued, render }) => {
     const date = toDate(timestamp);
     const day = date ? dayKey(date) : previousDay;
     const separator = date && day !== previousDay ? <DaySeparator date={date} /> : null;
@@ -98,7 +119,7 @@ function withDaySeparators(rows: { key: string; timestamp: string; node: ReactNo
     return (
       <Fragment key={key}>
         {separator}
-        {node}
+        {render(continued)}
       </Fragment>
     );
   });
@@ -157,26 +178,31 @@ export function Transcript({
   }, [pendingCount, scrollToBottom]);
 
   const empty = entries.length === 0 && pending.length === 0;
-  const rows = [
+  const rows = markContinuations([
     ...entries.map((entry) => ({
       key: entry.id,
       timestamp: entry.timestamp,
-      node: <EntryView entry={entry} assistantName={assistantName} />,
+      author: authorOf(entry),
+      render: (continued: boolean) => (
+        <EntryView entry={entry} assistantName={assistantName} continued={continued} />
+      ),
     })),
     ...pending.map((message) => ({
       key: `pending:${message.requestId}`,
       timestamp: message.createdAt,
-      node: (
+      author: "user" as const,
+      render: (continued: boolean) => (
         <UserMessage
           text={message.text}
           timestamp={message.createdAt}
+          continued={continued}
           pendingLabel={
             message.state === "sending" ? "Sending…" : "Sent, waiting for confirmation…"
           }
         />
       ),
     })),
-  ];
+  ]);
 
   return (
     <div className={styles.wrap}>

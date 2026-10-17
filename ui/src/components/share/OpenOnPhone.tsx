@@ -4,6 +4,7 @@ import { lazy, Suspense, useEffect, useState, type JSX } from "react";
 import { API, toPublicOrigin } from "../../../../extension-src/shared/contract.mts";
 import type { ShareInfo } from "../../../../extension-src/shared/contract.mts";
 import { getJson } from "../../api";
+import { isRemote } from "../../remote";
 import type { Connection } from "../../useConnection";
 import styles from "./OpenOnPhone.module.css";
 
@@ -47,7 +48,7 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
     return () => controller.abort();
   }, [generation]);
 
-  if (!publicUrl) return null;
+  if (!publicUrl || isRemote()) return null;
 
   return (
     <>
