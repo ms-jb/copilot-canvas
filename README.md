@@ -199,11 +199,6 @@ it.
 ![Vitest](https://img.shields.io/badge/Vitest-5-6e9f18?logo=vitest&logoColor=white)
 ![npm](https://img.shields.io/badge/npm-11-cb3837?logo=npm&logoColor=white)
 
-## Contributing
-
-Bugs, ideas and questions go to [Issues](https://github.com/ms-jb/copilot-canvas/issues). See
-[CONTRIBUTING.md](CONTRIBUTING.md) before opening a pull request.
-
 ## License
 
 Released under the [MIT License](LICENSE).
