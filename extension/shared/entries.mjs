@@ -1,6 +1,10 @@
 // Pure helpers for keeping an ordered, de-duplicated list of transcript entries.
 // Used by the host (authoritative store) and by the renderer (client view state).
 import { LIMITS } from "./contract.mjs";
+export const NO_CONTROLS = Object.freeze({
+    available: { mode: false, model: false, reasoningEffort: false, contextTier: false },
+    models: [],
+});
 /** Inserts or replaces an entry by id. New entries are placed by timestamp (stable for ties). */
 export function upsertEntry(entries, entry, maxEntries = LIMITS.maxEntries) {
     const index = entries.findIndex((existing) => existing.id === entry.id);
@@ -18,7 +22,14 @@ export function upsertEntry(entries, entry, maxEntries = LIMITS.maxEntries) {
     return next.length > maxEntries ? next.slice(next.length - maxEntries) : next;
 }
 export function createViewState() {
-    return { generation: null, seq: -1, entries: [], status: { phase: "idle" } };
+    return {
+        generation: null,
+        seq: -1,
+        entries: [],
+        status: { phase: "idle" },
+        controls: NO_CONTROLS,
+        prompts: [],
+    };
 }
 /**
  * Applies one parsed SSE event to the client view state and returns a new state.
@@ -33,20 +44,33 @@ export function applyServerEvent(state, name, data) {
             seq: event.seq,
             entries: event.snapshot.entries.slice(-LIMITS.maxEntries),
             status: event.snapshot.status,
+            controls: event.controls,
+            prompts: event.snapshot.prompts ?? [],
         };
     }
     if (data.seq <= state.seq) {
         return state;
     }
-    if (name === "entry") {
-        const event = data;
-        return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+    switch (name) {
+        case "entry": {
+            const event = data;
+            return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+        }
+        case "status": {
+            const event = data;
+            return { ...state, seq: event.seq, status: event.status };
+        }
+        case "controls": {
+            const event = data;
+            return { ...state, seq: event.seq, controls: event.controls };
+        }
+        case "prompts": {
+            const event = data;
+            return { ...state, seq: event.seq, prompts: event.prompts };
+        }
+        default:
+            return state;
     }
-    if (name === "status") {
-        const event = data;
-        return { ...state, seq: event.seq, status: event.status };
-    }
-    return state;
 }
 /**
  * Drops pending composer drafts that the transcript already confirms, so an optimistic bubble

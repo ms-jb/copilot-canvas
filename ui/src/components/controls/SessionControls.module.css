@@ -1,0 +1,189 @@
+/* Native session settings as composer pills. Tokens only. */
+
+.composer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-1);
+  min-width: 0;
+}
+
+.row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--cc-space-1);
+  min-width: 0;
+}
+
+/* One compact row in the composer; scrolls sideways on narrow screens instead of wrapping. */
+.composer .row {
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.composer .row > * {
+  flex: none;
+}
+
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  font: inherit;
+  color: var(--cc-text-muted);
+  cursor: pointer;
+  transition:
+    background-color var(--cc-duration) var(--cc-ease),
+    border-color var(--cc-duration) var(--cc-ease),
+    color var(--cc-duration) var(--cc-ease);
+}
+
+.pill {
+  height: 28px;
+  max-width: 220px;
+  padding: 0 var(--cc-space-2) 0 10px;
+  font-size: var(--cc-text-sm);
+  line-height: 1;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 999px;
+}
+
+.pill:hover:not(:disabled),
+.pill[aria-expanded="true"] {
+  color: var(--cc-text);
+  background: var(--cc-surface-sunken);
+}
+
+.pill[aria-pressed="true"] {
+  color: var(--cc-accent);
+  background: var(--cc-accent-soft);
+}
+
+.pill[aria-pressed="false"] {
+  border-color: var(--cc-border);
+}
+
+.pill:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 1px;
+}
+
+.pill:disabled {
+  cursor: default;
+  opacity: 0.6;
+}
+
+.pill[data-busy] {
+  opacity: 1;
+  color: var(--cc-text);
+}
+
+.triggerText {
+  min-width: 0;
+  line-height: 1.3;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.prefix {
+  color: var(--cc-text-faint);
+}
+
+.chevron {
+  flex: none;
+  color: var(--cc-text-faint);
+}
+
+.spinner {
+  flex: none;
+  --loader-color: currentColor;
+}
+
+/* Dropdown (portaled, so it styles itself from tokens) */
+.dropdown {
+  padding: var(--cc-space-1);
+  background: var(--cc-surface-raised);
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  box-shadow: var(--cc-shadow-md);
+}
+
+.search {
+  margin-bottom: var(--cc-space-1);
+  font-size: var(--cc-text-sm);
+}
+
+.options {
+  max-height: 300px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  padding: 6px var(--cc-space-2);
+  font-size: var(--cc-text-sm);
+  color: var(--cc-text);
+  border-radius: var(--cc-radius-sm);
+}
+
+.option[data-combobox-selected] {
+  background: var(--cc-surface-sunken);
+}
+
+.option[data-combobox-disabled] {
+  color: var(--cc-text-muted);
+}
+
+.optionText {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.optionLabel {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.optionHint {
+  font-size: var(--cc-text-xs);
+  color: var(--cc-text-muted);
+}
+
+.check {
+  flex: none;
+  color: var(--cc-accent);
+}
+
+.empty {
+  padding: var(--cc-space-2);
+  font-size: var(--cc-text-sm);
+  color: var(--cc-text-muted);
+}
+
+/* A failed change is the only feedback shown here. */
+.error {
+  margin: 0;
+  padding: var(--cc-space-1) var(--cc-space-2);
+  border-radius: var(--cc-radius-sm);
+  background: var(--cc-danger-soft);
+  color: var(--cc-danger);
+  font-size: var(--cc-text-xs);
+  line-height: 1.4;
+}
+
+@media (pointer: coarse) {
+  .pill {
+    height: 36px;
+  }
+}

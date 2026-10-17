@@ -1,29 +1,95 @@
-// Starts one provider (HTTP server + runtime state file) for a session bridge.
-import { publishProviderState } from "./provider-state.mjs";
+// Starts one provider (HTTP server + private runtime state file) for a session bridge.
+// Each Copilot session runs its own extension process and publishes its own state file, keyed by
+// session id. The file holds the loopback origin and capability path for the optional gateway:
+// never log its contents.
+import { gatewayStatePath, providerStatePathFor } from "../shared/config.mjs";
+import { toPublicOrigin } from "../shared/contract.mjs";
+import { buildProviderState, isProcessAlive, readGatewayState, readProviderState, removeProviderState, writeProviderState, } from "../shared/runtime-state.mjs";
 import { createProviderServer } from "./server.mjs";
-/** Resolves once the server is listening and its state file is published. */
-export async function startProvider(input) {
-    const { config, bridge, uiDir, log = () => { }, env = process.env, serverOptions = {} } = input;
-    const server = createProviderServer({ ...serverOptions, config, bridge, uiDir, log });
-    await server.start();
-    const state = publishProviderState({
-        config,
+/**
+ * Public root origin for "Open on phone": the running gateway's published origin, else the
+ * configured allowed origin. Origin only; never a path or token.
+ */
+export function readShareInfo(config, env = process.env) {
+    const gateway = readGatewayState(gatewayStatePath(config, env));
+    const fromGateway = gateway && isProcessAlive(gateway.pid) ? gateway.publicUrl : null;
+    return { publicUrl: toPublicOrigin(fromGateway) ?? toPublicOrigin(config.gatewayAllowedOrigin) };
+}
+/**
+ * Writes this session's state file for a listening provider. `markOpened()` refreshes its
+ * `openedAt`; `remove()` deletes it only while it still belongs to this generation. Failures are
+ * logged, never thrown: the canvas works without the file; only the optional gateway needs it.
+ */
+function publishProviderState(input) {
+    const { config, server, sessionId, env, log } = input;
+    const path = providerStatePathFor(config, sessionId, env);
+    const state = buildProviderState({
         generation: server.generation,
         origin: server.origin,
         capabilityPath: server.capabilityPath,
-        env,
+        sessionId,
+    });
+    let removed = false;
+    const write = () => {
+        try {
+            writeProviderState(path, state);
+            return true;
+        }
+        catch (error) {
+            const code = error?.code;
+            log(`Could not publish provider state: ${code ?? "error"}`, "warning");
+            return false;
+        }
+    };
+    write();
+    return {
+        markOpened() {
+            if (removed)
+                return;
+            const current = readProviderState(path);
+            if (current && current.generation !== state.generation)
+                return;
+            state.openedAt = new Date().toISOString();
+            write();
+        },
+        remove() {
+            removed = true;
+            try {
+                removeProviderState(path, server.generation);
+            }
+            catch {
+                // Already gone or unreadable.
+            }
+        },
+    };
+}
+/** Resolves once the server is listening and its state file is published. */
+export async function startProvider(input) {
+    const { config, bridge, sessionId, uiDir, log = () => { }, env = process.env, serverOptions = {}, } = input;
+    const server = createProviderServer({
+        getShareInfo: () => readShareInfo(config, env),
+        ...serverOptions,
+        config,
+        bridge,
+        uiDir,
         log,
     });
+    await server.start();
+    const published = publishProviderState({ config, server, sessionId, env, log });
     let closed = false;
     return {
         url: server.url,
         generation: server.generation,
         server,
+        markOpened() {
+            if (!closed)
+                published.markOpened();
+        },
         async close() {
             if (closed)
                 return;
             closed = true;
-            state.remove();
+            published.remove();
             await server.close();
         },
     };

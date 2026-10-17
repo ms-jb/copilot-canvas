@@ -1,14 +1,15 @@
 // Template configuration: template.config.json plus environment overrides. Node only.
+import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const CANVAS_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 export const DEFAULT_CONFIG = Object.freeze({
-    extensionName: "canvas-chat-starter",
+    extensionName: "copilot-canvas",
     canvasId: "chat-panel",
-    displayName: "Chat Panel",
-    description: "A connected chat panel for this session's own conversation.",
+    assistantName: "Copilot",
+    description: "Your Copilot conversation in a focused, phone-ready canvas.",
     defaultView: "chat",
     gatewayPort: 47600,
     gatewayAllowedOrigin: "",
@@ -32,7 +33,7 @@ function normalizeOrigin(value) {
 }
 /**
  * Merges raw JSON config with env overrides and validates the result.
- * Env: EXTENSION_NAME, CANVAS_ID, CANVAS_DISPLAY_NAME, GATEWAY_PORT, GATEWAY_ALLOWED_ORIGIN.
+ * Env: EXTENSION_NAME, CANVAS_ID, ASSISTANT_NAME, GATEWAY_PORT, GATEWAY_ALLOWED_ORIGIN.
  */
 export function resolveConfig(raw = {}, env = process.env) {
     const overrides = raw && typeof raw === "object" ? raw : {};
@@ -48,7 +49,7 @@ export function resolveConfig(raw = {}, env = process.env) {
     return {
         extensionName: String(extensionName),
         canvasId: String(canvasId),
-        displayName: String(env.CANVAS_DISPLAY_NAME || merged.displayName),
+        assistantName: String(env.ASSISTANT_NAME || merged.assistantName),
         description: String(merged.description),
         defaultView: String(merged.defaultView || "chat"),
         gatewayPort: parsePort(env.GATEWAY_PORT ?? merged.gatewayPort, DEFAULT_CONFIG.gatewayPort),
@@ -74,6 +75,29 @@ export function copilotHome(env = process.env) {
 export function runtimeDir(config, env = process.env) {
     return env.CANVAS_RUNTIME_DIR || join(copilotHome(env), "canvas-runtime", config.extensionName);
 }
-export function providerStatePath(config, env = process.env) {
-    return join(runtimeDir(config, env), "provider.json");
+/** One provider state file per Copilot session lives here, so concurrent sessions never collide. */
+export function sessionsDir(config, env = process.env) {
+    return join(runtimeDir(config, env), "sessions");
+}
+const SAFE_SESSION_NAME = /^[A-Za-z0-9_-][A-Za-z0-9._-]{0,127}$/;
+/**
+ * File-name-safe form of a session id: kept as is when already safe, otherwise a sanitized,
+ * bounded prefix plus a short hash so distinct ids never share a file.
+ */
+export function safeSessionFileName(sessionId) {
+    if (SAFE_SESSION_NAME.test(sessionId))
+        return sessionId;
+    const prefix = sessionId
+        .replace(/[^A-Za-z0-9._-]/g, "_")
+        .replace(/^\.+/, "")
+        .slice(0, 64);
+    const hash = createHash("sha256").update(sessionId).digest("hex").slice(0, 16);
+    return prefix ? `${prefix}-${hash}` : `session-${hash}`;
+}
+export function providerStatePathFor(config, sessionId, env = process.env) {
+    return join(sessionsDir(config, env), `${safeSessionFileName(sessionId)}.json`);
+}
+/** Written by the gateway while it runs: lets the extension learn the public origin for "Open on phone". */
+export function gatewayStatePath(config, env = process.env) {
+    return join(runtimeDir(config, env), "gateway.json");
 }

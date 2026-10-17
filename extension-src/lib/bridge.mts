@@ -6,12 +6,27 @@
 // - Coalesces streaming entry updates (~50ms) so SSE clients are not flooded.
 // - Sends composer text through the joined session (never sendAndWait) with a timeout that
 //   reports "uncertain" instead of ever re-sending.
-// - Never answers permission or question events; it only mirrors them as a "waiting" status.
+// - Mirrors the requests the session waits on (permissions, questions, forms, plan approvals) through
+//   the prompt service and answers one only when the user explicitly does so (see prompts.mts).
+// - Owns the native controls service and numbers its changes on the same sequence as transcript
+//   events, so clients apply them in order.
 
 import { ERROR_CODES, LIMITS, SEND_STATUS } from "../shared/contract.mts";
-import type { SessionStatus, Snapshot, TranscriptEntry } from "../shared/contract.mts";
+import type {
+  ControlChange,
+  PendingPrompt,
+  PromptResponse,
+  SessionControls,
+  SessionStatus,
+  Snapshot,
+  TranscriptEntry,
+} from "../shared/contract.mts";
 import { createTranscriptStore } from "../shared/transcript.mts";
 import type { SessionEventLike, TranscriptChange, TranscriptStore } from "../shared/transcript.mts";
+import { createControlsService } from "./controls.mts";
+import type { ControlsRpcLike, ControlsService } from "./controls.mts";
+import { createPromptService } from "./prompts.mts";
+import type { PromptService, PromptsRpcLike, RespondOutcome } from "./prompts.mts";
 
 const DEFAULT_COALESCE_MS = 50;
 const MAX_TRACKED_REQUESTS = 500;
@@ -23,6 +38,7 @@ export interface SessionLike {
   on(handler: (event: SessionEventLike) => void): () => void;
   getEvents(): Promise<readonly SessionEventLike[]>;
   send(options: { prompt: string }): Promise<string>;
+  readonly rpc?: ControlsRpcLike & PromptsRpcLike;
 }
 
 export type LogLevel = "info" | "warning" | "error";
@@ -30,7 +46,9 @@ export type Logger = (message: string, level?: LogLevel) => void;
 
 export type BridgeEvent =
   | { seq: number; type: "entry"; entry: TranscriptEntry }
-  | { seq: number; type: "status"; status: SessionStatus };
+  | { seq: number; type: "status"; status: SessionStatus }
+  | { seq: number; type: "controls"; controls: SessionControls }
+  | { seq: number; type: "prompts"; prompts: PendingPrompt[] };
 
 export type SendOutcome =
   | { ok: true; status: "accepted"; requestId: string; messageId?: string }
@@ -45,9 +63,15 @@ export type SendOutcome =
 /** What the provider server needs from a bridge. */
 export interface Bridge {
   sessionId: string;
-  getSnapshot(): { seq: number; snapshot: Snapshot };
+  getSnapshot(): { seq: number; snapshot: Snapshot; controls: SessionControls };
   subscribe(listener: (event: BridgeEvent) => void): () => void;
   send(text: string, requestId: string): Promise<SendOutcome>;
+  /** Applies one native setting change. Rejects with a `ControlError` from controls.mts. */
+  applyControl(change: ControlChange): Promise<SessionControls>;
+  /** Answers one pending prompt with the user's explicit decision. */
+  respond(requestId: string, response: PromptResponse): Promise<RespondOutcome>;
+  /** Re-reads pending requests from the session (for example when a client reconnects). */
+  refreshPrompts(): void;
 }
 
 export interface SessionBridge extends Bridge {
@@ -58,6 +82,10 @@ export interface SessionBridge extends Bridge {
 
 export interface SessionBridgeOptions {
   store?: TranscriptStore;
+  /** Defaults to a service over `session.rpc`; disposed with the bridge. */
+  controls?: ControlsService;
+  /** Defaults to a service over `session.rpc`; disposed with the bridge. */
+  prompts?: PromptService;
   log?: Logger;
   coalesceMs?: number;
   sendTimeoutMs?: number;
@@ -76,6 +104,8 @@ export function createSessionBridge(
   {
     store = createTranscriptStore(),
     log = () => {},
+    controls = createControlsService(session, { log }),
+    prompts = createPromptService(session, { log }),
     coalesceMs = DEFAULT_COALESCE_MS,
     sendTimeoutMs = LIMITS.sendTimeoutMs,
   }: SessionBridgeOptions = {},
@@ -136,22 +166,48 @@ export function createSessionBridge(
     } catch (error) {
       log(`Failed to apply session event: ${describeError(error)}`, "warning");
     }
+    try {
+      prompts.applyEvent(event);
+    } catch (error) {
+      log(`Failed to track a pending request: ${describeError(error)}`, "warning");
+    }
   }
 
   // Subscribe first; history is merged afterwards and overlaps are de-duplicated by the store.
   const unsubscribeSession = session.on(onSessionEvent);
 
-  const ready = (async () => {
+  const unsubscribeControls = controls.subscribe((next) => {
+    if (disposed) return;
+    seq += 1;
+    notify({ seq, type: "controls", controls: next });
+  });
+
+  const unsubscribePrompts = prompts.subscribe((next) => {
+    if (disposed) return;
+    seq += 1;
+    notify({ seq, type: "prompts", prompts: next });
+  });
+
+  const history = (async () => {
     try {
-      const history = await session.getEvents();
-      if (!disposed && Array.isArray(history)) emit(store.mergeHistory(history));
+      const events = await session.getEvents();
+      if (!disposed && Array.isArray(events)) emit(store.mergeHistory(events));
     } catch (error) {
       log(`Could not load session history: ${describeError(error)}`, "warning");
     }
   })();
+  const ready = Promise.all([history, controls.ready, prompts.ready]).then(() => undefined);
 
-  function getSnapshot(): { seq: number; snapshot: Snapshot } {
-    return { seq, snapshot: store.snapshot() };
+  function getSnapshot(): { seq: number; snapshot: Snapshot; controls: SessionControls } {
+    return {
+      seq,
+      snapshot: { ...store.snapshot(), prompts: prompts.list() },
+      controls: controls.get(),
+    };
+  }
+
+  function applyControl(change: ControlChange): Promise<SessionControls> {
+    return controls.apply(change);
   }
 
   function subscribe(listener: (event: BridgeEvent) => void): () => void {
@@ -264,6 +320,10 @@ export function createSessionBridge(
     } catch {
       // Session may already be disconnected.
     }
+    unsubscribeControls();
+    controls.dispose();
+    unsubscribePrompts();
+    prompts.dispose();
     if (flushTimer !== null) clearTimeout(flushTimer);
     flushTimer = null;
     pendingStreaming.clear();
@@ -272,5 +332,15 @@ export function createSessionBridge(
     listeners.clear();
   }
 
-  return { sessionId: session.sessionId, ready, getSnapshot, subscribe, send, dispose };
+  return {
+    sessionId: session.sessionId,
+    ready,
+    getSnapshot,
+    subscribe,
+    send,
+    applyControl,
+    respond: (requestId, response) => prompts.respond(requestId, response),
+    refreshPrompts: () => prompts.refresh(),
+    dispose,
+  };
 }

@@ -1,7 +1,9 @@
 // Extension entry point. The only file that imports the Copilot SDK.
 // Joins the current session once; that session is the only transcript source and composer target.
+// Each Copilot chat session that loads this extension runs its own copy, so the canvas always
+// shows the session it was opened from.
 
-import { createCanvas, joinSession } from "@github/copilot-sdk/extension";
+import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/extension";
 import type { CopilotSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -12,6 +14,13 @@ import type { LogLevel, SessionBridge } from "./lib/bridge.mts";
 import { createChatCanvas } from "./lib/canvas.mts";
 import { startProvider } from "./lib/provider.mts";
 
+// Structured canvas error exported by the SDK; declared here because the shared ambient typings omit it.
+declare module "@github/copilot-sdk/extension" {
+  export class CanvasError extends Error {
+    readonly code: string;
+    constructor(code: string, message: string);
+  }
+}
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 const uiDir = join(extensionDir, "ui");
 
@@ -48,7 +57,22 @@ const chat = createChatCanvas({
   config,
   createCanvas,
   log,
-  ensureProvider: async () => startProvider({ config, bridge: await bridgeReady, uiDir, log }),
+  getStatus: () => bridge?.getSnapshot().snapshot.status ?? null,
+  getSessionId: async () => {
+    await bridgeReady;
+    return session?.sessionId ?? null;
+  },
+  createError: (code, message) => new CanvasError(code, message),
+  ensureProvider: async () => {
+    const ready = await bridgeReady;
+    return startProvider({
+      config,
+      bridge: ready,
+      sessionId: session?.sessionId ?? "",
+      uiDir,
+      log,
+    });
+  },
 });
 
 const joined = await joinSession({
@@ -71,7 +95,7 @@ function shutdown(reason: string): Promise<void> {
   shutdownPromise ??= (async () => {
     bridge?.dispose();
     await chat.shutdown().catch(() => {});
-    log(`${config.displayName} stopped (${reason}).`);
+    log(`${config.assistantName} canvas stopped (${reason}).`);
   })();
   return shutdownPromise;
 }

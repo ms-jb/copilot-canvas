@@ -7,8 +7,9 @@ import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
-import { API, CONTRACT_VERSION, ERROR_CODES, HEADERS, HTTP_STATUS_BY_CODE, IDENTITY_APP, LIMITS, SEND_STATUS, SSE_EVENTS, validateSendPayload, } from "../shared/contract.mjs";
+import { API, CONTRACT_VERSION, ERROR_CODES, HEADERS, HTTP_STATUS_BY_CODE, IDENTITY_APP, LIMITS, SEND_STATUS, SSE_EVENTS, toPublicOrigin, validateControlsPayload, validateRespondPayload, validateSendPayload, } from "../shared/contract.mjs";
 import { SENSITIVE_RESPONSE_HEADERS, checkOrigin, isAllowedHost, isJsonContentType, loopbackHost, loopbackOrigin, timingSafeEqualStrings, } from "../shared/security.mjs";
+import { ControlError } from "./controls.mjs";
 const MAX_TRACKED_SENDS = 500;
 const MAX_SSE_CLIENTS = 16;
 const MAX_SSE_BUFFERED_BYTES = 2 * 1024 * 1024;
@@ -48,8 +49,8 @@ function buildCsp(frameAncestors) {
         directives.push(`frame-ancestors ${frameAncestors}`);
     return directives.join("; ");
 }
-function fallbackPage(displayName) {
-    const title = displayName.replace(/[<>&"']/g, "");
+function fallbackPage(assistantName) {
+    const title = assistantName.replace(/[<>&"']/g, "");
     return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>body{font:16px system-ui,sans-serif;margin:2rem;color:CanvasText;background:Canvas}code{font-family:ui-monospace,monospace}</style></head><body><h1>UI not built</h1><p>The renderer has not been built yet. Run <code>npx vp build</code> in the template repository, then reload extensions and reopen this canvas.</p></body></html>`;
 }
 function isRead(method) {
@@ -65,7 +66,7 @@ function errorMessage(error) {
  * Creates the provider server around a bridge (see `Bridge` in bridge.mts).
  * Call `start()` to listen on 127.0.0.1 (OS-assigned port unless `port` is set).
  */
-export function createProviderServer({ config, bridge, uiDir, log = () => { }, port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
+export function createProviderServer({ config, bridge, uiDir, log = () => { }, getShareInfo = () => ({ publicUrl: null }), port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
     const capabilityPath = `/${config.canvasId}/${token}/`;
     const uiRoot = uiDir ? resolve(uiDir) : null;
     const csp = buildCsp(frameAncestors);
@@ -115,7 +116,7 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
                 }
             }
         }
-        const body = html ?? Buffer.from(fallbackPage(config.displayName));
+        const body = html ?? Buffer.from(fallbackPage(config.assistantName));
         res.writeHead(200, {
             ...baseHeaders("text/html; charset=utf-8"),
             "content-security-policy": csp,
@@ -168,19 +169,31 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
         }
     }
     function handleBootstrap(res) {
-        const { snapshot } = bridge.getSnapshot();
+        const { snapshot, controls } = bridge.getSnapshot();
         const body = {
             contractVersion: CONTRACT_VERSION,
             generation,
             sessionId: bridge.sessionId,
             csrfToken,
             config: {
-                displayName: config.displayName,
+                assistantName: config.assistantName,
                 description: config.description,
                 defaultView: config.defaultView,
             },
             snapshot,
+            controls,
         };
+        sendJson(res, 200, body);
+    }
+    function handleShare(res) {
+        let publicUrl = null;
+        try {
+            publicUrl = toPublicOrigin(getShareInfo().publicUrl);
+        }
+        catch (error) {
+            log(`Could not read share info: ${errorMessage(error)}`, "warning");
+        }
+        const body = { publicUrl };
         sendJson(res, 200, body);
     }
     function closeSse(client) {
@@ -221,15 +234,25 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
         const client = { res, closed: false, keepalive: null, unsubscribe: () => { } };
         // Subscribe and snapshot in the same tick so no event is missed or duplicated.
         client.unsubscribe = bridge.subscribe((event) => {
-            if (event.type === SSE_EVENTS.entry) {
-                writeSse(client, SSE_EVENTS.entry, { seq: event.seq, entry: event.entry });
-            }
-            else {
-                writeSse(client, SSE_EVENTS.status, { seq: event.seq, status: event.status });
+            switch (event.type) {
+                case "entry":
+                    writeSse(client, SSE_EVENTS.entry, { seq: event.seq, entry: event.entry });
+                    break;
+                case "status":
+                    writeSse(client, SSE_EVENTS.status, { seq: event.seq, status: event.status });
+                    break;
+                case "controls":
+                    writeSse(client, SSE_EVENTS.controls, { seq: event.seq, controls: event.controls });
+                    break;
+                case "prompts":
+                    writeSse(client, SSE_EVENTS.prompts, { seq: event.seq, prompts: event.prompts });
+                    break;
             }
         });
-        const { seq, snapshot } = bridge.getSnapshot();
-        writeSse(client, SSE_EVENTS.snapshot, { seq, generation, snapshot });
+        const { seq, snapshot, controls } = bridge.getSnapshot();
+        writeSse(client, SSE_EVENTS.snapshot, { seq, generation, snapshot, controls });
+        // A (re)connecting client may have missed requests answered elsewhere; re-check with the session.
+        bridge.refreshPrompts();
         client.keepalive = setInterval(() => {
             if (!client.closed)
                 res.write(": keepalive\n\n");
@@ -290,38 +313,71 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
     function respondWithOutcome(res, outcome) {
         sendJson(res, outcome.ok ? 200 : statusFor(outcome.code), outcome);
     }
-    async function handleSend(req, res) {
+    /**
+     * Shared checks for state-changing POSTs: CSRF token, provider generation, JSON content type,
+     * size limit and JSON parsing. Responds and returns `undefined` on any failure.
+     */
+    async function readJsonPost(req, res, status) {
+        const fail = (code, message, extra) => {
+            sendError(res, code, message, status, extra);
+            return undefined;
+        };
         const providedCsrf = req.headers[HEADERS.csrf];
         if (typeof providedCsrf !== "string" || !timingSafeEqualStrings(providedCsrf, csrfToken)) {
-            sendRejected(res, ERROR_CODES.forbidden, "Missing or invalid CSRF token.");
-            return;
+            return fail(ERROR_CODES.forbidden, "Missing or invalid CSRF token.");
         }
         if (staleGeneration(req)) {
-            sendRejected(res, ERROR_CODES.staleProvider, "The provider was restarted. Reload the page.");
-            return;
+            return fail(ERROR_CODES.staleProvider, "The provider was restarted. Reload the page.");
         }
         if (!isJsonContentType(req.headers["content-type"])) {
-            sendRejected(res, ERROR_CODES.unsupportedMediaType, "Content-Type must be application/json.");
-            return;
+            return fail(ERROR_CODES.unsupportedMediaType, "Content-Type must be application/json.");
         }
         const read = await readBody(req, res);
         if ("failed" in read)
-            return;
+            return undefined;
         if ("tooLarge" in read) {
-            sendRejected(res, ERROR_CODES.payloadTooLarge, "Request body is too large.", {
+            return fail(ERROR_CODES.payloadTooLarge, "Request body is too large.", {
                 connection: "close",
             });
-            return;
         }
-        let parsed;
         try {
-            parsed = JSON.parse(read.body);
+            return { value: JSON.parse(read.body) };
         }
         catch {
-            sendRejected(res, ERROR_CODES.badRequest, "Body is not valid JSON.");
+            return fail(ERROR_CODES.badRequest, "Body is not valid JSON.");
+        }
+    }
+    async function handleControls(req, res) {
+        const parsed = await readJsonPost(req, res, "error");
+        if (!parsed)
+            return;
+        const validation = validateControlsPayload(parsed.value);
+        if (!validation.ok) {
+            sendError(res, validation.code, validation.message);
             return;
         }
-        const validation = validateSendPayload(parsed);
+        if (validation.value.sessionId !== bridge.sessionId) {
+            sendError(res, ERROR_CODES.sessionMismatch, "This panel belongs to a different session.");
+            return;
+        }
+        try {
+            const controls = await bridge.applyControl(validation.value.change);
+            sendJson(res, 200, { ok: true, controls });
+        }
+        catch (error) {
+            if (error instanceof ControlError) {
+                sendError(res, error.code, error.message);
+                return;
+            }
+            log(`Control change failed: ${errorMessage(error)}`, "warning");
+            sendError(res, ERROR_CODES.controlFailed, "The session did not apply the change.");
+        }
+    }
+    async function handleSend(req, res) {
+        const parsed = await readJsonPost(req, res, SEND_STATUS.rejected);
+        if (!parsed)
+            return;
+        const validation = validateSendPayload(parsed.value);
         if (!validation.ok) {
             sendRejected(res, validation.code, validation.message);
             return;
@@ -358,6 +414,36 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
         }
         record.outcome = outcome;
         respondWithOutcome(res, outcome);
+    }
+    async function handleRespond(req, res) {
+        const parsed = await readJsonPost(req, res, SEND_STATUS.rejected);
+        if (!parsed)
+            return;
+        const validation = validateRespondPayload(parsed.value);
+        if (!validation.ok) {
+            sendRejected(res, validation.code, validation.message);
+            return;
+        }
+        const { sessionId, requestId, response } = validation.value;
+        if (sessionId !== bridge.sessionId) {
+            sendRejected(res, ERROR_CODES.sessionMismatch, "This panel belongs to a different session.");
+            return;
+        }
+        let outcome;
+        try {
+            outcome = await bridge.respond(requestId, response);
+        }
+        catch (error) {
+            log(`Answer failed: ${errorMessage(error)}`, "warning");
+            outcome = {
+                ok: false,
+                status: SEND_STATUS.rejected,
+                code: ERROR_CODES.respondFailed,
+                message: "The session didn't accept the answer.",
+            };
+        }
+        const body = outcome;
+        sendJson(res, outcome.ok ? 200 : statusFor(outcome.code), body);
     }
     async function route(req, res) {
         if (!isAllowedHost(req.headers.host, [loopbackHost(listenPort)])) {
@@ -417,6 +503,18 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, p
                 if (method !== "POST")
                     return notAllowed(res, "POST");
                 return handleSend(req, res);
+            case API.controls:
+                if (method !== "POST")
+                    return notAllowed(res, "POST");
+                return handleControls(req, res);
+            case API.respond:
+                if (method !== "POST")
+                    return notAllowed(res, "POST");
+                return handleRespond(req, res);
+            case API.share:
+                if (method !== "GET")
+                    return notAllowed(res, "GET");
+                return handleShare(res);
             default:
                 return sendError(res, ERROR_CODES.notFound, "Not found.");
         }

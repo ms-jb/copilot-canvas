@@ -6,9 +6,14 @@
 // - Coalesces streaming entry updates (~50ms) so SSE clients are not flooded.
 // - Sends composer text through the joined session (never sendAndWait) with a timeout that
 //   reports "uncertain" instead of ever re-sending.
-// - Never answers permission or question events; it only mirrors them as a "waiting" status.
+// - Mirrors the requests the session waits on (permissions, questions, forms, plan approvals) through
+//   the prompt service and answers one only when the user explicitly does so (see prompts.mts).
+// - Owns the native controls service and numbers its changes on the same sequence as transcript
+//   events, so clients apply them in order.
 import { ERROR_CODES, LIMITS, SEND_STATUS } from "../shared/contract.mjs";
 import { createTranscriptStore } from "../shared/transcript.mjs";
+import { createControlsService } from "./controls.mjs";
+import { createPromptService } from "./prompts.mjs";
 const DEFAULT_COALESCE_MS = 50;
 const MAX_TRACKED_REQUESTS = 500;
 const MAX_ERROR_MESSAGE = 300;
@@ -17,7 +22,7 @@ function describeError(error) {
     const trimmed = message.replace(/\s+/g, " ").trim().slice(0, MAX_ERROR_MESSAGE);
     return trimmed || "The session did not accept the message.";
 }
-export function createSessionBridge(session, { store = createTranscriptStore(), log = () => { }, coalesceMs = DEFAULT_COALESCE_MS, sendTimeoutMs = LIMITS.sendTimeoutMs, } = {}) {
+export function createSessionBridge(session, { store = createTranscriptStore(), log = () => { }, controls = createControlsService(session, { log }), prompts = createPromptService(session, { log }), coalesceMs = DEFAULT_COALESCE_MS, sendTimeoutMs = LIMITS.sendTimeoutMs, } = {}) {
     const listeners = new Set();
     const pendingStreaming = new Map();
     const requests = new Set();
@@ -76,21 +81,47 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         catch (error) {
             log(`Failed to apply session event: ${describeError(error)}`, "warning");
         }
+        try {
+            prompts.applyEvent(event);
+        }
+        catch (error) {
+            log(`Failed to track a pending request: ${describeError(error)}`, "warning");
+        }
     }
     // Subscribe first; history is merged afterwards and overlaps are de-duplicated by the store.
     const unsubscribeSession = session.on(onSessionEvent);
-    const ready = (async () => {
+    const unsubscribeControls = controls.subscribe((next) => {
+        if (disposed)
+            return;
+        seq += 1;
+        notify({ seq, type: "controls", controls: next });
+    });
+    const unsubscribePrompts = prompts.subscribe((next) => {
+        if (disposed)
+            return;
+        seq += 1;
+        notify({ seq, type: "prompts", prompts: next });
+    });
+    const history = (async () => {
         try {
-            const history = await session.getEvents();
-            if (!disposed && Array.isArray(history))
-                emit(store.mergeHistory(history));
+            const events = await session.getEvents();
+            if (!disposed && Array.isArray(events))
+                emit(store.mergeHistory(events));
         }
         catch (error) {
             log(`Could not load session history: ${describeError(error)}`, "warning");
         }
     })();
+    const ready = Promise.all([history, controls.ready, prompts.ready]).then(() => undefined);
     function getSnapshot() {
-        return { seq, snapshot: store.snapshot() };
+        return {
+            seq,
+            snapshot: { ...store.snapshot(), prompts: prompts.list() },
+            controls: controls.get(),
+        };
+    }
+    function applyControl(change) {
+        return controls.apply(change);
     }
     function subscribe(listener) {
         listeners.add(listener);
@@ -192,6 +223,10 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         catch {
             // Session may already be disconnected.
         }
+        unsubscribeControls();
+        controls.dispose();
+        unsubscribePrompts();
+        prompts.dispose();
         if (flushTimer !== null)
             clearTimeout(flushTimer);
         flushTimer = null;
@@ -201,5 +236,15 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         cancelTimers.clear();
         listeners.clear();
     }
-    return { sessionId: session.sessionId, ready, getSnapshot, subscribe, send, dispose };
+    return {
+        sessionId: session.sessionId,
+        ready,
+        getSnapshot,
+        subscribe,
+        send,
+        applyControl,
+        respond: (requestId, response) => prompts.respond(requestId, response),
+        refreshPrompts: () => prompts.refresh(),
+        dispose,
+    };
 }

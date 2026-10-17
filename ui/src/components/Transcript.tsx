@@ -1,7 +1,18 @@
-import { Alert, Button, Text } from "@mantine/core";
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { MarkdownView } from "../MarkdownView";
+import {
+  Fragment,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import type { TranscriptEntry } from "../shared";
+import { ArrowDownIcon } from "./ChatIcons";
+import { AssistantMessage, Avatar, ErrorMessage, UserMessage } from "./Message";
+import { DaySeparator } from "./Timestamp";
+import { dayKey, toDate } from "./timeFormat";
+import styles from "./Transcript.module.css";
 
 /** A message the user just sent that the transcript has not confirmed yet. */
 export interface PendingMessage {
@@ -9,47 +20,97 @@ export interface PendingMessage {
   messageId?: string;
   text: string;
   state: "sending" | "accepted";
+  /** ISO time the user pressed send. */
+  createdAt: string;
 }
 
 interface TranscriptProps {
   entries: TranscriptEntry[];
   pending: PendingMessage[];
+  assistantName: string;
+  description?: string;
+  /** Fills the composer with an example prompt; never sends it. */
+  onPickPrompt: (text: string) => void;
 }
 
 const PIN_THRESHOLD_PX = 48;
 
-function EntryView({ entry }: { entry: TranscriptEntry }) {
-  if (entry.kind === "error") {
-    return (
-      <Alert color="red" variant="light" title="Error" className="entry entry-error">
-        <span className="plain-text">{entry.text}</span>
-      </Alert>
-    );
-  }
-  if (entry.kind === "user") {
-    return (
-      <div className="entry entry-user">
-        <div className="bubble bubble-user plain-text">{entry.text}</div>
-      </div>
-    );
-  }
+const EXAMPLE_PROMPTS = [
+  "Summarize what we have done in this session",
+  "What should I work on next?",
+  "Explain the last change you made",
+];
+
+function EmptyState({
+  assistantName,
+  description,
+  onPickPrompt,
+}: Pick<TranscriptProps, "assistantName" | "description" | "onPickPrompt">) {
   return (
-    <div className="entry entry-assistant" data-streaming={entry.streaming ? "true" : undefined}>
-      <div className="bubble bubble-assistant">
-        {entry.text.length > 0 && <MarkdownView text={entry.text} />}
-        {entry.streaming && (
-          <span className="streaming-indicator" role="img" aria-label="Copilot is responding">
-            <span />
-            <span />
-            <span />
-          </span>
-        )}
+    <div className={styles.empty}>
+      <Avatar name={assistantName} size="lg" />
+      <h2 className={styles.emptyTitle}>Start a conversation with {assistantName}</h2>
+      <p className={styles.emptyText}>
+        {description ?? "Messages you send here go to your current Copilot session."}
+      </p>
+      <div className={styles.prompts} role="group" aria-label="Example prompts">
+        {EXAMPLE_PROMPTS.map((prompt) => (
+          <button
+            key={prompt}
+            type="button"
+            className={styles.prompt}
+            onClick={() => onPickPrompt(prompt)}
+          >
+            {prompt}
+          </button>
+        ))}
       </div>
     </div>
   );
 }
 
-export function Transcript({ entries, pending }: TranscriptProps) {
+function EntryView({ entry, assistantName }: { entry: TranscriptEntry; assistantName: string }) {
+  switch (entry.kind) {
+    case "user":
+      return <UserMessage text={entry.text} timestamp={entry.timestamp} />;
+    case "error":
+      return <ErrorMessage text={entry.text} timestamp={entry.timestamp} />;
+    default:
+      return (
+        <AssistantMessage
+          text={entry.text}
+          timestamp={entry.timestamp}
+          streaming={entry.streaming}
+          assistantName={assistantName}
+        />
+      );
+  }
+}
+
+/** Interleaves day separators wherever the local calendar date changes between turns. */
+function withDaySeparators(rows: { key: string; timestamp: string; node: ReactNode }[]) {
+  let previousDay: string | null = null;
+  return rows.map(({ key, timestamp, node }) => {
+    const date = toDate(timestamp);
+    const day = date ? dayKey(date) : previousDay;
+    const separator = date && day !== previousDay ? <DaySeparator date={date} /> : null;
+    previousDay = day;
+    return (
+      <Fragment key={key}>
+        {separator}
+        {node}
+      </Fragment>
+    );
+  });
+}
+
+export function Transcript({
+  entries,
+  pending,
+  assistantName,
+  description,
+  onPickPrompt,
+}: TranscriptProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -73,7 +134,7 @@ export function Transcript({ entries, pending }: TranscriptProps) {
     if (pinned.current) scrollToBottom();
   }, [entries, pending, scrollToBottom]);
 
-  // Layout changes (streaming growth, composer resize, on-screen keyboard) keep the pin too.
+  // Layout changes (streaming growth, composer or activity bar resize, on-screen keyboard) keep the pin.
   useEffect(() => {
     const target = content.current;
     if (!target || typeof ResizeObserver === "undefined") return;
@@ -96,52 +157,64 @@ export function Transcript({ entries, pending }: TranscriptProps) {
   }, [pendingCount, scrollToBottom]);
 
   const empty = entries.length === 0 && pending.length === 0;
+  const rows = [
+    ...entries.map((entry) => ({
+      key: entry.id,
+      timestamp: entry.timestamp,
+      node: <EntryView entry={entry} assistantName={assistantName} />,
+    })),
+    ...pending.map((message) => ({
+      key: `pending:${message.requestId}`,
+      timestamp: message.createdAt,
+      node: (
+        <UserMessage
+          text={message.text}
+          timestamp={message.createdAt}
+          pendingLabel={
+            message.state === "sending" ? "Sending…" : "Sent, waiting for confirmation…"
+          }
+        />
+      ),
+    })),
+  ];
 
   return (
-    <div className="transcript-wrap">
+    <div className={styles.wrap}>
       <div
         ref={scroller}
-        className="transcript"
+        className={styles.scroller}
         onScroll={onScroll}
         role="log"
         aria-live="polite"
-        aria-relevant="additions text"
+        aria-relevant="additions"
         aria-label="Conversation"
         tabIndex={0}
       >
-        <div ref={content} className="transcript-content">
-          {empty && (
-            <Text c="dimmed" ta="center" py="xl">
-              No messages yet. Send a prompt to your Copilot session.
-            </Text>
+        <div ref={content} className={styles.content}>
+          {empty ? (
+            <EmptyState
+              assistantName={assistantName}
+              description={description}
+              onPickPrompt={onPickPrompt}
+            />
+          ) : (
+            withDaySeparators(rows)
           )}
-          {entries.map((entry) => (
-            <EntryView key={entry.id} entry={entry} />
-          ))}
-          {pending.map((message) => (
-            <div key={message.requestId} className="entry entry-user">
-              <div className="bubble bubble-user bubble-pending plain-text">{message.text}</div>
-              <Text size="xs" c="dimmed" className="pending-label">
-                {message.state === "sending" ? "Sending…" : "Sent — waiting for confirmation…"}
-              </Text>
-            </div>
-          ))}
         </div>
       </div>
       {showJump && (
-        <Button
-          className="jump-latest"
-          size="xs"
-          radius="xl"
-          variant="default"
+        <button
+          type="button"
+          className={styles.jump}
           onClick={() => {
             pinned.current = true;
             setShowJump(false);
             scrollToBottom();
           }}
         >
+          <ArrowDownIcon size={14} />
           Jump to latest
-        </Button>
+        </button>
       )}
     </div>
   );

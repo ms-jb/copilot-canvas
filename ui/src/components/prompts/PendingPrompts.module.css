@@ -1,0 +1,251 @@
+.liveRegion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.stack {
+  padding-bottom: var(--cc-space-2);
+}
+
+/* One focused request; a warm border marks it as waiting on you without shouting. */
+.card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid color-mix(in srgb, var(--cc-warning) 55%, var(--cc-border));
+  border-radius: var(--cc-radius-lg);
+  background: var(--cc-surface-raised);
+  box-shadow: var(--cc-shadow-md);
+  overflow: hidden;
+  animation: arrive var(--cc-duration) var(--cc-ease);
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  padding: var(--cc-space-3) var(--cc-space-4);
+  background: var(--cc-warning-soft);
+  border-bottom: 1px solid color-mix(in srgb, var(--cc-warning) 25%, transparent);
+}
+
+.icon {
+  display: inline-flex;
+  flex: none;
+  color: var(--cc-warning);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  font-size: var(--cc-text-lg);
+  font-weight: 600;
+  line-height: 1.3;
+  color: var(--cc-text);
+  text-wrap: balance;
+}
+
+.pager {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 2px;
+}
+
+.count {
+  min-width: 3.5em;
+  font-size: var(--cc-text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  color: var(--cc-text-muted);
+}
+
+.pagerButton {
+  display: inline-grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--cc-radius-sm);
+  background: transparent;
+  color: var(--cc-text-muted);
+  cursor: pointer;
+}
+
+.pagerButton:hover {
+  background: color-mix(in srgb, var(--cc-text) 8%, transparent);
+  color: var(--cc-text);
+}
+
+.pagerButton:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 1px;
+}
+
+/* Scrolls inside itself so a long request never pushes the composer off screen. */
+.body {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  max-height: min(56vh, 560px);
+  max-height: min(56dvh, 560px);
+  padding: var(--cc-space-3) var(--cc-space-4) var(--cc-space-4);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.subject {
+  margin: 0;
+  font-size: var(--cc-text-sm);
+  font-weight: 600;
+  color: var(--cc-text);
+  overflow-wrap: anywhere;
+}
+
+.intent {
+  margin: 0;
+  max-width: 70ch;
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+  color: var(--cc-text);
+}
+
+.message {
+  max-width: 70ch;
+  font-size: var(--cc-text-md);
+}
+
+.message > * > :first-child {
+  margin-top: 0;
+}
+
+.message > * > :last-child {
+  margin-bottom: 0;
+}
+
+/* The exact text being requested, verbatim. */
+.detail {
+  margin: 0;
+  max-height: 220px;
+  padding: var(--cc-space-2) var(--cc-space-3);
+  overflow: auto;
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-surface-sunken);
+  font-family: var(--cc-font-mono);
+  font-size: var(--cc-text-sm);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  color: var(--cc-text);
+}
+
+.plan {
+  max-height: 260px;
+  padding: var(--cc-space-2) var(--cc-space-3);
+  overflow: auto;
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-surface-sunken);
+  font-size: var(--cc-text-sm);
+}
+
+.detail:focus-visible,
+.plan:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 1px;
+}
+
+.warning {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cc-space-2);
+  margin: 0;
+  font-size: var(--cc-text-sm);
+  line-height: 1.45;
+  color: var(--cc-text);
+}
+
+.warning > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--cc-danger);
+}
+
+.choices {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-2);
+}
+
+.choice {
+  height: auto;
+  min-height: 40px;
+  padding-block: var(--cc-space-2);
+}
+
+.choice :global(.mantine-Button-label) {
+  white-space: normal;
+  text-align: left;
+  line-height: 1.4;
+}
+
+.freeform,
+.fields {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--cc-space-2);
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+
+/* Phones and touch screens: full-width, 44px targets. */
+@media (max-width: 768px), (pointer: coarse) {
+  .button {
+    --button-height: 44px;
+    flex: 1 1 auto;
+  }
+
+  .choice {
+    min-height: 44px;
+  }
+
+  .pagerButton {
+    width: 44px;
+    height: 44px;
+  }
+
+  .header {
+    padding-inline: var(--cc-space-3);
+  }
+
+  .body {
+    padding-inline: var(--cc-space-3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+  }
+}

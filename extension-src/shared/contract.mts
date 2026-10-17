@@ -1,13 +1,17 @@
 // Shared wire contract between the extension host (provider), the renderer and the gateway.
 // Pure TypeScript, no dependencies, safe to import from Node and from the browser bundle.
 
-export const CONTRACT_VERSION = 1;
-export const IDENTITY_APP = "copilot-canvas-starter";
+export const CONTRACT_VERSION = 2;
+export const IDENTITY_APP = "copilot-canvas";
 
 export type EntryKind = "user" | "assistant" | "error";
 export type Phase = "idle" | "working" | "waiting";
-export type WaitingFor = "permission" | "input" | "elicitation";
+/** What the agent is doing while `phase` is "working". */
+export type Activity = "thinking" | "responding" | "tool";
+export type WaitingFor = "permission" | "input" | "elicitation" | "plan";
 export type SendStatus = "accepted" | "rejected" | "uncertain";
+export type SessionMode = "interactive" | "plan" | "autopilot";
+export type ContextTier = "default" | "long_context";
 
 export interface TranscriptEntry {
   /** Stable id: `user:<messageId>`, `assistant:<messageId>` or `error:<eventId>`. */
@@ -22,16 +26,160 @@ export interface TranscriptEntry {
 
 export interface SessionStatus {
   phase: Phase;
+  /** Only meaningful while phase is "working". */
+  activity?: Activity;
+  /** Tool name while activity is "tool" (display only, never arguments). */
+  toolName?: string;
   waitingFor?: WaitingFor;
 }
 
 export interface Snapshot {
   entries: TranscriptEntry[];
   status: SessionStatus;
+  /** Requests the session is waiting on that can be answered from the canvas, oldest first. */
+  prompts?: PendingPrompt[];
+}
+
+export type PromptKind = "permission" | "question" | "form" | "plan";
+/** What a permission request is for (display only). */
+export type PermissionKind =
+  | "command"
+  | "write"
+  | "read"
+  | "path"
+  | "url"
+  | "mcp"
+  | "tool"
+  | "memory"
+  | "extension"
+  | "workflow"
+  | "other";
+export type PlanAction = "exit_only" | "interactive" | "autopilot" | "autopilot_fleet";
+export type FormFieldType = "string" | "number" | "integer" | "boolean" | "enum";
+export type FormValue = string | number | boolean;
+
+/** One flat form field. Nested or multi-select fields are never offered in the canvas. */
+export interface FormField {
+  name: string;
+  label: string;
+  description?: string;
+  type: FormFieldType;
+  required: boolean;
+  /** Choices for "enum" fields. */
+  options?: { value: string; label: string }[];
+  default?: FormValue;
+  minLength?: number;
+  maxLength?: number;
+  minimum?: number;
+  maximum?: number;
+}
+
+interface PromptBase {
+  /** The session's own request id; answers are applied to exactly this request. */
+  requestId: string;
+  createdAt: string;
+}
+
+/** A tool permission request. The only decisions are "allow once" and "deny". */
+export interface PermissionPrompt extends PromptBase {
+  kind: "permission";
+  permission: PermissionKind;
+  /** Short name of what is asking (tool, server or extension), when known. */
+  subject?: string;
+  /** Why the agent wants it, in its own words. */
+  intent?: string;
+  /** The exact command, path, address or arguments being requested (bounded). */
+  detail: string;
+  /** A risk note supplied by the session. */
+  warning?: string;
+}
+
+export interface QuestionPrompt extends PromptBase {
+  kind: "question";
+  question: string;
+  choices: string[];
+  allowFreeform: boolean;
+}
+
+export interface FormPrompt extends PromptBase {
+  kind: "form";
+  message: string;
+  /** Name of the server that asked, when it was not the agent itself. */
+  source?: string;
+  fields: FormField[];
+  /** False when the request needs something the canvas can't render; it can only be declined here. */
+  supported: boolean;
+}
+
+export interface PlanPrompt extends PromptBase {
+  kind: "plan";
+  summary: string;
+  /** Plan text as markdown (bounded). */
+  plan: string;
+  actions: PlanAction[];
+  recommended?: PlanAction;
+}
+
+export type PendingPrompt = PermissionPrompt | QuestionPrompt | FormPrompt | PlanPrompt;
+
+/** The user's explicit answer to one pending prompt. */
+export type PromptResponse =
+  | { kind: "permission"; decision: "approve" | "deny" }
+  | { kind: "question"; answer: string; freeform: boolean }
+  | { kind: "form"; action: "accept" | "decline" | "cancel"; values?: Record<string, FormValue> }
+  | { kind: "plan"; approved: true; action: PlanAction }
+  | { kind: "plan"; approved: false; feedback?: string };
+
+export interface RespondPayload {
+  sessionId: string;
+  requestId: string;
+  response: PromptResponse;
+}
+
+export interface RespondResult {
+  ok: boolean;
+  status: SendStatus;
+  code?: string;
+  message?: string;
+}
+
+/** A model the session can switch to, as reported by the native model list. */
+export interface ModelOption {
+  id: string;
+  name: string;
+  reasoningEfforts?: string[];
+  defaultReasoningEffort?: string;
+  contextTiers?: ContextTier[];
+}
+
+/**
+ * Native session settings. Each control is present in `available` only when the host
+ * verified the native API exists; the renderer hides controls that are not available.
+ */
+export interface SessionControls {
+  available: { mode: boolean; model: boolean; reasoningEffort: boolean; contextTier: boolean };
+  mode?: SessionMode;
+  modelId?: string;
+  reasoningEffort?: string;
+  contextTier?: ContextTier;
+  models: ModelOption[];
+}
+
+/** Exactly one key is set per change request. */
+export type ControlChange =
+  | { mode: SessionMode }
+  | { modelId: string }
+  | { reasoningEffort: string }
+  | { contextTier: ContextTier };
+
+export interface ControlsPayload {
+  sessionId: string;
+  change: ControlChange;
 }
 
 export interface PanelConfig {
-  displayName: string;
+  /** Name shown in the UI and as the canvas title. */
+  assistantName: string;
   description?: string;
   defaultView: string;
 }
@@ -43,6 +191,12 @@ export interface Bootstrap {
   csrfToken: string;
   config: PanelConfig;
   snapshot: Snapshot;
+  controls: SessionControls;
+}
+
+/** GET api/share: the public root origin (no path, no token) for "Open on phone", if configured. */
+export interface ShareInfo {
+  publicUrl: string | null;
 }
 
 export interface Identity {
@@ -67,9 +221,14 @@ export interface SendResult {
 }
 
 export type ServerEvent =
-  | { name: "snapshot"; data: { seq: number; generation: string; snapshot: Snapshot } }
+  | {
+      name: "snapshot";
+      data: { seq: number; generation: string; snapshot: Snapshot; controls: SessionControls };
+    }
   | { name: "entry"; data: { seq: number; entry: TranscriptEntry } }
-  | { name: "status"; data: { seq: number; status: SessionStatus } };
+  | { name: "status"; data: { seq: number; status: SessionStatus } }
+  | { name: "controls"; data: { seq: number; controls: SessionControls } }
+  | { name: "prompts"; data: { seq: number; prompts: PendingPrompt[] } };
 
 export type ValidationFailure = { ok: false; code: string; message: string };
 export type ValidationResult<T> = { ok: true; value: T } | ValidationFailure;
@@ -80,6 +239,9 @@ export const API = Object.freeze({
   bootstrap: "api/bootstrap",
   events: "api/events",
   send: "api/send",
+  controls: "api/controls",
+  share: "api/share",
+  respond: "api/respond",
 });
 
 export const HEADERS = Object.freeze({
@@ -93,6 +255,14 @@ export const LIMITS = Object.freeze({
   sendTimeoutMs: 30000,
   keepaliveMs: 15000,
   maxEntries: 500,
+  /** Answering a prompt must stay well under the gateway's upstream timeout. */
+  respondTimeoutMs: 20000,
+  maxPrompts: 20,
+  maxAnswerChars: 4000,
+  maxPromptDetailChars: 4000,
+  maxPlanChars: 20000,
+  maxChoices: 20,
+  maxFormFields: 20,
 });
 
 export const ERROR_CODES = Object.freeze({
@@ -107,8 +277,15 @@ export const ERROR_CODES = Object.freeze({
   duplicateRequest: "duplicate_request",
   sendFailed: "send_failed",
   sendUncertain: "send_uncertain",
+  controlUnavailable: "control_unavailable",
+  controlFailed: "control_failed",
   notConnected: "not_connected",
   internal: "internal_error",
+  /** The prompt was already answered (here or in another client) or is no longer waiting. */
+  promptResolved: "prompt_resolved",
+  promptUnavailable: "prompt_unavailable",
+  respondFailed: "respond_failed",
+  respondUncertain: "respond_uncertain",
 });
 
 export const HTTP_STATUS_BY_CODE: Readonly<Record<string, number>> = Object.freeze({
@@ -123,8 +300,14 @@ export const HTTP_STATUS_BY_CODE: Readonly<Record<string, number>> = Object.free
   [ERROR_CODES.duplicateRequest]: 409,
   [ERROR_CODES.sendFailed]: 502,
   [ERROR_CODES.sendUncertain]: 504,
+  [ERROR_CODES.controlUnavailable]: 501,
+  [ERROR_CODES.controlFailed]: 502,
   [ERROR_CODES.notConnected]: 503,
   [ERROR_CODES.internal]: 500,
+  [ERROR_CODES.promptResolved]: 409,
+  [ERROR_CODES.promptUnavailable]: 501,
+  [ERROR_CODES.respondFailed]: 502,
+  [ERROR_CODES.respondUncertain]: 504,
 });
 
 // Outcome of a send attempt as reported to the renderer.
@@ -138,14 +321,58 @@ export const SSE_EVENTS = Object.freeze({
   snapshot: "snapshot",
   entry: "entry",
   status: "status",
+  controls: "controls",
+  prompts: "prompts",
 } as const);
 
 export const PHASES: readonly Phase[] = Object.freeze(["idle", "working", "waiting"] as const);
+export const ACTIVITIES: readonly Activity[] = Object.freeze([
+  "thinking",
+  "responding",
+  "tool",
+] as const);
+export const SESSION_MODES: readonly SessionMode[] = Object.freeze([
+  "interactive",
+  "plan",
+  "autopilot",
+] as const);
+export const CONTEXT_TIERS: readonly ContextTier[] = Object.freeze([
+  "default",
+  "long_context",
+] as const);
 export const WAITING_FOR: readonly WaitingFor[] = Object.freeze([
   "permission",
   "input",
   "elicitation",
+  "plan",
 ] as const);
+export const PLAN_ACTIONS: readonly PlanAction[] = Object.freeze([
+  "exit_only",
+  "interactive",
+  "autopilot",
+  "autopilot_fleet",
+] as const);
+const PROMPT_KINDS: readonly PromptKind[] = ["permission", "question", "form", "plan"];
+const PERMISSION_KINDS: readonly PermissionKind[] = [
+  "command",
+  "write",
+  "read",
+  "path",
+  "url",
+  "mcp",
+  "tool",
+  "memory",
+  "extension",
+  "workflow",
+  "other",
+];
+const FORM_FIELD_TYPES: readonly FormFieldType[] = [
+  "string",
+  "number",
+  "integer",
+  "boolean",
+  "enum",
+];
 export const ENTRY_KINDS: readonly EntryKind[] = Object.freeze([
   "user",
   "assistant",
@@ -217,10 +444,68 @@ export function validateEntry(entry: unknown): entry is TranscriptEntry {
 export function validateStatus(status: unknown): status is SessionStatus {
   if (!isPlainObject(status)) return false;
   if (!PHASES.includes(status.phase as Phase)) return false;
+  if (status.activity !== undefined && !ACTIVITIES.includes(status.activity as Activity)) {
+    return false;
+  }
+  if (status.toolName !== undefined && typeof status.toolName !== "string") return false;
   if (status.waitingFor !== undefined && !WAITING_FOR.includes(status.waitingFor as WaitingFor)) {
     return false;
   }
   return true;
+}
+
+export function validateControls(controls: unknown): controls is SessionControls {
+  return (
+    isPlainObject(controls) &&
+    isPlainObject(controls.available) &&
+    Array.isArray(controls.models) &&
+    (controls.mode === undefined || SESSION_MODES.includes(controls.mode as SessionMode))
+  );
+}
+
+const MODEL_ID_PATTERN = /^[A-Za-z0-9._:/-]{1,128}$/;
+const EFFORT_PATTERN = /^[a-z_-]{1,32}$/;
+
+/** Validates the body of POST api/controls: { sessionId, change } with exactly one change key. */
+export function validateControlsPayload(body: unknown): ValidationResult<ControlsPayload> {
+  if (!isPlainObject(body) || !isPlainObject(body.change)) {
+    return makeError(ERROR_CODES.badRequest, "Body must be { sessionId, change }.");
+  }
+  if (Object.keys(body).some((key) => key !== "sessionId" && key !== "change")) {
+    return makeError(ERROR_CODES.badRequest, "Unexpected field.");
+  }
+  const { sessionId, change } = body;
+  if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
+    return makeError(ERROR_CODES.badRequest, "sessionId is missing or malformed.");
+  }
+  const keys = Object.keys(change);
+  if (keys.length !== 1) {
+    return makeError(ERROR_CODES.badRequest, "change must have exactly one key.");
+  }
+  const value = change[keys[0]!];
+  switch (keys[0]) {
+    case "mode":
+      if (SESSION_MODES.includes(value as SessionMode)) {
+        return { ok: true, value: { sessionId, change: { mode: value as SessionMode } } };
+      }
+      break;
+    case "modelId":
+      if (typeof value === "string" && MODEL_ID_PATTERN.test(value)) {
+        return { ok: true, value: { sessionId, change: { modelId: value } } };
+      }
+      break;
+    case "reasoningEffort":
+      if (typeof value === "string" && EFFORT_PATTERN.test(value)) {
+        return { ok: true, value: { sessionId, change: { reasoningEffort: value } } };
+      }
+      break;
+    case "contextTier":
+      if (CONTEXT_TIERS.includes(value as ContextTier)) {
+        return { ok: true, value: { sessionId, change: { contextTier: value as ContextTier } } };
+      }
+      break;
+  }
+  return makeError(ERROR_CODES.badRequest, "Unsupported or malformed change.");
 }
 
 export function validateSnapshot(snapshot: unknown): snapshot is Snapshot {
@@ -228,8 +513,163 @@ export function validateSnapshot(snapshot: unknown): snapshot is Snapshot {
     isPlainObject(snapshot) &&
     Array.isArray(snapshot.entries) &&
     snapshot.entries.every(validateEntry) &&
-    validateStatus(snapshot.status)
+    validateStatus(snapshot.status) &&
+    (snapshot.prompts === undefined || validatePrompts(snapshot.prompts))
   );
+}
+
+const PROMPT_REQUEST_ID_PATTERN = /^[A-Za-z0-9._:-]{1,128}$/;
+const FORM_FIELD_NAME_MAX = 128;
+
+const isString = (value: unknown): value is string => typeof value === "string";
+const isOptionalString = (value: unknown) => value === undefined || typeof value === "string";
+const isStringList = (value: unknown): value is string[] =>
+  Array.isArray(value) && value.every(isString);
+
+function validateFormField(field: unknown): field is FormField {
+  if (!isPlainObject(field)) return false;
+  if (!isString(field.name) || !isString(field.label)) return false;
+  if (!FORM_FIELD_TYPES.includes(field.type as FormFieldType)) return false;
+  if (typeof field.required !== "boolean" || !isOptionalString(field.description)) return false;
+  if (field.options !== undefined) {
+    if (!Array.isArray(field.options)) return false;
+    if (!field.options.every((o) => isPlainObject(o) && isString(o.value) && isString(o.label))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** Structural check of one pending prompt as sent to the renderer. */
+export function validatePrompt(prompt: unknown): prompt is PendingPrompt {
+  if (!isPlainObject(prompt)) return false;
+  if (!PROMPT_KINDS.includes(prompt.kind as PromptKind)) return false;
+  if (!isString(prompt.requestId) || !PROMPT_REQUEST_ID_PATTERN.test(prompt.requestId)) {
+    return false;
+  }
+  if (!isString(prompt.createdAt)) return false;
+  switch (prompt.kind) {
+    case "permission":
+      return (
+        PERMISSION_KINDS.includes(prompt.permission as PermissionKind) &&
+        isString(prompt.detail) &&
+        isOptionalString(prompt.subject) &&
+        isOptionalString(prompt.intent) &&
+        isOptionalString(prompt.warning)
+      );
+    case "question":
+      return (
+        isString(prompt.question) &&
+        isStringList(prompt.choices) &&
+        typeof prompt.allowFreeform === "boolean"
+      );
+    case "form":
+      return (
+        isString(prompt.message) &&
+        isOptionalString(prompt.source) &&
+        typeof prompt.supported === "boolean" &&
+        Array.isArray(prompt.fields) &&
+        prompt.fields.every(validateFormField)
+      );
+    default:
+      return (
+        isString(prompt.summary) &&
+        isString(prompt.plan) &&
+        Array.isArray(prompt.actions) &&
+        prompt.actions.every((action) => PLAN_ACTIONS.includes(action as PlanAction)) &&
+        (prompt.recommended === undefined ||
+          PLAN_ACTIONS.includes(prompt.recommended as PlanAction))
+      );
+  }
+}
+
+export function validatePrompts(prompts: unknown): prompts is PendingPrompt[] {
+  return Array.isArray(prompts) && prompts.every(validatePrompt);
+}
+
+function onlyKeys(value: Record<string, unknown>, keys: readonly string[]): boolean {
+  return Object.keys(value).every((key) => keys.includes(key));
+}
+
+function validateAnswerText(value: unknown, allowEmpty = false): value is string {
+  return (
+    isString(value) &&
+    value.length <= LIMITS.maxAnswerChars &&
+    (allowEmpty || value.trim().length > 0)
+  );
+}
+
+function validatePromptResponse(response: unknown): PromptResponse | null {
+  if (!isPlainObject(response)) return null;
+  switch (response.kind) {
+    case "permission":
+      if (!onlyKeys(response, ["kind", "decision"])) return null;
+      return response.decision === "approve" || response.decision === "deny"
+        ? { kind: "permission", decision: response.decision }
+        : null;
+    case "question":
+      if (!onlyKeys(response, ["kind", "answer", "freeform"])) return null;
+      if (!validateAnswerText(response.answer) || typeof response.freeform !== "boolean") {
+        return null;
+      }
+      return { kind: "question", answer: response.answer, freeform: response.freeform };
+    case "form": {
+      if (!onlyKeys(response, ["kind", "action", "values"])) return null;
+      const { action, values } = response;
+      if (action !== "accept" && action !== "decline" && action !== "cancel") return null;
+      if (values === undefined) return { kind: "form", action };
+      if (action !== "accept" || !isPlainObject(values)) return null;
+      const entries = Object.entries(values);
+      if (entries.length > LIMITS.maxFormFields) return null;
+      const clean: Record<string, FormValue> = {};
+      for (const [name, value] of entries) {
+        if (name.length === 0 || name.length > FORM_FIELD_NAME_MAX) return null;
+        const ok =
+          typeof value === "boolean" ||
+          (typeof value === "number" && Number.isFinite(value)) ||
+          validateAnswerText(value, true);
+        if (!ok) return null;
+        Object.defineProperty(clean, name, { value, enumerable: true, writable: true });
+      }
+      return { kind: "form", action, values: clean };
+    }
+    case "plan":
+      if (!onlyKeys(response, ["kind", "approved", "action", "feedback"])) return null;
+      if (response.approved === true) {
+        if (response.feedback !== undefined) return null;
+        return PLAN_ACTIONS.includes(response.action as PlanAction)
+          ? { kind: "plan", approved: true, action: response.action as PlanAction }
+          : null;
+      }
+      if (response.approved !== false || response.action !== undefined) return null;
+      if (response.feedback === undefined) return { kind: "plan", approved: false };
+      return validateAnswerText(response.feedback, true)
+        ? { kind: "plan", approved: false, feedback: response.feedback }
+        : null;
+    default:
+      return null;
+  }
+}
+
+/**
+ * Validates the body of POST api/respond: { sessionId, requestId, response } where `response` is
+ * one explicit decision of a known kind. Unknown keys anywhere are rejected. Whether the answer
+ * fits the actual prompt (choices, fields, actions) is checked by the host against the prompt.
+ */
+export function validateRespondPayload(body: unknown): ValidationResult<RespondPayload> {
+  if (!isPlainObject(body) || !onlyKeys(body, ["sessionId", "requestId", "response"])) {
+    return makeError(ERROR_CODES.badRequest, "Body must be { sessionId, requestId, response }.");
+  }
+  const { sessionId, requestId } = body;
+  if (!isString(sessionId) || !SESSION_ID_PATTERN.test(sessionId)) {
+    return makeError(ERROR_CODES.badRequest, "sessionId is missing or malformed.");
+  }
+  if (!isString(requestId) || !PROMPT_REQUEST_ID_PATTERN.test(requestId)) {
+    return makeError(ERROR_CODES.badRequest, "requestId is missing or malformed.");
+  }
+  const response = validatePromptResponse(body.response);
+  if (!response) return makeError(ERROR_CODES.badRequest, "Unsupported or malformed response.");
+  return { ok: true, value: { sessionId, requestId, response } };
 }
 
 /** Validates a parsed SSE payload for the named event. */
@@ -237,11 +677,19 @@ export function validateServerEvent(name: string, data: unknown): boolean {
   if (!isPlainObject(data) || !Number.isInteger(data.seq) || (data.seq as number) < 0) return false;
   switch (name) {
     case SSE_EVENTS.snapshot:
-      return typeof data.generation === "string" && validateSnapshot(data.snapshot);
+      return (
+        typeof data.generation === "string" &&
+        validateSnapshot(data.snapshot) &&
+        validateControls(data.controls)
+      );
     case SSE_EVENTS.entry:
       return validateEntry(data.entry);
     case SSE_EVENTS.status:
       return validateStatus(data.status);
+    case SSE_EVENTS.controls:
+      return validateControls(data.controls);
+    case SSE_EVENTS.prompts:
+      return validatePrompts(data.prompts);
     default:
       return false;
   }
@@ -256,9 +704,21 @@ export function validateBootstrap(body: unknown): body is Bootstrap {
     typeof body.sessionId === "string" &&
     typeof body.csrfToken === "string" &&
     isPlainObject(body.config) &&
-    typeof body.config.displayName === "string" &&
-    validateSnapshot(body.snapshot)
+    typeof body.config.assistantName === "string" &&
+    validateSnapshot(body.snapshot) &&
+    validateControls(body.controls)
   );
+}
+
+/** Returns only the scheme://host[:port] of an http(s) URL, or null. Never keeps a path or query. */
+export function toPublicOrigin(value: unknown): string | null {
+  if (typeof value !== "string" || value.trim() === "") return null;
+  try {
+    const url = new URL(value.trim());
+    return url.protocol === "https:" || url.protocol === "http:" ? url.origin : null;
+  } catch {
+    return null;
+  }
 }
 
 /** Validates the body of GET api/identity (no CSRF token, no transcript data). */

@@ -33,6 +33,7 @@ const HIDDEN_USER_SOURCE_PREFIXES = ["skill-", "agent-", "system", "hook", "work
 const SYSTEM_TAG = /^\s*<(system[_-]notification|system[_-]reminder)\b/i;
 const MAX_SEEN_EVENTS = 5000;
 const MAX_ERROR_TEXT = 2000;
+const MAX_TOOL_NAME = 80;
 
 /** True for a user.message that the person actually typed (not injected plumbing). */
 export function isVisibleUserMessage(event: SessionEventLike | null | undefined): boolean {
@@ -75,7 +76,14 @@ export function createTranscriptStore({
   function setStatus(next: SessionStatus, history: boolean): TranscriptChange | null {
     if (history && statusLocked) return null;
     if (!history) statusLocked = true;
-    if (status.phase === next.phase && status.waitingFor === next.waitingFor) return null;
+    if (
+      status.phase === next.phase &&
+      status.activity === next.activity &&
+      status.toolName === next.toolName &&
+      status.waitingFor === next.waitingFor
+    ) {
+      return null;
+    }
     status = next;
     return { type: "status", status: { ...next } };
   }
@@ -106,7 +114,7 @@ export function createTranscriptStore({
         const requestId = messageId ? requestByMessage.get(messageId) : undefined;
         if (requestId) entry.requestId = requestId;
         push(putEntry(entry));
-        push(setStatus({ phase: "working" }, history));
+        push(setStatus({ phase: "working", activity: "thinking" }, history));
         break;
       }
       case "assistant.message_delta": {
@@ -123,7 +131,7 @@ export function createTranscriptStore({
             streaming: true,
           }),
         );
-        push(setStatus({ phase: "working" }, history));
+        push(setStatus({ phase: "working", activity: "responding" }, history));
         break;
       }
       case "assistant.message": {
@@ -149,13 +157,22 @@ export function createTranscriptStore({
         break;
       }
       case "assistant.turn_start":
-        push(setStatus({ phase: "working" }, history));
+      case "assistant.reasoning_delta":
+      case "tool.execution_complete":
+        push(setStatus({ phase: "working", activity: "thinking" }, history));
         break;
+      case "tool.execution_start": {
+        const toolName =
+          typeof data.toolName === "string" ? data.toolName.slice(0, MAX_TOOL_NAME) : undefined;
+        push(setStatus({ phase: "working", activity: "tool", toolName }, history));
+        break;
+      }
       case "session.idle":
       case "abort":
         push(setStatus({ phase: "idle" }, history));
         break;
       case "permission.requested":
+        if (data.resolvedByHook === true) break;
         push(setStatus({ phase: "waiting", waitingFor: "permission" }, history));
         break;
       case "user_input.requested":
@@ -164,10 +181,14 @@ export function createTranscriptStore({
       case "elicitation.requested":
         push(setStatus({ phase: "waiting", waitingFor: "elicitation" }, history));
         break;
+      case "exit_plan_mode.requested":
+        push(setStatus({ phase: "waiting", waitingFor: "plan" }, history));
+        break;
       case "permission.completed":
       case "user_input.completed":
       case "elicitation.completed":
-        push(setStatus({ phase: "working" }, history));
+      case "exit_plan_mode.completed":
+        push(setStatus({ phase: "working", activity: "thinking" }, history));
         break;
       case "session.error": {
         const message =

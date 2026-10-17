@@ -1,7 +1,125 @@
+/*
+ * Design tokens for Copilot Canvas.
+ *
+ * Every color follows the host: when the Copilot app injects its theme variables we use them,
+ * otherwise the fallbacks below keep a plain browser (or a phone over the gateway) looking right.
+ * Light and dark follow `prefers-color-scheme`; there is no in-app picker.
+ * Components consume only the `--cc-*` names, never the host names directly.
+ */
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
+
+  /* Surfaces */
+  --cc-bg: var(--background-color-default, #ffffff);
+  --cc-surface: var(--background-color-muted, #f6f8fa);
+  --cc-surface-raised: var(--cc-bg);
+  --cc-surface-sunken: color-mix(in srgb, var(--cc-text) 4%, var(--cc-bg));
+
+  /* Lines: a hairline for structure, a stronger edge (about 3:1) for fields and controls. */
+  --cc-border: var(--border-color-default, #d1d9e0);
+  --cc-border-strong: color-mix(in srgb, var(--cc-text) 45%, var(--cc-bg));
+
+  /* Text: faint is for tertiary meta only (timestamps, hints), never for body copy. */
+  --cc-text: var(--text-color-default, #1f2328);
+  --cc-text-muted: var(--text-color-muted, #59636e);
+  --cc-text-faint: color-mix(in srgb, var(--cc-text-muted) 80%, var(--cc-bg));
+
+  /* The one accent, plus semantic states */
+  --cc-accent: var(--fgColor-accent, #0969da);
+  --cc-accent-contrast: #ffffff;
+  --cc-accent-soft: var(--bgColor-accent-muted, #ddf4ff);
+  --cc-danger: var(--fgColor-danger, #d1242f);
+  --cc-danger-soft: var(--bgColor-danger-muted, #ffebe9);
+  --cc-warning: var(--fgColor-attention, #9a6700);
+  --cc-warning-soft: var(--bgColor-attention-muted, #fff8c5);
+  --cc-success: var(--fgColor-success, #1a7f37);
+  --cc-focus: var(--color-focus-outline, var(--cc-accent));
+
+  /* Shape */
+  --cc-radius-sm: 6px;
+  --cc-radius-md: 10px;
+  --cc-radius-lg: 14px;
+
+  /* Spacing scale */
+  --cc-space-1: 4px;
+  --cc-space-2: 8px;
+  --cc-space-3: 12px;
+  --cc-space-4: 16px;
+  --cc-space-5: 24px;
+  --cc-space-6: 32px;
+
+  /* Type */
+  --cc-font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --cc-font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --cc-text-xs: 12px;
+  --cc-text-sm: 13px;
+  --cc-text-md: 14px;
+  --cc-text-lg: 16px;
+
+  /* Elevation: only for things that float (menus, drawers, the composer). */
+  --cc-shadow-sm: 0 1px 2px rgb(31 35 40 / 6%);
+  --cc-shadow-md: 0 1px 3px rgb(31 35 40 / 6%), 0 8px 24px rgb(31 35 40 / 10%);
+
+  /* Motion */
+  --cc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --cc-duration: 180ms;
+
+  /* Layout */
+  --cc-sidebar-width: 232px;
+  --cc-aside-width: 300px;
+  --cc-topbar-height: 48px;
+  --cc-content-max: 760px;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --cc-bg: var(--background-color-default, #0d1117);
+    --cc-surface: var(--background-color-muted, #151b23);
+    --cc-surface-raised: color-mix(in srgb, var(--cc-text) 5%, var(--cc-surface));
+    --cc-surface-sunken: color-mix(in srgb, #000000 30%, var(--cc-bg));
+
+    --cc-border: var(--border-color-default, #3d444d);
+    --cc-border-strong: color-mix(in srgb, var(--cc-text) 40%, var(--cc-bg));
+
+    --cc-text: var(--text-color-default, #f0f6fc);
+    --cc-text-muted: var(--text-color-muted, #9198a1);
+
+    --cc-accent: var(--fgColor-accent, #4493f8);
+    /* Dark ink on the brighter dark-theme accent keeps filled buttons above 4.5:1. */
+    --cc-accent-contrast: #0b1220;
+    --cc-accent-soft: var(--bgColor-accent-muted, rgb(56 139 253 / 15%));
+    --cc-danger: var(--fgColor-danger, #f85149);
+    --cc-danger-soft: var(--bgColor-danger-muted, rgb(248 81 73 / 10%));
+    --cc-warning: var(--fgColor-attention, #d29922);
+    --cc-warning-soft: var(--bgColor-attention-muted, rgb(187 128 9 / 15%));
+    --cc-success: var(--fgColor-success, #3fb950);
+
+    --cc-shadow-sm: 0 1px 2px rgb(1 4 9 / 40%);
+    --cc-shadow-md: 0 1px 3px rgb(1 4 9 / 40%), 0 8px 24px rgb(1 4 9 / 50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cc-duration: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Base */
 html,
 body,
 #root {
@@ -11,332 +129,52 @@ body,
 
 body {
   overflow: hidden;
-  -webkit-text-size-adjust: 100%;
-}
-
-/* Header */
-.app-header {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding-inline: max(12px, env(safe-area-inset-left)) max(12px, env(safe-area-inset-right));
-}
-
-.app-title {
-  font-weight: 600;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.app-burger {
-  flex: none;
-  min-width: 44px;
-  min-height: 44px;
-}
-
-.nav-link {
-  min-height: 44px;
-  border-radius: var(--mantine-radius-md);
-}
-
-/* Main column: banner on top, then the stack of views filling the rest of the viewport. */
-.app-main {
-  display: flex;
-  flex-direction: column;
-  height: 100dvh;
-  min-height: 0;
-  overflow: hidden;
-}
-
-.view-stack {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.view-pane {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-}
-
-.view-pane[hidden] {
-  display: none;
-}
-
-.connection-banner {
-  flex: none;
-}
-
-/* Chat view */
-.chat-view {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  width: 100%;
-  max-width: 860px;
-  margin-inline: auto;
-}
-
-.chat-status {
-  flex: none;
-  padding: 8px max(12px, env(safe-area-inset-left)) 0 max(12px, env(safe-area-inset-right));
-}
-
-.status-chip {
-  max-width: 100%;
-  height: auto;
-  min-height: 26px;
-  text-transform: none;
-}
-
-.transcript-wrap {
-  position: relative;
-  flex: 1;
-  min-height: 0;
-  display: flex;
-}
-
-.transcript {
-  flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  padding: 12px max(12px, env(safe-area-inset-left)) 12px max(12px, env(safe-area-inset-right));
-}
-
-.transcript-content {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.jump-latest {
-  position: absolute;
-  bottom: 12px;
-  left: 50%;
-  transform: translateX(-50%);
-  min-height: 36px;
-  box-shadow: var(--mantine-shadow-sm);
-}
-
-.entry {
-  display: flex;
-  flex-direction: column;
-  min-width: 0;
-}
-
-.entry-user {
-  align-items: flex-end;
-}
-
-.entry-assistant {
-  align-items: flex-start;
-}
-
-.bubble {
-  max-width: min(100%, 720px);
-  padding: 8px 12px;
-  border-radius: var(--mantine-radius-lg);
-  overflow-wrap: anywhere;
+  background: var(--cc-bg);
+  color: var(--cc-text);
+  font-family: var(--cc-font-sans);
+  font-size: var(--cc-text-md);
   line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
 }
 
-.bubble-user {
-  background: var(--panel-accent-muted);
-  border: 1px solid var(--panel-border);
-}
-
-.bubble-pending {
-  opacity: 0.7;
-}
-
-.bubble-assistant {
-  background: var(--panel-bg-muted);
-  border: 1px solid var(--panel-border);
-}
-
-.plain-text {
-  white-space: pre-wrap;
-}
-
-.pending-label {
-  margin-top: 2px;
-}
-
-.streaming-indicator {
-  display: inline-flex;
-  gap: 4px;
-  padding-top: 6px;
-}
-
-.streaming-indicator span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--mantine-color-dimmed);
-  animation: streaming-pulse 1.2s ease-in-out infinite;
-}
-
-.streaming-indicator span:nth-child(2) {
-  animation-delay: 0.2s;
-}
-
-.streaming-indicator span:nth-child(3) {
-  animation-delay: 0.4s;
-}
-
-@keyframes streaming-pulse {
-  0%,
-  80%,
-  100% {
-    opacity: 0.25;
-  }
-  40% {
-    opacity: 1;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .streaming-indicator span {
-    animation: none;
-    opacity: 0.6;
-  }
-}
-
-/* Composer: pinned to the bottom, honoring device safe areas. */
-.composer {
-  flex: none;
-  position: sticky;
-  bottom: 0;
-  background: var(--mantine-color-body);
-  border-top: 1px solid var(--panel-border);
-  padding: 10px max(12px, env(safe-area-inset-right)) calc(10px + env(safe-area-inset-bottom))
-    max(12px, env(safe-area-inset-left));
-}
-
-.composer-row {
-  display: flex;
-  align-items: flex-end;
-  gap: 8px;
-}
-
-.composer-input {
-  flex: 1;
-  min-width: 0;
-}
-
-/* 16px prevents iOS Safari from zooming into the field on focus. */
-.composer-input textarea {
-  font-size: 16px;
-  min-height: 44px;
-  line-height: 1.4;
-}
-
-.composer-send {
-  flex: none;
-  min-height: 44px;
-  min-width: 64px;
+::selection {
+  background: var(--cc-accent-soft);
+  color: var(--cc-text);
 }
 
 :focus-visible {
-  outline: 2px solid var(--panel-focus);
+  outline: 2px solid var(--cc-focus);
   outline-offset: 2px;
 }
 
-/* Rendered Markdown */
-.md > :first-child {
-  margin-top: 0;
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cc-border) transparent;
 }
 
-.md > :last-child {
-  margin-bottom: 0;
+/* Floating Mantine surfaces share one look: raised fill, hairline, soft shadow. */
+.mantine-Menu-dropdown,
+.mantine-Popover-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-Modal-content {
+  background: var(--cc-surface-raised);
+  border: 1px solid var(--cc-border);
+  box-shadow: var(--cc-shadow-md);
 }
 
-.md p {
-  margin: 0 0 0.6em;
+.mantine-Tooltip-tooltip {
+  background: var(--cc-text);
+  color: var(--cc-bg);
+  font-size: var(--cc-text-xs);
 }
 
-.md ul,
-.md ol {
-  margin: 0 0 0.6em;
-  padding-inline-start: 1.5em;
+.mantine-Skeleton-root::after {
+  background: color-mix(in srgb, var(--cc-text) 8%, transparent);
 }
 
-.md li > p {
-  margin: 0;
-}
-
-.md blockquote {
-  margin: 0 0 0.6em;
-  padding-inline-start: 12px;
-  border-inline-start: 3px solid var(--panel-border);
-  color: var(--mantine-color-dimmed);
-}
-
-.md hr {
-  border: 0;
-  border-top: 1px solid var(--panel-border);
-  margin: 0.8em 0;
-}
-
-.md a {
-  color: var(--mantine-color-anchor);
-  text-decoration: underline;
-  overflow-wrap: anywhere;
-}
-
-.md code {
-  font-family: var(--mantine-font-family-monospace);
-  font-size: 0.9em;
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
-  background: var(--panel-accent-muted);
-}
-
-.md pre {
-  margin: 0 0 0.6em;
-  padding: 10px 12px;
-  overflow-x: auto;
-  border-radius: var(--mantine-radius-md);
-  background: var(--mantine-color-body);
-  border: 1px solid var(--panel-border);
-}
-
-.md pre code {
-  padding: 0;
-  background: none;
-  font-size: 0.85em;
-  white-space: pre;
-}
-
-.md-heading {
-  font-weight: 650;
-  margin: 0.8em 0 0.4em;
-  line-height: 1.3;
-}
-
-.md-heading-1 {
-  font-size: 1.35em;
-}
-
-.md-heading-2 {
-  font-size: 1.2em;
-}
-
-.md-heading-3 {
-  font-size: 1.1em;
-}
-
-.md-heading-4 {
-  font-size: 1em;
-}
-
-@media (max-width: 768px) {
-  .bubble {
-    max-width: 100%;
-  }
+.mantine-Modal-header {
+  background: var(--cc-surface-raised);
 }

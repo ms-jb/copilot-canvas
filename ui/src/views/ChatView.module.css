@@ -1,0 +1,33 @@
+.chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--cc-bg);
+}
+
+/* Activity row and composer stay docked at the bottom of the view. */
+.dock {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  background: var(--cc-bg);
+}
+
+.activity {
+  padding-inline: max(var(--cc-space-4), env(safe-area-inset-left))
+    max(var(--cc-space-4), env(safe-area-inset-right));
+}
+
+.activityInner {
+  max-width: var(--cc-content-max, 760px);
+  margin-inline: auto;
+}
+
+@media (max-width: 768px) {
+  .activity {
+    padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
+      max(var(--cc-space-2), env(safe-area-inset-right));
+  }
+}

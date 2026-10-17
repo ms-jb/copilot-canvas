@@ -1,12 +1,15 @@
-// The chat canvas: opens a panel that points at the shared provider. One provider serves every
+// The canvas: opens a panel that points at the shared provider. One provider serves every
 // open instance; it starts on the first open and stops (with a new generation next time) when
-// the last instance closes.
+// the last instance closes. The canvas belongs to the session that loaded this extension: an open
+// request for any other session is refused rather than showing the wrong transcript.
 
+import type { SessionStatus } from "../shared/contract.mts";
 import type { TemplateConfig } from "../shared/config.mts";
 import type { Logger } from "./bridge.mts";
 
 export interface CanvasOpenContext {
   instanceId: string;
+  sessionId?: string;
 }
 
 export interface CanvasOpenResult {
@@ -34,13 +37,25 @@ export interface CanvasSpec {
 
 export interface ProviderHandle {
   url: string;
+  /** Called on every successful open or focus. */
+  markOpened?(): void;
   close(): Promise<void>;
 }
+
+export const SESSION_MISMATCH = "session_mismatch";
 
 export interface ChatCanvas<C> {
   canvas: C;
   /** Closes the provider regardless of open instances. */
   shutdown(): Promise<void>;
+}
+
+/** Short canvas status text for the app chrome. */
+export function describeStatus(status: SessionStatus | null): string {
+  if (!status) return "Connecting";
+  if (status.phase === "waiting") return "Waiting for you";
+  if (status.phase === "working") return "Working";
+  return "Ready";
 }
 
 const OPEN_INPUT_SCHEMA = Object.freeze({
@@ -49,18 +64,35 @@ const OPEN_INPUT_SCHEMA = Object.freeze({
   additionalProperties: true,
 });
 
+function defaultError(code: string, message: string): Error {
+  return Object.assign(new Error(message), { code });
+}
+
 /**
  * `createCanvas` is the SDK factory (injected so only extension.mts imports the SDK).
  * `ensureProvider()` is called whenever no provider is running and must resolve to
- * `{ url, close() }`.
+ * `{ url, close() }`. `getStatus()` returns the session status when known. `getSessionId()`
+ * resolves to the id of the session this extension joined. `createError` builds the structured
+ * error returned to the host (the SDK's CanvasError).
  */
 export function createChatCanvas<C>(input: {
-  config: Pick<TemplateConfig, "canvasId" | "displayName" | "description">;
+  config: Pick<TemplateConfig, "canvasId" | "assistantName" | "description">;
   createCanvas: (spec: CanvasSpec) => C;
   ensureProvider: () => Promise<ProviderHandle>;
+  getStatus?: () => SessionStatus | null;
+  getSessionId?: () => Promise<string | null> | string | null;
+  createError?: (code: string, message: string) => Error;
   log?: Logger;
 }): ChatCanvas<C> {
-  const { config, createCanvas, ensureProvider, log = () => {} } = input;
+  const {
+    config,
+    createCanvas,
+    ensureProvider,
+    getStatus = () => null,
+    getSessionId = () => null,
+    createError = defaultError,
+    log = () => {},
+  } = input;
   const instances = new Set<string>();
   let provider: ProviderHandle | null = null;
   let starting: Promise<ProviderHandle> | null = null;
@@ -102,18 +134,32 @@ export function createChatCanvas<C>(input: {
 
   const canvas = createCanvas({
     id: config.canvasId,
-    displayName: config.displayName,
+    displayName: config.assistantName,
     description: config.description,
     inputSchema: { ...OPEN_INPUT_SCHEMA },
     actions: [
       {
         name: "status",
-        description: "Reports whether the chat panel is running and how many panels are open.",
+        description:
+          "Reports whether the canvas is running, how many are open and the session phase.",
         inputSchema: { type: "object", properties: {}, additionalProperties: false },
-        handler: () => ({ running: provider !== null, openPanels: instances.size }),
+        handler: () => ({
+          running: provider !== null,
+          openPanels: instances.size,
+          status: describeStatus(getStatus()),
+        }),
       },
     ],
     async open(ctx) {
+      if (ctx.sessionId) {
+        const own = await getSessionId();
+        if (own && ctx.sessionId !== own) {
+          throw createError(
+            SESSION_MISMATCH,
+            `This ${config.assistantName} canvas belongs to another session. Open it from that session's chat.`,
+          );
+        }
+      }
       // Registered first so a concurrent close cannot stop the provider this open is about to use.
       instances.add(ctx.instanceId);
       let running: ProviderHandle;
@@ -123,7 +169,12 @@ export function createChatCanvas<C>(input: {
         instances.delete(ctx.instanceId);
         throw error;
       }
-      return { url: running.url, title: config.displayName, status: "Connected to this session" };
+      running.markOpened?.();
+      return {
+        url: running.url,
+        title: config.assistantName,
+        status: describeStatus(getStatus()),
+      };
     },
     async onClose(ctx) {
       instances.delete(ctx.instanceId);

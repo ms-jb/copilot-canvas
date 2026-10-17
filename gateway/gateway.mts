@@ -1,11 +1,15 @@
 // Loopback gateway: lets a remote browser (for example through an owner-only dev tunnel) reach the
 // extension's provider without exposing its capability path. Binds 127.0.0.1 only and never
 // forwards anything outside the allow-list below. It never logs request data.
+// Every Copilot session with the extension loaded publishes its own provider state file; the
+// gateway follows the live one whose canvas was opened most recently.
 
+import { rmSync } from "node:fs";
 import http from "node:http";
 import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { dirname, resolve } from "node:path";
+import qrcode from "qrcode-generator";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   API,
@@ -15,8 +19,14 @@ import {
   LIMITS,
   validateIdentity,
 } from "../extension-src/shared/contract.mts";
-import { loadConfig, providerStatePath } from "../extension-src/shared/config.mts";
-import { readProviderState } from "../extension-src/shared/runtime-state.mts";
+import { gatewayStatePath, loadConfig, sessionsDir } from "../extension-src/shared/config.mts";
+import {
+  buildGatewayState,
+  readGatewayState,
+  readLiveProviders,
+  readProviderState,
+  writePrivateJson,
+} from "../extension-src/shared/runtime-state.mts";
 import type { ProviderState } from "../extension-src/shared/runtime-state.mts";
 import {
   SENSITIVE_RESPONSE_HEADERS,
@@ -26,6 +36,8 @@ import {
 
 const LOOPBACK = "127.0.0.1";
 const WATCH_INTERVAL_MS = 500;
+// Provider selection (file scan + identity probe) is reused for this long.
+const SELECTION_TTL_MS = 500;
 const UPSTREAM_TIMEOUT_MS = LIMITS.sendTimeoutMs + 5000;
 
 // Only these request headers reach the provider (no cookies, authorization or x-forwarded-*).
@@ -44,14 +56,19 @@ const ROUTES: Record<string, string> = {
   [`/${API.bootstrap}`]: "GET",
   [`/${API.events}`]: "GET",
   [`/${API.send}`]: "POST",
+  [`/${API.controls}`]: "POST",
+  [`/${API.respond}`]: "POST",
+  [`/${API.share}`]: "GET",
 };
+// Writes must be pinned to the provider run the page was loaded from.
+const PINNED_WRITES = new Set<string>([API.send, API.controls, API.respond]);
 
 const NOT_CONNECTED_PAGE = `<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
 <meta http-equiv="refresh" content="5"><title>Not connected</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;color-scheme:light dark}</style>
 <h1>Not connected</h1>
-<p>The chat panel isn't running. Open the canvas in the Copilot app and this page reconnects on its own.</p>
+<p>Copilot Canvas isn't running. Open the canvas in a Copilot chat and this page reconnects on its own.</p>
 `;
 
 export interface GatewayOptions {
@@ -59,8 +76,10 @@ export interface GatewayOptions {
   port?: number;
   /** Exact extra Origin to accept, for example the tunnel's https origin. */
   allowedOrigin?: string;
-  /** Provider state file written by the extension host. */
-  statePath: string;
+  /** Directory of per-session provider state files; the most recently opened live one is used. */
+  sessionsDir?: string;
+  /** A single provider state file to use instead of scanning `sessionsDir`. */
+  statePath?: string;
 }
 
 export interface Gateway {
@@ -115,9 +134,33 @@ function readBody(request: IncomingMessage, maxBytes: number): Promise<Buffer | 
 }
 
 export function createGateway(options: GatewayOptions): Gateway {
-  const { statePath, allowedOrigin = "" } = options;
+  const { statePath, sessionsDir: stateDir, allowedOrigin = "" } = options;
   const server = http.createServer((request, response) => void handle(request, response));
   const port = () => (server.address() as AddressInfo).port;
+
+  function candidates(): ProviderState[] {
+    if (statePath) {
+      const state = readProviderState(statePath);
+      return state ? [state] : [];
+    }
+    return stateDir ? readLiveProviders(stateDir) : [];
+  }
+
+  let selection: { at: number; result: Promise<ProviderState | null> } | null = null;
+
+  /** The most recently opened provider that answers its identity probe with its own generation. */
+  function selectProvider(): Promise<ProviderState | null> {
+    const now = Date.now();
+    if (selection && now - selection.at < SELECTION_TTL_MS) return selection.result;
+    const result = (async () => {
+      for (const state of candidates()) {
+        if (await probeIdentity(state)) return state;
+      }
+      return null;
+    })();
+    selection = { at: now, result };
+    return result;
+  }
 
   function sendError(
     request: IncomingMessage,
@@ -125,7 +168,8 @@ export function createGateway(options: GatewayOptions): Gateway {
     code: string,
     message: string,
   ) {
-    const isSend = request.method === "POST";
+    const isPost = request.method === "POST";
+    const isSend = isPost && request.url?.split("?")[0] === `/${API.send}`;
     const body = Buffer.from(
       JSON.stringify({
         ok: false,
@@ -139,7 +183,7 @@ export function createGateway(options: GatewayOptions): Gateway {
       "content-type": "application/json; charset=utf-8",
       "content-length": body.length,
     };
-    if (isSend) {
+    if (isPost) {
       // The request body may be unread: discard it and close the connection after replying.
       headers.connection = "close";
       request.resume();
@@ -223,9 +267,12 @@ export function createGateway(options: GatewayOptions): Gateway {
         if (!isSse) return;
 
         response.flushHeaders();
-        // End the stream when the provider restarts (new generation) or disappears.
+        // End the stream when the selected provider changes (restart, another session's canvas
+        // opened more recently) or disappears.
         const watcher = setInterval(() => {
-          if (readProviderState(statePath)?.generation !== state.generation) upstream.destroy();
+          void selectProvider().then((current) => {
+            if (current?.generation !== state.generation) upstream.destroy();
+          });
         }, WATCH_INTERVAL_MS);
         upstream.on("close", () => {
           clearInterval(watcher);
@@ -239,12 +286,28 @@ export function createGateway(options: GatewayOptions): Gateway {
       if (response.headersSent) return;
       // A refused connection never reached the provider; any other send failure is an unknown outcome.
       if (request.method === "POST" && error.code !== "ECONNREFUSED") {
-        sendError(
-          request,
-          response,
-          ERROR_CODES.sendUncertain,
-          "The outcome of the send is unknown.",
-        );
+        if (path === API.controls) {
+          sendError(
+            request,
+            response,
+            ERROR_CODES.controlFailed,
+            "The change may not have applied.",
+          );
+        } else if (path === API.respond) {
+          sendError(
+            request,
+            response,
+            ERROR_CODES.respondUncertain,
+            "The answer may not have reached the session. Check before answering again.",
+          );
+        } else {
+          sendError(
+            request,
+            response,
+            ERROR_CODES.sendUncertain,
+            "The outcome of the send is unknown.",
+          );
+        }
       } else {
         sendNotConnected(request, response, path === "");
       }
@@ -276,16 +339,14 @@ export function createGateway(options: GatewayOptions): Gateway {
     }
     const path = pathname.slice(1);
 
-    const state = readProviderState(statePath);
-    if (!state || !(await probeIdentity(state)))
-      return sendNotConnected(request, response, path === "");
+    const state = await selectProvider();
+    if (!state) return sendNotConnected(request, response, path === "");
 
-    // Pages always send their generation on send; refuse anything pinned to a different provider run.
+    // Pages always send their generation on writes; refuse anything pinned to a different provider run.
     const pinned = request.headers[HEADERS.generation];
-    const stale =
-      path === API.send
-        ? pinned !== state.generation
-        : pinned !== undefined && pinned !== state.generation;
+    const stale = PINNED_WRITES.has(path)
+      ? pinned !== state.generation
+      : pinned !== undefined && pinned !== state.generation;
     if (stale) {
       return sendError(
         request,
@@ -296,7 +357,7 @@ export function createGateway(options: GatewayOptions): Gateway {
     }
 
     let body: Buffer | undefined;
-    if (path === API.send) {
+    if (PINNED_WRITES.has(path)) {
       const read = await readBody(request, LIMITS.maxBodyBytes);
       if (!read)
         return sendError(
@@ -327,15 +388,61 @@ export function createGateway(options: GatewayOptions): Gateway {
   };
 }
 
+/**
+ * Renders `text` as a terminal QR code: two modules per character cell using half blocks, with a
+ * 4-module quiet zone. Explicit black-on-white colors keep it scannable on light and dark themes.
+ */
+export function renderTerminalQr(text: string, color = !process.env.NO_COLOR): string {
+  const qr = qrcode(0, "M");
+  qr.addData(text);
+  qr.make();
+  const quiet = 4;
+  const size = qr.getModuleCount() + quiet * 2;
+  const dark = (row: number, col: number) => {
+    const r = row - quiet;
+    const c = col - quiet;
+    return r >= 0 && c >= 0 && r < size - quiet * 2 && c < size - quiet * 2 && qr.isDark(r, c);
+  };
+  const [start, end] = color ? ["\x1b[38;5;16;48;5;231m", "\x1b[0m"] : ["", ""];
+  const lines: string[] = [];
+  for (let row = 0; row < size; row += 2) {
+    let line = "";
+    for (let col = 0; col < size; col++) {
+      const top = dark(row, col);
+      const bottom = dark(row + 1, col);
+      line += top && bottom ? "█" : top ? "▀" : bottom ? "▄" : " ";
+    }
+    lines.push(start + line + end);
+  }
+  return lines.join("\n");
+}
+
 if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1])).href) {
   const config = loadConfig(resolve(dirname(fileURLToPath(import.meta.url)), ".."));
   const gateway = createGateway({
     port: config.gatewayPort,
     allowedOrigin: config.gatewayAllowedOrigin,
-    statePath: process.env.GATEWAY_STATE_FILE || providerStatePath(config),
+    statePath: process.env.GATEWAY_STATE_FILE || undefined,
+    sessionsDir: sessionsDir(config),
   });
   const { port } = await gateway.listen();
   console.log(`gateway listening on 127.0.0.1:${port}`);
+
+  // Publish only the public root origin so the canvas can offer "Open on phone".
+  const sharePath = gatewayStatePath(config);
+  const share = config.gatewayAllowedOrigin ? buildGatewayState(config.gatewayAllowedOrigin) : null;
+  if (share) {
+    writePrivateJson(sharePath, share);
+    console.log(`\nOpen on phone: ${share.publicUrl}\n\n${renderTerminalQr(share.publicUrl)}\n`);
+    console.log("Use an owner-only tunnel and a browser signed in as the tunnel owner.");
+  } else {
+    console.log("Set GATEWAY_ALLOWED_ORIGIN to your tunnel origin to enable Open on phone.");
+  }
+  const removeShare = () => {
+    if (share && readGatewayState(sharePath)?.pid === process.pid)
+      rmSync(sharePath, { force: true });
+  };
+  process.on("exit", removeShare);
   const shutdown = () => void gateway.close().then(() => process.exit(0));
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);

@@ -23,12 +23,13 @@ export interface Connection {
   /** Null until the first bootstrap succeeds. */
   context: SendContext | null;
   config: PanelConfig | null;
+  /** Live transcript, session status, native session controls and pending prompts. */
   view: ViewState;
   /** Call when the provider reports it restarted (for example a 409 stale_provider on send). */
   markStale: () => void;
 }
 
-const SSE_EVENT_NAMES = ["snapshot", "entry", "status"] as const;
+const SSE_EVENT_NAMES = ["snapshot", "entry", "status", "controls", "prompts"] as const;
 const RETRY_BASE_MS = 1000;
 const RETRY_MAX_MS = 15000;
 // EventSource retries on its own; after this long without a connection we call it "not connected".
@@ -156,6 +157,8 @@ export function useConnection(): Connection {
           generation,
           entries: bootstrap.snapshot.entries,
           status: bootstrap.snapshot.status,
+          controls: bootstrap.controls,
+          prompts: bootstrap.snapshot.prompts ?? [],
         });
         setPhase("connecting");
         open();

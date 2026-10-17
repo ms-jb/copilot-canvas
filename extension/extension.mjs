@@ -1,6 +1,8 @@
 // Extension entry point. The only file that imports the Copilot SDK.
 // Joins the current session once; that session is the only transcript source and composer target.
-import { createCanvas, joinSession } from "@github/copilot-sdk/extension";
+// Each Copilot chat session that loads this extension runs its own copy, so the canvas always
+// shows the session it was opened from.
+import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/config.mjs";
@@ -36,7 +38,22 @@ const chat = createChatCanvas({
     config,
     createCanvas,
     log,
-    ensureProvider: async () => startProvider({ config, bridge: await bridgeReady, uiDir, log }),
+    getStatus: () => bridge?.getSnapshot().snapshot.status ?? null,
+    getSessionId: async () => {
+        await bridgeReady;
+        return session?.sessionId ?? null;
+    },
+    createError: (code, message) => new CanvasError(code, message),
+    ensureProvider: async () => {
+        const ready = await bridgeReady;
+        return startProvider({
+            config,
+            bridge: ready,
+            sessionId: session?.sessionId ?? "",
+            uiDir,
+            log,
+        });
+    },
 });
 const joined = await joinSession({
     streaming: true,
@@ -56,7 +73,7 @@ function shutdown(reason) {
     shutdownPromise ??= (async () => {
         bridge?.dispose();
         await chat.shutdown().catch(() => { });
-        log(`${config.displayName} stopped (${reason}).`);
+        log(`${config.assistantName} canvas stopped (${reason}).`);
     })();
     return shutdownPromise;
 }

@@ -2,19 +2,33 @@
 // Used by the host (authoritative store) and by the renderer (client view state).
 
 import { LIMITS } from "./contract.mts";
-import type { ServerEvent, SessionStatus, TranscriptEntry } from "./contract.mts";
+import type {
+  PendingPrompt,
+  ServerEvent,
+  SessionControls,
+  SessionStatus,
+  TranscriptEntry,
+} from "./contract.mts";
 
 export interface ViewState {
   generation: string | null;
   seq: number;
   entries: TranscriptEntry[];
   status: SessionStatus;
+  controls: SessionControls;
+  /** Pending requests the user can answer from the canvas, oldest first. */
+  prompts: PendingPrompt[];
 }
 
 export interface PendingRef {
   requestId: string;
   messageId?: string;
 }
+
+export const NO_CONTROLS: SessionControls = Object.freeze({
+  available: { mode: false, model: false, reasoningEffort: false, contextTier: false },
+  models: [],
+}) as SessionControls;
 
 /** Inserts or replaces an entry by id. New entries are placed by timestamp (stable for ties). */
 export function upsertEntry(
@@ -37,8 +51,17 @@ export function upsertEntry(
 }
 
 export function createViewState(): ViewState {
-  return { generation: null, seq: -1, entries: [], status: { phase: "idle" } };
+  return {
+    generation: null,
+    seq: -1,
+    entries: [],
+    status: { phase: "idle" },
+    controls: NO_CONTROLS,
+    prompts: [],
+  };
 }
+
+type EventData<E extends ServerEvent["name"]> = Extract<ServerEvent, { name: E }>["data"];
 
 /**
  * Applies one parsed SSE event to the client view state and returns a new state.
@@ -48,29 +71,42 @@ export function createViewState(): ViewState {
 export function applyServerEvent<E extends ServerEvent["name"]>(
   state: ViewState,
   name: E,
-  data: Extract<ServerEvent, { name: E }>["data"],
+  data: EventData<E>,
 ): ViewState {
   if (name === "snapshot") {
-    const event = data as Extract<ServerEvent, { name: "snapshot" }>["data"];
+    const event = data as EventData<"snapshot">;
     return {
       generation: event.generation,
       seq: event.seq,
       entries: event.snapshot.entries.slice(-LIMITS.maxEntries),
       status: event.snapshot.status,
+      controls: event.controls,
+      prompts: event.snapshot.prompts ?? [],
     };
   }
   if (data.seq <= state.seq) {
     return state;
   }
-  if (name === "entry") {
-    const event = data as Extract<ServerEvent, { name: "entry" }>["data"];
-    return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+  switch (name) {
+    case "entry": {
+      const event = data as EventData<"entry">;
+      return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+    }
+    case "status": {
+      const event = data as EventData<"status">;
+      return { ...state, seq: event.seq, status: event.status };
+    }
+    case "controls": {
+      const event = data as EventData<"controls">;
+      return { ...state, seq: event.seq, controls: event.controls };
+    }
+    case "prompts": {
+      const event = data as EventData<"prompts">;
+      return { ...state, seq: event.seq, prompts: event.prompts };
+    }
+    default:
+      return state;
   }
-  if (name === "status") {
-    const event = data as Extract<ServerEvent, { name: "status" }>["data"];
-    return { ...state, seq: event.seq, status: event.status };
-  }
-  return state;
 }
 
 /**

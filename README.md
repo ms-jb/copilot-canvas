@@ -1,116 +1,193 @@
-# copilot-canvas-starter
+# Copilot Canvas
 
-A small TypeScript starter for a Copilot app **canvas extension**: a chat panel that shows the
-conversation of the session it is installed in and lets you send messages to that same session.
-An optional loopback **gateway** lets you open the same panel from another browser through a
-private dev tunnel.
+[![CI](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml)
+
+Your Copilot chat session in a calm, three-column canvas: your views on the left, the conversation
+in the middle, your own panels on the right. Answer permission requests, questions and plan
+approvals right in the canvas, even from your phone, and shape the whole thing just by asking
+Copilot. It works with any Copilot chat session where the extension is loaded, with no extra setup.
+
+[![Report an issue](https://img.shields.io/badge/Report_an_issue-d73a49?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues/new/choose)
+[![Issues](https://img.shields.io/badge/Issues-24292f?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues)
+[![Releases](https://img.shields.io/badge/Releases-2da44e?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/releases)
+[![Install](https://img.shields.io/badge/Install-8957e5?style=for-the-badge&logo=githubcopilot&logoColor=white)](#getting-started)
+
+<table>
+  <tr>
+    <td width="72%"><img src="docs/screenshots/desktop.png" alt="Copilot Canvas on desktop"></td>
+    <td width="28%"><img src="docs/screenshots/phone.png" alt="Copilot Canvas on a phone"></td>
+  </tr>
+</table>
+
+<details>
+<summary>Dark theme</summary>
+
+![Copilot Canvas on desktop, dark theme](docs/screenshots/desktop-dark.png)
+
+</details>
+
+## Getting started
+
+In the Copilot app, open the **Install canvas extension** dialog and paste:
 
 ```
-extension-src/   extension host (.mts) -> compiled to extension/
-ui/              React + Mantine renderer -> built to extension/ui/
-gateway/         optional loopback proxy (gateway.mts)
-extension/       generated, committed, installable output (do not hand-edit)
+https://github.com/ms-jb/copilot-canvas/tree/main/extension
 ```
 
-## Prerequisites
+Or install from a clone with `npm install` and `npm run install-ext`. Reload extensions, then open
+the canvas from your chat session.
 
-- Node.js 22.18 or newer (24 recommended). The gateway and scripts run as TypeScript directly
-  through Node's type stripping, so code must be erasable TypeScript (no enums or namespaces).
-- npm. Tooling is [Vite+](https://viteplus.dev) (`vp`), installed locally.
+> [!TIP]
+> The canvas binds to the session that opens it. Open it from each chat you want to follow; every
+> canvas reads and writes only its own session.
 
-## Quick start
+**What you see**
 
-```bash
-npm install
-npx vp run install-ext
+- **Conversation** in the center, with Markdown, code blocks and timestamps.
+- **Activity** (thinking, responding, running a tool, waiting on you) in the line above the
+  composer.
+- **Decisions** – permission requests, questions and plan approvals – answered right in the canvas,
+  so you never have to switch to the app.
+- **Connection health** as the dot next to the assistant's name; a banner appears only when
+  something needs your action.
+- **Session settings** (mode, model, reasoning effort, long context) as pills in the composer.
+- **Your panels** on the right, starting with an invitation to ask Copilot to add one.
+
+## Make it yours
+
+Ask Copilot in chat. Describe what you want and it updates the canvas for you:
+
+- _"Add a panel to the right side that shows my open pull requests."_
+- _"Add a Notes view to the sidebar where I can keep a scratchpad."_
+- _"Rename the assistant to Atlas and use a teal accent."_
+- _"Open the Notes view first when the canvas starts."_
+- _"Add a panel with a checklist for today that I can tick off."_
+
+Reload the canvas when Copilot is done to see the change.
+
+## Open on phone
+
+An optional gateway makes the canvas reachable from your phone through an **owner-only** dev
+tunnel. With several sessions open, it follows the session whose canvas was opened most recently.
+
+1. Create and host an owner-only tunnel for port 47600 (never anonymous access):
+
+   ```bash
+   devtunnel user login
+   devtunnel create
+   devtunnel port create -p 47600
+   devtunnel host
+   ```
+
+2. Start the gateway with the tunnel's exact origin:
+
+   ```bash
+   GATEWAY_ALLOWED_ORIGIN=https://<tunnel-id>-47600.<region>.devtunnels.ms npm run gateway
+   ```
+
+   PowerShell: `$env:GATEWAY_ALLOWED_ORIGIN="https://..."; npm run gateway`
+
+3. Scan the QR code from the terminal or the canvas's **Open on phone** button and sign in as the
+   tunnel owner.
+
+## How it works
+
+```mermaid
+flowchart LR
+  S[Copilot chat session] <--> H[Extension host<br/>loopback provider]
+  H <--> C[Canvas renderer]
+  H -. optional .-> G[Gateway]
+  G -.-> T[Owner-only dev tunnel]
+  T -.-> P[Phone browser]
 ```
 
-This builds and copies `extension/` to `~/.copilot/extensions/<name>/` (`COPILOT_HOME` changes the
-root). Reload extensions in the Copilot app and open the **Chat Panel** canvas. Pass
-`[name] [--force] [--dir <extensions-root>]` to change the target; it never overwrites a folder it
-did not create unless you pass `--force`.
+| Component       | Role                                                                   |
+| --------------- | ---------------------------------------------------------------------- |
+| Extension host  | Binds to the session, serves the canvas and its API on loopback only   |
+| Canvas renderer | The React UI: conversation, composer, decisions, your views and panels |
+| Gateway         | Optional; forwards only the canvas's own requests to a dev tunnel      |
+| Dev preview     | A scripted stand-in for the host, used by `npx vp dev`                 |
 
-### Install from GitHub instead
+## Safety
 
-`extension/` is committed and installable as-is. In the app's **Install canvas extension** dialog,
-paste the folder URL `https://github.com/<owner>/<repo>/tree/<ref>/extension`, or share the
-`extension/` contents as a gist.
-
-## Develop
-
-- `npx vp check` – format, lint and type-check
-- `npx vp test` – small unit tests (contract, transcript, markdown, Host/Origin, gateway)
-- `npx vp build` – build the renderer and compile the host into `extension/`
-
-Rebuild and commit `extension/` after changing `extension-src/`, `ui/` or `template.config.json`.
-The template ships without a lockfile; commit your own `package-lock.json` once you start a
-project from it.
-
-## Customize
-
-Edit `template.config.json`. Environment variables override it.
-
-| Field                  | Env                      | Meaning                               |
-| ---------------------- | ------------------------ | ------------------------------------- |
-| `extensionName`        | `EXTENSION_NAME`         | install folder name                   |
-| `canvasId`             | `CANVAS_ID`              | canvas id                             |
-| `displayName`          | `CANVAS_DISPLAY_NAME`    | title shown in the app                |
-| `description`          | –                        | canvas description                    |
-| `defaultView`          | –                        | view opened first                     |
-| `gatewayPort`          | `GATEWAY_PORT`           | gateway port (default 47600)          |
-| `gatewayAllowedOrigin` | `GATEWAY_ALLOWED_ORIGIN` | extra browser origin allowed (tunnel) |
-
-### Add a view
-
-Create a component that takes `ViewProps` in `ui/src/views/`, then add an entry (`id`, `title`,
-`icon`, `component`) to `ui/src/views/registry.ts`. It shows up in the navigation at `#/<id>`.
-
-## Gateway and dev tunnel (optional)
-
-The extension serves the panel on `127.0.0.1` under an unguessable path. The gateway is a separate
-process that forwards only the panel's endpoints, so a tunnel can expose one fixed port.
-
-```bash
-npm run gateway    # 127.0.0.1:47600
-```
-
-Expose it with an **owner-only** dev tunnel (never anonymous access):
-
-```bash
-devtunnel user login
-devtunnel create
-devtunnel port create -p 47600
-devtunnel host
-```
-
-The tunnel rewrites `Host` to `localhost` and passes `Origin` through, so set
-`GATEWAY_ALLOWED_ORIGIN` to the exact tunnel origin (for example
-`https://<tunnel-id>-47600.<region>.devtunnels.ms`) and restart the gateway. Open it in a browser
-signed in as the tunnel owner. If the canvas is not open in the app, the gateway answers
-"not connected".
-
-## Safety model
-
-- The panel reads and writes only the session it is installed in. It never answers permission or
-  question prompts; it shows "waiting" and you answer in the app.
-- The extension's server listens on loopback only, behind a random path, and checks `Host`,
-  `Origin`, a per-run CSRF token and a per-run generation (a restarted extension is refused as
-  stale). It sets no CORS headers and marks sensitive responses `no-store`.
-- Sends are never retried automatically. An unconfirmed send is shown as "might not have been
-  delivered" and the draft is kept.
-- Markdown is parsed to plain data with no raw HTML; only `http`, `https` and `mailto` links work.
-- The gateway binds loopback only, forwards an allow-list of paths, strips cookies and
-  authorization, and never logs transcripts or tokens.
-- `template.config.json` ships with the extension: keep secrets out of it.
+- **Nothing is approved automatically.** Every permission, answer and plan approval is an explicit
+  tap.
+- **Only the owner can answer:** loopback-only server, a random path, per-run CSRF and generation
+  checks, and an owner-only tunnel for the phone.
+- **One session per canvas.** A canvas reads and writes only the session that opened it.
+- **No silent resends.** If a send cannot be confirmed, your draft is kept.
+- **Safe rendering.** Messages render without raw HTML; only web and email links open.
+- **Quiet gateway.** It never logs messages or tokens. Anyone who can reach your tunnel can act as
+  you, so keep it owner-only.
 
 ## Troubleshooting
 
-- **Canvas missing**: reload extensions and check `~/.copilot/extensions/<name>/extension.mjs` exists.
-- **"UI not built"**: run `npx vp build`, reinstall, reload.
-- **Gateway "not connected"**: open the canvas in the app first, then reload the browser page
-  (the extension gets a new generation on every reload).
-- **403 through the tunnel**: `GATEWAY_ALLOWED_ORIGIN` must equal the browser's origin exactly.
+| Symptom                           | Fix                                                             |
+| --------------------------------- | --------------------------------------------------------------- |
+| Canvas missing                    | Reload extensions in the Copilot app or CLI                     |
+| The canvas asks you to reload     | The extension restarted; reload the canvas                      |
+| No **Open on phone** button       | Start the gateway, then reload the canvas                       |
+| Phone says it is not connected    | Open the canvas from your chat session, then reload the page    |
+| Blocked through the tunnel        | `GATEWAY_ALLOWED_ORIGIN` must match the phone's address exactly |
+| A setting is missing from the bar | Your Copilot version does not offer it yet                      |
+
+Still stuck? [Open an issue](https://github.com/ms-jb/copilot-canvas/issues/new/choose).
+
+## Developing the template
+
+For people working on the template itself. Requires Node.js 22.18+ (24 recommended) and npm.
+Scripts and the gateway run as TypeScript through Node's type stripping, so code must be erasable
+TypeScript (no enums or namespaces).
+
+```bash
+npx vp dev     # canvas with a built-in preview of the extension, no Copilot needed
+npx vp check   # format, lint and type-check
+npx vp test    # unit tests
+npx vp build   # build the canvas into extension/
+```
+
+Append a query to the `npx vp dev` page to preview other states:
+
+| Query               | Shows                                     |
+| ------------------- | ----------------------------------------- |
+| (none)              | sample conversation and a scripted loop   |
+| `?state=empty`      | a new session with no messages            |
+| `?state=waiting`    | the session waiting on you                |
+| `?state=busy`       | a reply mid-stream                        |
+| `?state=nocontrols` | a Copilot version without native settings |
+
+`DEV_PUBLIC_URL=https://...` changes the preview's Open on phone origin; `DEV_PUBLIC_URL=off` hides
+it.
+
+| Folder           | Contents                                                    |
+| ---------------- | ----------------------------------------------------------- |
+| `extension-src/` | extension host, compiled to `extension/`                    |
+| `ui/`            | React + Mantine canvas; views and panels in `ui/src/views/` |
+| `gateway/`       | optional phone gateway                                      |
+| `scripts/`       | install, sync and the development preview                   |
+| `extension/`     | generated, committed, installable output (do not hand-edit) |
+
+- Settings live in `template.config.json`, which ships with the extension, so keep secrets out of
+  it. `ASSISTANT_NAME`, `EXTENSION_NAME`, `CANVAS_ID` (keep it stable), `GATEWAY_PORT` and
+  `GATEWAY_ALLOWED_ORIGIN` override it.
+- `npm run install-ext [name] [--force] [--dir <extensions-root>]` never replaces a folder it did
+  not create unless you pass `--force`.
+- Rebuild and commit `extension/` after any change.
+
+## Stack
+
+![Node.js 24](https://img.shields.io/badge/Node.js-24-5FA04E?logo=nodedotjs&logoColor=white)
+![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=white)
+![React 19](https://img.shields.io/badge/React-19-61DAFB?logo=react&logoColor=black)
+![Mantine 9](https://img.shields.io/badge/Mantine-9-339AF0?logo=mantine&logoColor=white)
+![Vite+](https://img.shields.io/badge/Vite%2B-646CFF?logo=vite&logoColor=white)
+![Vitest](https://img.shields.io/badge/Vitest-6E9F18?logo=vitest&logoColor=white)
+
+## Contributing
+
+Bugs, ideas and questions go to [Issues](https://github.com/ms-jb/copilot-canvas/issues); pull
+requests are welcome.
 
 ## License
 
-MIT
+[MIT](LICENSE)

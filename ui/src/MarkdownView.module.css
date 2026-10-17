@@ -1,0 +1,203 @@
+.md {
+  font-size: var(--cc-text-md);
+  line-height: 1.6;
+  color: var(--cc-text);
+  overflow-wrap: anywhere;
+  min-width: 0;
+}
+
+.md > :first-child {
+  margin-top: 0;
+}
+
+.md > :last-child {
+  margin-bottom: 0;
+}
+
+.md p {
+  margin: 0 0 0.75em;
+}
+
+.md ul,
+.md ol {
+  margin: 0 0 0.75em;
+  padding-inline-start: 1.4em;
+}
+
+.md li {
+  margin-block: 0.2em;
+}
+
+.md li > p {
+  margin: 0;
+}
+
+.md li::marker {
+  color: var(--cc-text-muted);
+}
+
+.md strong {
+  font-weight: 600;
+}
+
+.md blockquote {
+  margin: 0 0 0.75em;
+  padding: 0 0 0 var(--cc-space-3);
+  border-inline-start: 2px solid var(--cc-border-strong);
+  color: var(--cc-text-muted);
+}
+
+.md hr {
+  border: 0;
+  border-top: 1px solid var(--cc-border);
+  margin: var(--cc-space-4) 0;
+}
+
+.md a {
+  color: var(--cc-accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+.md a:hover {
+  text-decoration-thickness: 2px;
+}
+
+.md :not(pre) > code {
+  font-family: var(--cc-font-mono);
+  font-size: 0.86em;
+  padding: 0.12em 0.36em;
+  border-radius: 4px;
+  background: var(--cc-surface-sunken);
+  border: 1px solid var(--cc-border);
+}
+
+.heading {
+  font-weight: 600;
+  line-height: 1.3;
+  margin: 1.1em 0 0.45em;
+  color: var(--cc-text);
+}
+
+.heading[data-level="1"] {
+  font-size: 1.25em;
+}
+
+.heading[data-level="2"] {
+  font-size: 1.12em;
+}
+
+.heading[data-level="3"],
+.heading[data-level="4"] {
+  font-size: 1em;
+}
+
+/* Code blocks */
+.code {
+  margin: 0 0 0.75em;
+  border: 1px solid var(--cc-border);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-surface-sunken);
+  overflow: hidden;
+}
+
+.codeHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cc-space-2);
+  min-height: 32px;
+  padding: 0 var(--cc-space-1) 0 var(--cc-space-3);
+  border-bottom: 1px solid var(--cc-border);
+}
+
+.codeLang {
+  font-family: var(--cc-font-mono);
+  font-size: var(--cc-text-xs);
+  color: var(--cc-text-muted);
+  text-transform: lowercase;
+}
+
+.copy {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cc-space-1);
+  min-height: 28px;
+  padding: 0 var(--cc-space-2);
+  border: 0;
+  border-radius: var(--cc-radius-sm);
+  background: transparent;
+  color: var(--cc-text-muted);
+  font: inherit;
+  font-size: var(--cc-text-xs);
+  cursor: pointer;
+  transition:
+    background-color var(--cc-duration) var(--cc-ease),
+    color var(--cc-duration) var(--cc-ease);
+}
+
+.copy:hover {
+  background: var(--cc-surface-raised);
+  color: var(--cc-text);
+}
+
+.copy:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 1px;
+}
+
+.code pre:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: -2px;
+}
+
+.code pre {
+  margin: 0;
+  padding: var(--cc-space-3);
+  overflow-x: auto;
+  font-family: var(--cc-font-mono);
+  font-size: var(--cc-text-sm);
+  line-height: 1.55;
+  tab-size: 2;
+}
+
+.code pre code {
+  white-space: pre;
+}
+
+/* Streaming caret, appended after the last rendered text. */
+.md[data-streaming] > p:last-child::after,
+.md[data-streaming] > :is(ul, ol):last-child > li:last-child > :last-child::after,
+.md[data-streaming] > :not(p, ul, ol):last-child::after,
+.md[data-streaming]:empty::after {
+  content: "";
+  display: inline-block;
+  width: 2px;
+  height: 1.05em;
+  margin-inline-start: 2px;
+  vertical-align: text-bottom;
+  border-radius: 1px;
+  background: var(--cc-accent);
+  animation: caret 1s steps(2, start) infinite;
+}
+
+@keyframes caret {
+  to {
+    visibility: hidden;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .md[data-streaming] > p:last-child::after,
+  .md[data-streaming] > :is(ul, ol):last-child > li:last-child > :last-child::after,
+  .md[data-streaming] > :not(p, ul, ol):last-child::after,
+  .md[data-streaming]:empty::after {
+    animation: none;
+    opacity: 0.6;
+  }
+
+  .copy {
+    transition: none;
+  }
+}

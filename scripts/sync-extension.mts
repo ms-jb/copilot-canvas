@@ -25,3 +25,7 @@ export async function syncExtension(root = repoRoot): Promise<void> {
 
   await cp(join(root, "template.config.json"), join(target, "template.config.json"));
 }
+
+if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
+  await syncExtension();
+}

@@ -1,11 +1,12 @@
-import { AppShell, Burger, NavLink, Title } from "@mantine/core";
-import { useDisclosure, useMediaQuery } from "@mantine/hooks";
 import { useEffect, useState } from "react";
-import { ConnectionBanner } from "./components/ConnectionBanner";
+import { LoadingSkeleton } from "./layout/LoadingSkeleton";
+import { Shell } from "./layout/Shell";
+import { ViewStack } from "./layout/ViewStack";
 import { useConnection } from "./useConnection";
 import { views } from "./views/registry";
 
-const MOBILE_MAX_WIDTH = 768;
+// Shown until the bootstrap delivers the configured assistantName.
+const DEFAULT_NAME = "Copilot";
 
 function viewIdFromHash(hash: string): string | null {
   const match = /^#\/([A-Za-z0-9_-]+)/.exec(hash);
@@ -25,86 +26,28 @@ function useHashViewId(): string | null {
 export function App() {
   const connection = useConnection();
   const hashId = useHashViewId();
-  const [navOpen, { toggle, close }] = useDisclosure(false);
-  const isMobile = useMediaQuery(`(max-width: ${MOBILE_MAX_WIDTH}px)`) ?? false;
-  const title = connection.config?.displayName ?? "Chat Panel";
+  const assistantName = connection.config?.assistantName || DEFAULT_NAME;
 
-  const fallbackId = views.some((view) => view.id === connection.config?.defaultView)
-    ? connection.config?.defaultView
-    : views[0]?.id;
-  const activeId = views.some((view) => view.id === hashId) ? hashId : fallbackId;
-
-  // Views stay mounted once visited so drafts and scroll position survive navigation.
-  const [visited, setVisited] = useState<ReadonlySet<string>>(new Set());
-  useEffect(() => {
-    if (activeId)
-      setVisited((current) => (current.has(activeId) ? current : new Set(current).add(activeId)));
-  }, [activeId]);
+  const activeView =
+    views.find((view) => view.id === hashId) ??
+    views.find((view) => view.id === connection.config?.defaultView) ??
+    views[0];
 
   useEffect(() => {
-    document.title = title;
-  }, [title]);
-
-  useEffect(() => {
-    if (!navOpen) return;
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") close();
-    };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [navOpen, close]);
+    document.title = assistantName;
+  }, [assistantName]);
 
   return (
-    <AppShell
-      padding={0}
-      header={{ height: 52 }}
-      navbar={{
-        width: 220,
-        breakpoint: `${MOBILE_MAX_WIDTH + 1}px`,
-        collapsed: { mobile: !navOpen },
-      }}
+    <Shell
+      connection={connection}
+      title={activeView?.title ?? assistantName}
+      activeViewId={activeView?.id}
     >
-      <AppShell.Header className="app-header">
-        {isMobile && (
-          <Burger
-            opened={navOpen}
-            onClick={toggle}
-            size="sm"
-            aria-label={navOpen ? "Close navigation" : "Open navigation"}
-            className="app-burger"
-          />
-        )}
-        <Title order={1} size="h4" className="app-title">
-          {title}
-        </Title>
-      </AppShell.Header>
-
-      <AppShell.Navbar p="xs" aria-label="Views">
-        {views.map((view) => (
-          <NavLink
-            key={view.id}
-            href={`#/${view.id}`}
-            label={view.title}
-            leftSection={<view.icon />}
-            active={view.id === activeId}
-            onClick={close}
-            className="nav-link"
-          />
-        ))}
-      </AppShell.Navbar>
-
-      <AppShell.Main className="app-main">
-        <ConnectionBanner phase={connection.phase} />
-        <div className="view-stack">
-          {views.map((view) =>
-            visited.has(view.id) || view.id === activeId ? (
-              <div key={view.id} className="view-pane" hidden={view.id !== activeId}>
-                <view.component connection={connection} />
-              </div>
-            ) : null,
-          )}
-        </div>
-      </AppShell.Main>
-    </AppShell>
+      {connection.config ? (
+        <ViewStack views={views} activeId={activeView?.id} connection={connection} />
+      ) : (
+        <LoadingSkeleton />
+      )}
+    </Shell>
   );
 }

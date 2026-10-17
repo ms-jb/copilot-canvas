@@ -1,18 +1,24 @@
 {
-  "name": "copilot-canvas-starter",
+  "name": "copilot-canvas",
   "version": "0.1.0",
   "private": true,
-  "description": "Starter template for a Copilot app canvas extension: a connected chat panel for your own session, plus a loopback gateway.",
+  "description": "Your Copilot session in a three-column, phone-ready canvas with native session controls, plus an optional loopback gateway for opening it on your phone.",
   "license": "MIT",
   "type": "module",
   "scripts": {
+    "build": "vp build",
+    "dev": "vp dev",
+    "check": "vp check",
+    "fix": "vp check --fix",
     "test": "vp test",
+    "sync-ext": "node scripts/sync-extension.mts",
     "install-ext": "node scripts/install-ext.mts",
     "gateway": "node gateway/gateway.mts"
   },
   "dependencies": {
     "@mantine/core": "^9.7.1",
     "@mantine/hooks": "^9.7.1",
+    "qrcode-generator": "2.0.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

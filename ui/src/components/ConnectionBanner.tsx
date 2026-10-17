@@ -1,36 +1,34 @@
-import { Alert, Button, Group } from "@mantine/core";
+import { Button } from "@mantine/core";
 import type { ConnectionPhase } from "../useConnection";
+import classes from "./ConnectionBanner.module.css";
 
-const MESSAGES: Record<Exclude<ConnectionPhase, "connected">, string> = {
-  bootstrapping: "Connecting…",
-  connecting: "Connecting…",
-  reconnecting: "Connection lost — reconnecting…",
-  disconnected: "Not connected to the session. Retrying…",
-  stale: "Provider restarted — reload this panel to reconnect.",
+// Only real failures and states the user can act on. Connecting and brief reconnects are shown
+// by the dot next to the assistant name, not here.
+const MESSAGES: Partial<Record<ConnectionPhase, string>> = {
+  disconnected: "Can't reach the session. Open the canvas in Copilot to reconnect.",
+  stale: "The session restarted. Reload to reconnect.",
 };
 
-/** Shows nothing while connected; otherwise explains the connection state. */
+/**
+ * An inline alert under the top bar for a lost connection or a restarted session. The live region
+ * stays mounted so changes are announced.
+ */
 export function ConnectionBanner({ phase }: { phase: ConnectionPhase }) {
-  if (phase === "connected") return null;
+  const message = MESSAGES[phase];
   const stale = phase === "stale";
-  const pending = phase === "bootstrapping" || phase === "connecting";
   return (
-    <Alert
-      className="connection-banner"
-      role="status"
-      color={stale ? "red" : pending ? "blue" : "yellow"}
-      variant="light"
-      radius={0}
-      py="xs"
-    >
-      <Group justify="space-between" gap="sm" wrap="wrap">
-        <span>{MESSAGES[phase]}</span>
-        {stale && (
-          <Button size="xs" onClick={() => window.location.reload()}>
-            Reload
-          </Button>
-        )}
-      </Group>
-    </Alert>
+    <div role="status" aria-live="polite" className={classes.region}>
+      {message && (
+        <div className={classes.banner}>
+          <span className={classes.dot} aria-hidden="true" />
+          <span className={classes.message}>{message}</span>
+          {stale && (
+            <Button size="compact-sm" variant="default" onClick={() => window.location.reload()}>
+              Reload
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }

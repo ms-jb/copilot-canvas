@@ -1,6 +1,10 @@
 import { expect, it } from "vite-plus/test";
 import type { TranscriptEntry } from "../extension-src/shared/contract.mts";
-import { applyServerEvent, createViewState } from "../extension-src/shared/entries.mts";
+import {
+  applyServerEvent,
+  createViewState,
+  NO_CONTROLS,
+} from "../extension-src/shared/entries.mts";
 import { createTranscriptStore } from "../extension-src/shared/transcript.mts";
 
 let n = 0;
@@ -67,10 +71,18 @@ it("tags a request before or after the user entry arrives", () => {
   expect(store.snapshot().entries.map((e) => e.requestId)).toEqual(["req-1", "req-2"]);
 });
 
-it("tracks waiting status without answering", () => {
+it("derives activity and waiting status without answering", () => {
   const store = createTranscriptStore();
+  store.applyEvent(event("tool.execution_start", { toolName: "read_file" }));
+  expect(store.snapshot().status).toMatchObject({ activity: "tool", toolName: "read_file" });
+  store.applyEvent(event("assistant.message_delta", { messageId: "a1", deltaContent: "x" }));
+  expect(store.snapshot().status).toMatchObject({ phase: "working", activity: "responding" });
+  store.applyEvent(event("permission.requested", { resolvedByHook: true }));
+  expect(store.snapshot().status.phase).toBe("working");
   store.applyEvent(event("permission.requested"));
   expect(store.snapshot().status).toEqual({ phase: "waiting", waitingFor: "permission" });
+  store.applyEvent(event("session.idle"));
+  expect(store.snapshot().status).toEqual({ phase: "idle" });
 });
 
 it("resyncs the client view from a snapshot and ignores stale events", () => {
@@ -84,6 +96,7 @@ it("resyncs the client view from a snapshot and ignores stale events", () => {
     seq,
     generation,
     snapshot: { entries: ids.map(entry), status: { phase: "idle" as const } },
+    controls: NO_CONTROLS,
   });
   let state = applyServerEvent(createViewState(), "snapshot", snap(5, "g1", ["a"]));
   state = applyServerEvent(state, "entry", { seq: 6, entry: entry("b") });

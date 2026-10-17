@@ -1,6 +1,10 @@
-import { Alert, Button, Text, Textarea } from "@mantine/core";
-import type { KeyboardEvent } from "react";
+import { Loader, Textarea } from "@mantine/core";
+import type { KeyboardEvent, Ref } from "react";
 import { LIMITS } from "../shared";
+import type { Connection } from "../useConnection";
+import { AlertIcon, SendIcon } from "./ChatIcons";
+import { SessionControls } from "./controls/SessionControls";
+import styles from "./Composer.module.css";
 
 export interface ComposerNotice {
   kind: "error" | "uncertain";
@@ -8,26 +12,33 @@ export interface ComposerNotice {
 }
 
 interface ComposerProps {
+  connection: Connection;
   value: string;
   onChange: (value: string) => void;
   onSubmit: () => void;
   busy: boolean;
-  /** When set the composer is disabled and this explains why. */
-  disabledReason?: string;
+  /** Disabled while not connected; the connection banner explains why when it matters. */
+  disabled: boolean;
   notice: ComposerNotice | null;
+  assistantName: string;
+  inputRef?: Ref<HTMLTextAreaElement>;
 }
 
+// Show the counter only when the limit is close enough to matter.
+const COUNTER_FROM = Math.floor(LIMITS.maxPromptChars * 0.9);
+
 export function Composer({
+  connection,
   value,
   onChange,
   onSubmit,
   busy,
-  disabledReason,
+  disabled,
   notice,
+  assistantName,
+  inputRef,
 }: ComposerProps) {
-  const disabled = disabledReason !== undefined;
   const canSend = !disabled && !busy && value.trim().length > 0;
-  const nearLimit = value.length > LIMITS.maxPromptChars * 0.9;
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter sends, Shift+Enter inserts a newline; never fire while an IME is composing.
@@ -38,36 +49,30 @@ export function Composer({
 
   return (
     <form
-      className="composer"
+      className={styles.composer}
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) onSubmit();
       }}
     >
-      {notice && (
-        <Alert
-          role="alert"
-          color={notice.kind === "uncertain" ? "yellow" : "red"}
-          variant="light"
-          py="xs"
-          mb="xs"
-        >
-          {notice.message}
-        </Alert>
-      )}
-      {disabledReason && (
-        <Text size="sm" c="dimmed" mb="xs">
-          {disabledReason}
-        </Text>
-      )}
-      <div className="composer-row">
+      <div className={styles.card} data-disabled={disabled ? "true" : undefined}>
+        {notice && (
+          <div className={styles.notice} data-kind={notice.kind} role="alert">
+            <span className={styles.noticeIcon}>
+              <AlertIcon size={14} />
+            </span>
+            <span>{notice.message}</span>
+          </div>
+        )}
         <Textarea
-          className="composer-input"
-          aria-label="Message to Copilot"
-          placeholder="Message Copilot…"
+          ref={inputRef}
+          variant="unstyled"
+          classNames={{ root: styles.field, input: styles.input }}
+          aria-label={`Message ${assistantName}`}
+          placeholder={`Message ${assistantName}…`}
           autosize
           minRows={1}
-          maxRows={8}
+          maxRows={10}
           maxLength={LIMITS.maxPromptChars}
           value={value}
           readOnly={busy}
@@ -77,15 +82,29 @@ export function Composer({
           enterKeyHint="send"
           autoComplete="off"
         />
-        <Button type="submit" className="composer-send" disabled={!canSend} loading={busy}>
-          Send
-        </Button>
+        <div className={styles.footer}>
+          <div className={styles.controls}>
+            <SessionControls connection={connection} />
+          </div>
+          {value.length >= COUNTER_FROM && (
+            <span
+              className={styles.counter}
+              data-full={value.length >= LIMITS.maxPromptChars ? "true" : undefined}
+            >
+              {value.length.toLocaleString()} / {LIMITS.maxPromptChars.toLocaleString()}
+            </span>
+          )}
+          <button
+            type="submit"
+            className={styles.send}
+            disabled={!canSend}
+            aria-label={busy ? "Sending" : "Send message"}
+            title="Send (Enter)"
+          >
+            {busy ? <Loader size={14} color="currentColor" /> : <SendIcon size={16} />}
+          </button>
+        </div>
       </div>
-      {nearLimit && (
-        <Text size="xs" c="dimmed" ta="right" mt={4}>
-          {value.length} / {LIMITS.maxPromptChars}
-        </Text>
-      )}
     </form>
   );
 }

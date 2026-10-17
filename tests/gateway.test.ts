@@ -11,9 +11,11 @@ import { buildProviderState, writeProviderState } from "../extension-src/shared/
 
 const CAPABILITY = `/chat-panel/${"T".repeat(43)}/`;
 const GENERATION = "generation-aaaaaaaaaaaa";
+// A second provider run, told apart by its capability path.
+const CAPABILITY_B = `/chat-panel/${"B".repeat(43)}/`;
+const GENERATION_B = "generation-bbbbbbbbbbbb";
 
 let dir: string;
-let statePath: string;
 let provider: http.Server;
 let gateway: Gateway;
 let gatewayPort: number;
@@ -45,11 +47,16 @@ function call(path: string, headers: http.OutgoingHttpHeaders = {}, method = "GE
   });
 }
 
-function publish(generation: string) {
+function publish(
+  generation: string,
+  sessionId = "session-a",
+  capabilityPath = CAPABILITY,
+  openedAt?: string,
+) {
   const origin = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`;
   writeProviderState(
-    statePath,
-    buildProviderState({ generation, origin, capabilityPath: CAPABILITY }),
+    join(dir, `${sessionId}.json`),
+    buildProviderState({ generation, origin, capabilityPath, sessionId, openedAt }),
   );
 }
 
@@ -67,7 +74,7 @@ const send = (generation?: string) =>
 
 beforeEach(async () => {
   dir = mkdtempSync(join(tmpdir(), "canvas-starter-gateway-"));
-  statePath = join(dir, "provider.json");
+
   upstreamPaths = [];
   provider = http.createServer((request, response) => {
     const path = request.url ?? "";
@@ -77,7 +84,7 @@ beforeEach(async () => {
         JSON.stringify({
           app: IDENTITY_APP,
           contractVersion: CONTRACT_VERSION,
-          generation: GENERATION,
+          generation: path.startsWith(CAPABILITY_B) ? GENERATION_B : GENERATION,
         }),
       );
     } else {
@@ -86,7 +93,7 @@ beforeEach(async () => {
     }
   });
   await new Promise<void>((resolve) => provider.listen(0, "127.0.0.1", resolve));
-  gateway = createGateway({ port: 0, statePath });
+  gateway = createGateway({ port: 0, sessionsDir: dir });
   gatewayPort = (await gateway.listen()).port;
 });
 
@@ -113,6 +120,13 @@ it("forwards allow-listed paths to the provider capability path", async () => {
   publish(GENERATION);
   expect((await call("/api/bootstrap")).status).toBe(200);
   expect(upstreamPaths).toEqual([`${CAPABILITY}api/bootstrap`]);
+});
+
+it("follows the live provider whose canvas was opened most recently", async () => {
+  publish(GENERATION, "session-a", CAPABILITY, "2026-01-01T00:00:01.000Z");
+  publish(GENERATION_B, "session-b", CAPABILITY_B, "2026-01-01T00:00:02.000Z");
+  expect((await call("/api/bootstrap")).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY_B}api/bootstrap`]);
 });
 
 it("refuses a stale or missing generation on send and never forwards it", async () => {

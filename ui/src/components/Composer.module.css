@@ -1,0 +1,199 @@
+.composer {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 0 max(var(--cc-space-4), env(safe-area-inset-right))
+    calc(var(--cc-space-3) + env(safe-area-inset-bottom))
+    max(var(--cc-space-4), env(safe-area-inset-left));
+  background: var(--cc-bg);
+}
+
+.card {
+  width: 100%;
+  max-width: var(--cc-content-max, 760px);
+  margin-inline: auto;
+  border: 1px solid var(--cc-border-strong);
+  border-radius: var(--cc-radius-lg);
+  background: var(--cc-surface-raised);
+  box-shadow: var(--cc-shadow-sm);
+  transition:
+    border-color var(--cc-duration) var(--cc-ease),
+    box-shadow var(--cc-duration) var(--cc-ease);
+}
+
+.card:focus-within {
+  border-color: var(--cc-focus);
+  box-shadow:
+    0 0 0 1px var(--cc-focus),
+    var(--cc-shadow-sm);
+}
+
+.card[data-disabled] {
+  border-color: var(--cc-border);
+  box-shadow: none;
+}
+
+.notice {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--cc-space-2);
+  margin: var(--cc-space-2) var(--cc-space-2) 0;
+  padding: var(--cc-space-2) var(--cc-space-3);
+  border-radius: var(--cc-radius-md);
+  font-size: var(--cc-text-sm);
+  line-height: 1.45;
+  color: var(--cc-text);
+}
+
+.notice[data-kind="uncertain"] {
+  background: var(--cc-warning-soft);
+}
+
+.notice[data-kind="error"] {
+  background: var(--cc-danger-soft);
+}
+
+.noticeIcon {
+  display: inline-flex;
+  padding-top: 2px;
+}
+
+.notice[data-kind="uncertain"] .noticeIcon {
+  color: var(--cc-warning);
+}
+
+.notice[data-kind="error"] .noticeIcon {
+  color: var(--cc-danger);
+}
+
+.field {
+  padding: var(--cc-space-3) var(--cc-space-3) 0;
+}
+
+.field .input {
+  display: block;
+  min-height: 24px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--cc-text);
+  font-family: var(--cc-font-sans);
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+  resize: none;
+}
+
+.field .input::placeholder {
+  color: var(--cc-text-faint);
+}
+
+.field .input:focus,
+.field .input:focus-visible {
+  outline: none;
+}
+
+.field .input:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.footer {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  min-height: 44px;
+  padding: var(--cc-space-1) var(--cc-space-2) var(--cc-space-2);
+}
+
+.controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.counter {
+  flex: none;
+  font-size: var(--cc-text-xs);
+  color: var(--cc-text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.counter[data-full] {
+  color: var(--cc-danger);
+}
+
+/* 36px visual, 44px hit area. */
+.send {
+  position: relative;
+  flex: none;
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  margin-inline-start: auto;
+  border: 0;
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-accent);
+  color: var(--cc-accent-contrast);
+  cursor: pointer;
+  transition:
+    background-color var(--cc-duration) var(--cc-ease),
+    opacity var(--cc-duration) var(--cc-ease);
+}
+
+.send::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+}
+
+.send:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cc-accent) 88%, var(--cc-text));
+}
+
+.send:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 2px;
+}
+
+.send:disabled {
+  background: var(--cc-surface-sunken);
+  color: var(--cc-text-faint);
+  cursor: not-allowed;
+}
+
+/* 16px stops iOS Safari from zooming into the field; bigger targets for touch. */
+@media (max-width: 768px), (pointer: coarse) {
+  .field .input {
+    font-size: var(--cc-text-lg);
+  }
+
+  .send {
+    width: 44px;
+    height: 44px;
+  }
+
+  .send::after {
+    inset: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .composer {
+    padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
+      max(var(--cc-space-2), env(safe-area-inset-right));
+    padding-bottom: calc(var(--cc-space-2) + env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .send {
+    transition: none;
+  }
+}

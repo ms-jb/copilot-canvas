@@ -1,0 +1,46 @@
+.root {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  min-width: 0;
+}
+
+.dot {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--cc-text-faint);
+  transition: background-color var(--cc-duration) var(--cc-ease);
+}
+
+.dot[data-tone="success"] {
+  background: var(--cc-success);
+}
+
+.dot[data-tone="warning"] {
+  background: var(--cc-warning);
+}
+
+.dot[data-tone="danger"] {
+  background: var(--cc-danger);
+}
+
+.dot[data-tone="pending"] {
+  animation: breathe 1.6s ease-in-out infinite;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@keyframes breathe {
+  50% {
+    opacity: 0.35;
+  }
+}
