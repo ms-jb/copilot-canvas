@@ -67,7 +67,7 @@
 /* Grouped turns: a follow-up from the same author sits close to the one before it. */
 .user[data-continued],
 .assistant[data-continued] {
-  margin-top: calc(var(--cc-space-2) - var(--turn-gap, var(--cc-space-5)));
+  margin-top: calc(var(--cc-space-2) - var(--turn-gap));
 }
 
 .assistant[data-continued] {

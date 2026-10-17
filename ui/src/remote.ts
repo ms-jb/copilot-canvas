@@ -10,5 +10,5 @@ export function isRemote(): boolean {
 /** True when the page runs as an installed home-screen app rather than in a browser tab. */
 export function isStandalone(): boolean {
   const iosStandalone = (navigator as Navigator & { standalone?: boolean }).standalone === true;
-  return iosStandalone || window.matchMedia?.("(display-mode: standalone)").matches === true;
+  return iosStandalone || window.matchMedia("(display-mode: standalone)").matches;
 }

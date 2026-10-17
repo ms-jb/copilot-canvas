@@ -10,7 +10,6 @@ export type InstallPlatform =
   | "other";
 
 export interface InstallGuide {
-  platform: InstallPlatform;
   /** Short name of the browser and system, e.g. "Safari on iPhone". */
   label: string;
   steps: string[];
@@ -42,7 +41,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
   switch (platform) {
     case "ios-safari":
       return {
-        platform,
         label: "Safari on iPhone or iPad",
         steps: [
           "Tap the Share button (the square with an arrow pointing up). On iPhone it is at the bottom; on iPad, at the top.",
@@ -53,7 +51,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     case "ios-other":
       return {
-        platform,
         label: "iPhone or iPad",
         steps: [
           "Tap the Share button in the address bar or the browser menu.",
@@ -64,7 +61,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     case "android-chrome":
       return {
-        platform,
         label: "Chrome on Android",
         steps: [
           "Tap the menu (three dots) at the top right.",
@@ -74,7 +70,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     case "android-edge":
       return {
-        platform,
         label: "Edge on Android",
         steps: [
           "Tap the menu (three dots) at the bottom.",
@@ -84,7 +79,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     case "android-samsung":
       return {
-        platform,
         label: "Samsung Internet",
         steps: [
           "Tap the menu (three lines) at the bottom right.",
@@ -94,7 +88,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     case "android-firefox":
       return {
-        platform,
         label: "Firefox on Android",
         steps: [
           "Tap the menu (three dots).",
@@ -104,7 +97,6 @@ export function installGuide(platform: InstallPlatform): InstallGuide {
       };
     default:
       return {
-        platform,
         label: "your browser",
         steps: [
           "Open the browser's menu.",

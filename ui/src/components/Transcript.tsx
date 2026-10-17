@@ -102,9 +102,16 @@ function EntryView({
 }
 
 /** Interleaves day separators wherever the local calendar date changes between turns. */
-function withDaySeparators(rows: { key: string; timestamp: string; node: ReactNode }[]) {
+function withDaySeparators(
+  rows: {
+    key: string;
+    timestamp: string;
+    continued: boolean;
+    render: (continued: boolean) => ReactNode;
+  }[],
+) {
   let previousDay: string | null = null;
-  return rows.map(({ key, timestamp, node }) => {
+  return rows.map(({ key, timestamp, continued, render }) => {
     const date = toDate(timestamp);
     const day = date ? dayKey(date) : previousDay;
     const separator = date && day !== previousDay ? <DaySeparator date={date} /> : null;
@@ -112,7 +119,7 @@ function withDaySeparators(rows: { key: string; timestamp: string; node: ReactNo
     return (
       <Fragment key={key}>
         {separator}
-        {node}
+        {render(continued)}
       </Fragment>
     );
   });
@@ -195,7 +202,7 @@ export function Transcript({
         />
       ),
     })),
-  ]).map(({ key, timestamp, render, continued }) => ({ key, timestamp, node: render(continued) }));
+  ]);
 
   return (
     <div className={styles.wrap}>
