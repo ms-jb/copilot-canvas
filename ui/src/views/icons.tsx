@@ -91,3 +91,12 @@ export function CloseIcon(props: IconProps) {
     </Icon>
   );
 }
+
+export function ReloadIcon(props: IconProps) {
+  return (
+    <Icon {...props}>
+      <path d="M20 11a8 8 0 1 0-2.3 5.7" />
+      <path d="M20 4v7h-7" />
+    </Icon>
+  );
+}

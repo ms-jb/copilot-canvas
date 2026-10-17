@@ -2,7 +2,8 @@
 // Each Copilot session runs its own extension process and publishes its own state file, keyed by
 // session id. The file holds the loopback origin and capability path for the optional gateway:
 // never log its contents.
-import { gatewayStatePath, providerStatePathFor } from "../shared/config.mjs";
+import { dirname } from "node:path";
+import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/config.mjs";
 import { toPublicOrigin } from "../shared/contract.mjs";
 import { buildProviderState, isProcessAlive, readGatewayState, readProviderState, removeProviderState, writeProviderState, } from "../shared/runtime-state.mjs";
 import { createProviderServer } from "./server.mjs";
@@ -68,6 +69,7 @@ export async function startProvider(input) {
     const { config, bridge, sessionId, uiDir, log = () => { }, env = process.env, serverOptions = {}, } = input;
     const server = createProviderServer({
         getShareInfo: () => readShareInfo(config, env),
+        getSourceDir: () => (uiDir ? readSourceDir(dirname(uiDir)) : ""),
         ...serverOptions,
         config,
         bridge,

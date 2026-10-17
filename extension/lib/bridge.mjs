@@ -17,6 +17,7 @@ import { createPromptService } from "./prompts.mjs";
 const DEFAULT_COALESCE_MS = 50;
 const MAX_TRACKED_REQUESTS = 500;
 const MAX_ERROR_MESSAGE = 300;
+const RELOAD_DELAY_MS = 250;
 function describeError(error) {
     const message = error instanceof Error ? error.message : "Unknown error";
     const trimmed = message.replace(/\s+/g, " ").trim().slice(0, MAX_ERROR_MESSAGE);
@@ -30,6 +31,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
     let seq = 0;
     let flushTimer = null;
     let disposed = false;
+    let reloadScheduled = false;
     function notify(event) {
         for (const listener of Array.from(listeners)) {
             try {
@@ -213,6 +215,37 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
             outcome.messageId = winner.messageId;
         return outcome;
     }
+    /**
+     * Schedules a reload of this session's extensions, this one included. The reload restarts the
+     * provider, so the caller's reply must go out first; hence the short delay.
+     */
+    function reloadExtensions() {
+        if (disposed)
+            return false;
+        let api;
+        try {
+            api = session.rpc?.extensions;
+        }
+        catch {
+            return false;
+        }
+        if (!api || typeof api.reload !== "function")
+            return false;
+        if (!reloadScheduled) {
+            reloadScheduled = true;
+            setTimeout(() => {
+                Promise.resolve()
+                    .then(() => api.reload?.())
+                    .catch((error) => {
+                    log(`Reloading extensions failed: ${describeError(error)}`, "warning");
+                })
+                    .finally(() => {
+                    reloadScheduled = false;
+                });
+            }, RELOAD_DELAY_MS);
+        }
+        return true;
+    }
     function dispose() {
         if (disposed)
             return;
@@ -243,6 +276,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         subscribe,
         send,
         applyControl,
+        reloadExtensions,
         respond: (requestId, response) => prompts.respond(requestId, response),
         refreshPrompts: () => prompts.refresh(),
         dispose,

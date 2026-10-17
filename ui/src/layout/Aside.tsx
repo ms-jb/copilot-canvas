@@ -31,7 +31,9 @@ export function Aside({ connection, onClose }: AsideProps) {
             <panel.component connection={connection} />
           </section>
         ))}
-        {asidePanels.length === 0 && <AddPanelCard onPick={onClose} />}
+        {asidePanels.length === 0 && (
+          <AddPanelCard sourceDir={connection.config?.sourceDir} onPick={onClose} />
+        )}
       </div>
     </div>
   );

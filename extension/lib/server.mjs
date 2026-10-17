@@ -7,7 +7,7 @@ import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { extname, resolve, sep } from "node:path";
-import { API, CONTRACT_VERSION, ERROR_CODES, HEADERS, HTTP_STATUS_BY_CODE, IDENTITY_APP, LIMITS, SEND_STATUS, SSE_EVENTS, toPublicOrigin, validateControlsPayload, validateRespondPayload, validateSendPayload, } from "../shared/contract.mjs";
+import { API, CONTRACT_VERSION, ERROR_CODES, HEADERS, HTTP_STATUS_BY_CODE, IDENTITY_APP, LIMITS, SEND_STATUS, SSE_EVENTS, toPublicOrigin, validateControlsPayload, validateReloadPayload, validateRespondPayload, validateSendPayload, } from "../shared/contract.mjs";
 import { SENSITIVE_RESPONSE_HEADERS, checkOrigin, isAllowedHost, isJsonContentType, loopbackHost, loopbackOrigin, timingSafeEqualStrings, } from "../shared/security.mjs";
 import { ControlError } from "./controls.mjs";
 const MAX_TRACKED_SENDS = 500;
@@ -19,6 +19,7 @@ const MIME_TYPES = Object.freeze({
     ".mjs": "text/javascript; charset=utf-8",
     ".css": "text/css; charset=utf-8",
     ".json": "application/json; charset=utf-8",
+    ".webmanifest": "application/manifest+json; charset=utf-8",
     ".map": "application/json; charset=utf-8",
     ".svg": "image/svg+xml",
     ".png": "image/png",
@@ -41,6 +42,7 @@ function buildCsp(frameAncestors) {
         "style-src 'self' 'unsafe-inline'",
         "connect-src 'self'",
         "img-src 'self' data:",
+        "manifest-src 'self'",
         "font-src 'self' data:",
         "base-uri 'none'",
         "form-action 'none'",
@@ -66,7 +68,7 @@ function errorMessage(error) {
  * Creates the provider server around a bridge (see `Bridge` in bridge.mts).
  * Call `start()` to listen on 127.0.0.1 (OS-assigned port unless `port` is set).
  */
-export function createProviderServer({ config, bridge, uiDir, log = () => { }, getShareInfo = () => ({ publicUrl: null }), port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
+export function createProviderServer({ config, bridge, uiDir, log = () => { }, getShareInfo = () => ({ publicUrl: null }), getSourceDir = () => "", port: requestedPort = 0, generation = randomBytes(16).toString("base64url"), csrfToken = randomBytes(32).toString("base64url"), token = randomBytes(32).toString("base64url"), keepaliveMs = LIMITS.keepaliveMs, frameAncestors = "", }) {
     const capabilityPath = `/${config.canvasId}/${token}/`;
     const uiRoot = uiDir ? resolve(uiDir) : null;
     const csp = buildCsp(frameAncestors);
@@ -170,6 +172,13 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
     }
     function handleBootstrap(res) {
         const { snapshot, controls } = bridge.getSnapshot();
+        let sourceDir = "";
+        try {
+            sourceDir = getSourceDir();
+        }
+        catch {
+            // Only a hint for suggested prompts.
+        }
         const body = {
             contractVersion: CONTRACT_VERSION,
             generation,
@@ -179,6 +188,7 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
                 assistantName: config.assistantName,
                 description: config.description,
                 defaultView: config.defaultView,
+                ...(sourceDir ? { sourceDir } : {}),
             },
             snapshot,
             controls,
@@ -373,6 +383,25 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
             sendError(res, ERROR_CODES.controlFailed, "The session did not apply the change.");
         }
     }
+    async function handleReload(req, res) {
+        const parsed = await readJsonPost(req, res, "error");
+        if (!parsed)
+            return;
+        const validation = validateReloadPayload(parsed.value);
+        if (!validation.ok) {
+            sendError(res, validation.code, validation.message);
+            return;
+        }
+        if (validation.value.sessionId !== bridge.sessionId) {
+            sendError(res, ERROR_CODES.sessionMismatch, "This panel belongs to a different session.");
+            return;
+        }
+        if (!bridge.reloadExtensions()) {
+            sendError(res, ERROR_CODES.reloadUnavailable, "This Copilot version cannot reload extensions from the canvas.");
+            return;
+        }
+        sendJson(res, 200, { ok: true, status: "scheduled" });
+    }
     async function handleSend(req, res) {
         const parsed = await readJsonPost(req, res, SEND_STATUS.rejected);
         if (!parsed)
@@ -511,6 +540,10 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
                 if (method !== "POST")
                     return notAllowed(res, "POST");
                 return handleRespond(req, res);
+            case API.reload:
+                if (method !== "POST")
+                    return notAllowed(res, "POST");
+                return handleReload(req, res);
             case API.share:
                 if (method !== "GET")
                     return notAllowed(res, "GET");

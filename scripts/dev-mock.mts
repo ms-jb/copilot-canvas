@@ -17,6 +17,7 @@ import {
   LIMITS,
   toPublicOrigin,
   validateControlsPayload,
+  validateReloadPayload,
   validateRespondPayload,
   validateSendPayload,
 } from "../extension-src/shared/contract.mts";
@@ -437,7 +438,9 @@ export function devMock(repoRoot: string): Plugin {
     const session = get(scenarioOf(req));
     const method = req.method ?? "GET";
     const expected =
-      route === API.send || route === API.controls || route === API.respond ? "POST" : "GET";
+      route === API.send || route === API.controls || route === API.respond || route === API.reload
+        ? "POST"
+        : "GET";
     if (method !== expected) return error(res, ERROR_CODES.methodNotAllowed, "Method not allowed.");
 
     switch (route) {
@@ -453,6 +456,7 @@ export function devMock(repoRoot: string): Plugin {
             assistantName: config.assistantName,
             description: config.description,
             defaultView: config.defaultView,
+            sourceDir: repoRoot,
           },
           snapshot: { entries: session.entries, status: session.status, prompts: session.prompts },
           controls: session.controls,
@@ -553,6 +557,13 @@ export function devMock(repoRoot: string): Plugin {
           });
         }
         return;
+      }
+      case API.reload: {
+        if (!checkWrite(req, res)) return;
+        const parsed = validateReloadPayload(await readJson(req));
+        if (!parsed.ok) return error(res, parsed.code, parsed.message);
+        // The preview has no extensions to reload, so it only acknowledges.
+        return json(res, 200, { ok: true, status: "scheduled" });
       }
     }
   }

@@ -1,17 +1,22 @@
 # Copilot Canvas
 
-[![CI](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml)
+Your Copilot conversation in a calm, three-column window, on your computer and on your phone.
+Answer Copilot's questions and approvals from anywhere, and shape the whole thing into your own just
+by asking.
 
-Your Copilot chat session in a calm, three-column canvas: your views on the left, the conversation
-in the middle, your own panels on the right. Answer permission requests, questions and plan
-approvals right in the canvas, even from your phone, and shape the whole thing just by asking
-Copilot. It works with any Copilot chat session where the extension is loaded, with no extra setup.
+<br>
 
-[![Install in GitHub Copilot](https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DInstall%2520the%2520Copilot%2520Canvas%2520extension%2520from%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Ftree%252Fmain%252Fextension%2520for%2520my%2520user%252C%2520reload%2520extensions%252C%2520then%2520open%2520the%2520canvas.)
-[![Get started](https://img.shields.io/badge/Get_started-0078d4?style=for-the-badge&logo=readthedocs&logoColor=white)](#getting-started)
-[![Contributing](https://img.shields.io/badge/Contributing-6e5494?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
-[![Report an issue](https://img.shields.io/badge/Report_an_issue-e74c3c?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues/new/choose)
-[![Make it yours](https://img.shields.io/badge/Make_it_yours-0078d4?style=for-the-badge&logo=githubcopilot&logoColor=white)](#make-it-yours)
+<p align="center">
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520by%2520following%2520SETUP.md%2520in%2520this%2520repository."><img src="https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install in GitHub Copilot" height="56"></a>
+</p>
+
+<p align="center">
+  <b>One click. About five minutes. No coding.</b><br>
+  <sub>Opens the GitHub Copilot app (or offers to install it first). Copilot does the setup and asks
+  before anything important.</sub>
+</p>
+
+<br>
 
 <table>
   <tr>
@@ -27,81 +32,71 @@ Copilot. It works with any Copilot chat session where the extension is loaded, w
 
 </details>
 
-## Getting started
+## What happens when you click Install
 
-**One click:** [**Install in GitHub Copilot**](https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DInstall%2520the%2520Copilot%2520Canvas%2520extension%2520from%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Ftree%252Fmain%252Fextension%2520for%2520my%2520user%252C%2520reload%2520extensions%252C%2520then%2520open%2520the%2520canvas.)
+1. The GitHub Copilot app opens a new chat that is ready to set up the canvas. Confirm it.
+2. Copilot asks you one question: go ahead, skip the phone, or pick another folder.
+3. It makes your own copy of Copilot Canvas (a fork on your GitHub account, so your changes are
+   yours; sharing them is up to you), installs it and opens it next to your chat.
+4. For your phone, it shows a QR code. Scan it, sign in with the same account, and say hello. You
+   can add it to your home screen like an app.
+5. Then it asks what you'd like to see and builds your first panels.
 
-1. The link opens the GitHub Copilot app. If the app is not installed yet, the page that opens
-   offers to download it first.
-2. Confirm the new session. It is prefilled with a request to install the canvas, reload
-   extensions and open it.
+The full playbook Copilot follows is in [SETUP.md](SETUP.md).
 
 > [!NOTE]
-> Installing from a GitHub URL requires the Copilot app to be signed in with a **github.com**
-> account. Without one, use the download option below.
+> The one-click link needs the Copilot app signed in with a **github.com** account. Without one,
+> paste this into any Copilot chat instead: _"Set up Copilot Canvas by following
+> https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_.
 
-**Other ways to install**
+## What you see
 
-- **From the app:** open the **Install canvas extension** dialog and paste
-  `https://github.com/ms-jb/copilot-canvas/tree/main/extension`.
-- **By asking:** in any chat, say _"Install the canvas extension from
-  https://github.com/ms-jb/copilot-canvas/tree/main/extension"_.
-- **Without a github.com account:** download the repository (**Code** → **Download ZIP**), then run
-  `npm install` and `npm run install-ext` in the unzipped folder (Node.js 22.18+). Reload
-  extensions, then open the canvas from your chat session.
-
-> [!TIP]
-> The canvas binds to the session that opens it. Open it from each chat you want to follow; every
-> canvas reads and writes only its own session.
-
-**What you see**
-
-- **Conversation** in the center, with Markdown, code blocks and timestamps.
-- **Activity** (thinking, responding, running a tool, waiting on you) in the line above the
-  composer.
-- **Decisions** – permission requests, questions and plan approvals – answered right in the canvas,
-  so you never have to switch to the app.
-- **Connection health** as the dot next to the assistant's name; a banner appears only when
-  something needs your action.
-- **Session settings** (mode, model, reasoning effort, long context) as pills in the composer.
-- **Your panels** on the right, starting with an invitation to ask Copilot to add one.
+- **Your conversation** in the center, with timestamps, formatting and code.
+- **What Copilot is doing** (thinking, responding, running a tool, waiting on you) above the box you
+  type in.
+- **Decisions** (permission requests, questions and plan approvals) answered right in the canvas, so
+  you never have to switch windows.
+- **Session settings** (mode, model, reasoning effort) as buttons by the box you type in.
+- **Your own panels** on the right, starting with a few ideas you can tap.
 
 ## Make it yours
 
-Ask Copilot in chat. Describe what you want and it updates the canvas for you:
+Ask Copilot in any chat, or tap one of the ideas in the canvas's empty right-hand side. Copilot
+changes your copy of the canvas, rebuilds it, and asks you to tap **Reload extensions** (the
+circular arrow at the top) to see it. Then ask for the next thing. Some ideas:
 
-- _"Add a panel to the right side that shows my open pull requests."_
-- _"Add a Notes view to the sidebar where I can keep a scratchpad."_
-- _"Rename the assistant to Atlas and use a teal accent."_
-- _"Open the Notes view first when the canvas starts."_
-- _"Add a panel with a checklist for today that I can tick off."_
+- _"Add a panel to my canvas that shows my open pull requests."_
+- _"Add a Notes view to my canvas's sidebar where I can keep a scratchpad."_
+- _"Rename my canvas assistant to Atlas and use a teal accent."_
+- _"Add a checklist for today to my canvas that I can tick off."_
 
-Reload the canvas when Copilot is done to see the change.
+Copilot follows [AGENTS.md](AGENTS.md) when it works on your copy, so it edits the canvas itself
+instead of opening something else.
 
 ## Open on phone
 
-An optional gateway makes the canvas reachable from your phone through an **owner-only** dev
-tunnel. With several sessions open, it follows the session whose canvas was opened most recently.
+Setup does this for you. To start it again later (for example after a restart), run this in your copy:
 
-1. Create and host an owner-only tunnel for port 47600 (never anonymous access):
+```bash
+npm run phone
+```
 
-   ```bash
-   devtunnel user login
-   devtunnel create
-   devtunnel port create -p 47600
-   devtunnel host
-   ```
+It creates (once) a private dev tunnel that only you can sign in to, starts the gateway, and prints
+the link and a QR code; the canvas's **Open on phone** button shows the same code. Keep it running,
+and your computer awake, while you use your phone. On the phone, **Add to Home Screen** installs the
+canvas like an app.
 
-2. Start the gateway with the tunnel's exact origin:
+<details>
+<summary>What it does, step by step</summary>
 
-   ```bash
-   GATEWAY_ALLOWED_ORIGIN=https://<tunnel-id>-47600.<region>.devtunnels.ms npm run gateway
-   ```
+1. Signs in to dev tunnels (`devtunnel user login -d`) if needed.
+2. Creates an owner-only tunnel once and remembers its id outside the repository. A tunnel that
+   grants anyone else access is refused, never changed.
+3. Adds port 47600 with `--origin-header unchanged`, so the gateway can check the phone's exact
+   address.
+4. Hosts the tunnel and starts the gateway with `GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address.
 
-   PowerShell: `$env:GATEWAY_ALLOWED_ORIGIN="https://..."; npm run gateway`
-
-3. Scan the QR code from the terminal or the canvas's **Open on phone** button and sign in as the
-   tunnel owner.
+</details>
 
 ## How it works
 
@@ -132,31 +127,37 @@ flowchart LR
 - **Safe rendering.** Messages render without raw HTML; only web and email links open.
 - **Quiet gateway.** It never logs messages or tokens. Anyone who can reach your tunnel can act as
   you, so keep it owner-only.
+- **Reload from your computer only.** Reloading extensions is never reachable through the tunnel.
 
 ## Troubleshooting
 
-| Symptom                           | Fix                                                             |
-| --------------------------------- | --------------------------------------------------------------- |
-| Canvas missing                    | Reload extensions in the Copilot app or CLI                     |
-| The canvas asks you to reload     | The extension restarted; reload the canvas                      |
-| No **Open on phone** button       | Start the gateway, then reload the canvas                       |
-| Phone says it is not connected    | Open the canvas from your chat session, then reload the page    |
-| Blocked through the tunnel        | `GATEWAY_ALLOWED_ORIGIN` must match the phone's address exactly |
-| A setting is missing from the bar | Your Copilot version does not offer it yet                      |
+| Symptom                           | Fix                                                                    |
+| --------------------------------- | ---------------------------------------------------------------------- |
+| Canvas missing                    | Ask Copilot to follow SETUP.md, or restart the Copilot app             |
+| A change doesn't show             | Tap **Reload extensions** (circular arrow), then open the canvas again |
+| Two canvases, or an old one       | Another copy is installed; ask Copilot to remove the extra one         |
+| No **Open on phone** button       | Run `npm run phone` in your copy, then open the canvas again           |
+| Phone says it is not connected    | Open the canvas from your chat, then refresh the phone                 |
+| Phone link stopped working        | Your computer slept or `npm run phone` stopped; start it again         |
+| A setting is missing from the bar | Your Copilot version does not offer it yet                             |
 
 Still stuck? [Open an issue](https://github.com/ms-jb/copilot-canvas/issues/new/choose).
 
 ## Developing the template
 
-For people working on the template itself. Requires Node.js 22.18+ (24 recommended) and npm.
-Scripts and the gateway run as TypeScript through Node's type stripping, so code must be erasable
-TypeScript (no enums or namespaces).
+[![CI](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml)
+
+For people working on the template itself; [AGENTS.md](AGENTS.md) covers customizing a copy. Requires
+Node.js 22.18+ (24 recommended) and npm. Scripts and the gateway run as TypeScript through Node's type
+stripping, so code must be erasable TypeScript (no enums or namespaces).
 
 ```bash
-npx vp dev     # canvas with a built-in preview of the extension, no Copilot needed
-npx vp check   # format, lint and type-check
-npx vp test    # unit tests
-npx vp build   # build the canvas into extension/
+npx vp dev           # canvas with a built-in preview of the extension, no Copilot needed
+npx vp check         # format, lint and type-check
+npx vp test          # unit tests
+npx vp build         # build the canvas into extension/
+npm run install-ext  # build, then install this copy for your user
+npm run phone        # owner-only dev tunnel plus gateway for the phone
 ```
 
 Append a query to the `npx vp dev` page to preview other states:
@@ -177,15 +178,16 @@ it.
 | `extension-src/` | extension host, compiled to `extension/`                    |
 | `ui/`            | React + Mantine canvas; views and panels in `ui/src/views/` |
 | `gateway/`       | optional phone gateway                                      |
-| `scripts/`       | install, sync and the development preview                   |
+| `scripts/`       | install, phone, sync and the development preview            |
 | `extension/`     | generated, committed, installable output (do not hand-edit) |
 
 - Settings live in `template.config.json`, which ships with the extension, so keep secrets out of
   it. `ASSISTANT_NAME`, `EXTENSION_NAME`, `CANVAS_ID` (keep it stable), `GATEWAY_PORT` and
   `GATEWAY_ALLOWED_ORIGIN` override it.
-- `npm run install-ext [name] [--force] [--dir <extensions-root>]` never replaces a folder it did
-  not create unless you pass `--force`.
-- Rebuild and commit `extension/` after any change.
+- `npm run install-ext [name] [--force] [--dir <extensions-root>]` replaces only an earlier install
+  of this canvas (its own or a link install with the same canvas id) unless you pass `--force`, and
+  records where it was installed from so the canvas's suggestions point Copilot at this copy.
+- Rebuild and commit `extension/` after any change; link installs use it.
 
 ## Stack
 

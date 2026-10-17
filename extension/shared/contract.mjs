@@ -11,6 +11,7 @@ export const API = Object.freeze({
     controls: "api/controls",
     share: "api/share",
     respond: "api/respond",
+    reload: "api/reload",
 });
 export const HEADERS = Object.freeze({
     generation: "x-provider-generation",
@@ -45,6 +46,7 @@ export const ERROR_CODES = Object.freeze({
     sendUncertain: "send_uncertain",
     controlUnavailable: "control_unavailable",
     controlFailed: "control_failed",
+    reloadUnavailable: "reload_unavailable",
     notConnected: "not_connected",
     internal: "internal_error",
     /** The prompt was already answered (here or in another client) or is no longer waiting. */
@@ -67,6 +69,7 @@ export const HTTP_STATUS_BY_CODE = Object.freeze({
     [ERROR_CODES.sendUncertain]: 504,
     [ERROR_CODES.controlUnavailable]: 501,
     [ERROR_CODES.controlFailed]: 502,
+    [ERROR_CODES.reloadUnavailable]: 501,
     [ERROR_CODES.notConnected]: 503,
     [ERROR_CODES.internal]: 500,
     [ERROR_CODES.promptResolved]: 409,
@@ -220,6 +223,17 @@ export function validateControls(controls) {
 }
 const MODEL_ID_PATTERN = /^[A-Za-z0-9._:/-]{1,128}$/;
 const EFFORT_PATTERN = /^[a-z_-]{1,32}$/;
+/** Validates the body of POST api/reload: { sessionId }. */
+export function validateReloadPayload(body) {
+    if (!isPlainObject(body) || Object.keys(body).some((key) => key !== "sessionId")) {
+        return makeError(ERROR_CODES.badRequest, "Body must be { sessionId }.");
+    }
+    const { sessionId } = body;
+    if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
+        return makeError(ERROR_CODES.badRequest, "sessionId is missing or malformed.");
+    }
+    return { ok: true, value: { sessionId } };
+}
 /** Validates the body of POST api/controls: { sessionId, change } with exactly one change key. */
 export function validateControlsPayload(body) {
     if (!isPlainObject(body) || !isPlainObject(body.change)) {
@@ -454,6 +468,7 @@ export function validateBootstrap(body) {
         typeof body.csrfToken === "string" &&
         isPlainObject(body.config) &&
         typeof body.config.assistantName === "string" &&
+        (body.config.sourceDir === undefined || typeof body.config.sourceDir === "string") &&
         validateSnapshot(body.snapshot) &&
         validateControls(body.controls));
 }

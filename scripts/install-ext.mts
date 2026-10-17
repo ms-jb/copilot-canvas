@@ -3,27 +3,49 @@
 // The name is the argument, else EXTENSION_NAME, else template.config.json.
 
 import { spawnSync } from "node:child_process";
-import { existsSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { cp, mkdir, rm, writeFile } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
-import { copilotHome, loadConfig } from "../extension-src/shared/config.mts";
+import { copilotHome, INSTALL_MARKER, loadConfig } from "../extension-src/shared/config.mts";
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..");
-const MARKER = ".installed-by-template.json";
 
-/** Copies `source` to `target`. Refuses to replace a folder this script did not create. */
-export async function copyExtension(source: string, target: string, force = false): Promise<void> {
-  if (existsSync(target) && !existsSync(join(target, MARKER)) && !force) {
+/** True when `target` holds this canvas: installed by this script, or from a URL (same canvas id). */
+export function isOwnInstall(target: string, canvasId: string): boolean {
+  if (existsSync(join(target, INSTALL_MARKER))) return true;
+  try {
+    const raw = JSON.parse(readFileSync(join(target, "template.config.json"), "utf8")) as {
+      canvasId?: unknown;
+    };
+    return raw.canvasId === canvasId && existsSync(join(target, "extension.mjs"));
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Copies `source` to `target` and records `sourceDir`, the clone it came from, in the install marker.
+ * Refuses to replace a folder that is not this canvas unless `force` is set.
+ */
+export async function copyExtension(options: {
+  source: string;
+  target: string;
+  sourceDir: string;
+  canvasId: string;
+  force?: boolean;
+}): Promise<void> {
+  const { source, target, sourceDir, canvasId, force = false } = options;
+  if (existsSync(target) && !isOwnInstall(target, canvasId) && !force) {
     throw new Error(
-      `${target} exists and was not installed by this template. Use --force to replace it.`,
+      `${target} exists and is not this canvas. Remove it or pass --force to replace it.`,
     );
   }
   await rm(target, { recursive: true, force: true });
   await mkdir(dirname(target), { recursive: true });
   await cp(source, target, { recursive: true });
-  await writeFile(join(target, MARKER), "{}\n");
+  await writeFile(join(target, INSTALL_MARKER), JSON.stringify({ sourceDir }) + "\n");
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -31,7 +53,8 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     allowPositionals: true,
     options: { force: { type: "boolean" }, dir: { type: "string" } },
   });
-  const name = positionals[0] ?? loadConfig(repoRoot).extensionName;
+  const config = loadConfig(repoRoot);
+  const name = positionals[0] ?? config.extensionName;
   if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name) || name.includes("..")) {
     throw new Error(`Invalid extension name: ${name}`);
   }
@@ -44,8 +67,15 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
   }
 
   const target = join(resolve(values.dir ?? join(copilotHome(), "extensions")), name);
-  await copyExtension(join(repoRoot, "extension"), target, values.force);
+  await copyExtension({
+    source: join(repoRoot, "extension"),
+    target,
+    sourceDir: repoRoot,
+    canvasId: config.canvasId,
+    force: values.force,
+  });
   console.log(
-    `Installed to ${target}\nReload extensions in the Copilot app, then open the canvas.`,
+    `Installed to ${target}\nReload extensions (the canvas's reload button, or the Copilot app), ` +
+      "then open the canvas.",
   );
 }

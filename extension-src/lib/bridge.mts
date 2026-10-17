@@ -31,6 +31,7 @@ import type { PromptService, PromptsRpcLike, RespondOutcome } from "./prompts.mt
 const DEFAULT_COALESCE_MS = 50;
 const MAX_TRACKED_REQUESTS = 500;
 const MAX_ERROR_MESSAGE = 300;
+const RELOAD_DELAY_MS = 250;
 
 /** The slice of the SDK session the bridge uses. Tests can pass a fake. */
 export interface SessionLike {
@@ -38,7 +39,12 @@ export interface SessionLike {
   on(handler: (event: SessionEventLike) => void): () => void;
   getEvents(): Promise<readonly SessionEventLike[]>;
   send(options: { prompt: string }): Promise<string>;
-  readonly rpc?: ControlsRpcLike & PromptsRpcLike;
+  readonly rpc?: ControlsRpcLike & PromptsRpcLike & { extensions?: ExtensionsRpcLike };
+}
+
+/** Experimental like the other RPCs, so feature-detected before use. */
+export interface ExtensionsRpcLike {
+  reload?: () => Promise<void>;
 }
 
 export type LogLevel = "info" | "warning" | "error";
@@ -68,6 +74,8 @@ export interface Bridge {
   send(text: string, requestId: string): Promise<SendOutcome>;
   /** Applies one native setting change. Rejects with a `ControlError` from controls.mts. */
   applyControl(change: ControlChange): Promise<SessionControls>;
+  /** Asks the session to reload its extensions shortly. False when this Copilot cannot. */
+  reloadExtensions(): boolean;
   /** Answers one pending prompt with the user's explicit decision. */
   respond(requestId: string, response: PromptResponse): Promise<RespondOutcome>;
   /** Re-reads pending requests from the session (for example when a client reconnects). */
@@ -117,6 +125,7 @@ export function createSessionBridge(
   let seq = 0;
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
+  let reloadScheduled = false;
 
   function notify(event: BridgeEvent): void {
     for (const listener of Array.from(listeners)) {
@@ -312,6 +321,35 @@ export function createSessionBridge(
     return outcome;
   }
 
+  /**
+   * Schedules a reload of this session's extensions, this one included. The reload restarts the
+   * provider, so the caller's reply must go out first; hence the short delay.
+   */
+  function reloadExtensions(): boolean {
+    if (disposed) return false;
+    let api: ExtensionsRpcLike | undefined;
+    try {
+      api = session.rpc?.extensions;
+    } catch {
+      return false;
+    }
+    if (!api || typeof api.reload !== "function") return false;
+    if (!reloadScheduled) {
+      reloadScheduled = true;
+      setTimeout(() => {
+        Promise.resolve()
+          .then(() => api.reload?.())
+          .catch((error: unknown) => {
+            log(`Reloading extensions failed: ${describeError(error)}`, "warning");
+          })
+          .finally(() => {
+            reloadScheduled = false;
+          });
+      }, RELOAD_DELAY_MS);
+    }
+    return true;
+  }
+
   function dispose(): void {
     if (disposed) return;
     disposed = true;
@@ -339,6 +377,7 @@ export function createSessionBridge(
     subscribe,
     send,
     applyControl,
+    reloadExtensions,
     respond: (requestId, response) => prompts.respond(requestId, response),
     refreshPrompts: () => prompts.refresh(),
     dispose,

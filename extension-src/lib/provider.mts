@@ -3,7 +3,8 @@
 // session id. The file holds the loopback origin and capability path for the optional gateway:
 // never log its contents.
 
-import { gatewayStatePath, providerStatePathFor } from "../shared/config.mts";
+import { dirname } from "node:path";
+import { gatewayStatePath, providerStatePathFor, readSourceDir } from "../shared/config.mts";
 import type { Env, TemplateConfig } from "../shared/config.mts";
 import { toPublicOrigin } from "../shared/contract.mts";
 import type { ShareInfo } from "../shared/contract.mts";
@@ -116,6 +117,7 @@ export async function startProvider(input: {
   } = input;
   const server = createProviderServer({
     getShareInfo: () => readShareInfo(config, env),
+    getSourceDir: () => (uiDir ? readSourceDir(dirname(uiDir)) : ""),
     ...serverOptions,
     config,
     bridge,

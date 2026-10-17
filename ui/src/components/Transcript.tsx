@@ -38,7 +38,7 @@ const PIN_THRESHOLD_PX = 48;
 const EXAMPLE_PROMPTS = [
   "Summarize what we have done in this session",
   "What should I work on next?",
-  "Explain the last change you made",
+  "Help me make this canvas my own: suggest panels and tweaks, then build them in my fork",
 ];
 
 function EmptyState({

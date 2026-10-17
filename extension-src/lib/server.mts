@@ -21,6 +21,7 @@ import {
   SSE_EVENTS,
   toPublicOrigin,
   validateControlsPayload,
+  validateReloadPayload,
   validateRespondPayload,
   validateSendPayload,
 } from "../shared/contract.mts";
@@ -49,6 +50,7 @@ const MIME_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ".mjs": "text/javascript; charset=utf-8",
   ".css": "text/css; charset=utf-8",
   ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
   ".map": "application/json; charset=utf-8",
   ".svg": "image/svg+xml",
   ".png": "image/png",
@@ -70,6 +72,8 @@ export interface ProviderServerOptions {
   bridge: Bridge;
   /** Public root origin for "Open on phone" (read on each request). Defaults to none. */
   getShareInfo?: () => ShareInfo;
+  /** The user's source clone for suggested prompts, read on each bootstrap; "" when unknown. */
+  getSourceDir?: () => string;
   /** Directory holding the built renderer (index.html + assets/). Missing => placeholder page. */
   uiDir?: string;
   log?: Logger;
@@ -113,6 +117,7 @@ function buildCsp(frameAncestors: string): string {
     "style-src 'self' 'unsafe-inline'",
     "connect-src 'self'",
     "img-src 'self' data:",
+    "manifest-src 'self'",
     "font-src 'self' data:",
     "base-uri 'none'",
     "form-action 'none'",
@@ -148,6 +153,7 @@ export function createProviderServer({
   uiDir,
   log = () => {},
   getShareInfo = () => ({ publicUrl: null }),
+  getSourceDir = () => "",
   port: requestedPort = 0,
   generation = randomBytes(16).toString("base64url"),
   csrfToken = randomBytes(32).toString("base64url"),
@@ -278,6 +284,12 @@ export function createProviderServer({
 
   function handleBootstrap(res: ServerResponse): void {
     const { snapshot, controls } = bridge.getSnapshot();
+    let sourceDir = "";
+    try {
+      sourceDir = getSourceDir();
+    } catch {
+      // Only a hint for suggested prompts.
+    }
     const body: Bootstrap = {
       contractVersion: CONTRACT_VERSION,
       generation,
@@ -287,6 +299,7 @@ export function createProviderServer({
         assistantName: config.assistantName,
         description: config.description,
         defaultView: config.defaultView,
+        ...(sourceDir ? { sourceDir } : {}),
       },
       snapshot,
       controls,
@@ -484,6 +497,29 @@ export function createProviderServer({
     }
   }
 
+  async function handleReload(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const parsed = await readJsonPost(req, res, "error");
+    if (!parsed) return;
+    const validation = validateReloadPayload(parsed.value);
+    if (!validation.ok) {
+      sendError(res, validation.code, validation.message);
+      return;
+    }
+    if (validation.value.sessionId !== bridge.sessionId) {
+      sendError(res, ERROR_CODES.sessionMismatch, "This panel belongs to a different session.");
+      return;
+    }
+    if (!bridge.reloadExtensions()) {
+      sendError(
+        res,
+        ERROR_CODES.reloadUnavailable,
+        "This Copilot version cannot reload extensions from the canvas.",
+      );
+      return;
+    }
+    sendJson(res, 200, { ok: true, status: "scheduled" });
+  }
+
   async function handleSend(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const parsed = await readJsonPost(req, res, SEND_STATUS.rejected);
     if (!parsed) return;
@@ -614,6 +650,9 @@ export function createProviderServer({
       case API.respond:
         if (method !== "POST") return notAllowed(res, "POST");
         return handleRespond(req, res);
+      case API.reload:
+        if (method !== "POST") return notAllowed(res, "POST");
+        return handleReload(req, res);
       case API.share:
         if (method !== "GET") return notAllowed(res, "GET");
         return handleShare(res);

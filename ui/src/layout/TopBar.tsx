@@ -1,4 +1,5 @@
 import { OpenOnPhone } from "../components/share/OpenOnPhone";
+import { ReloadExtensions } from "../components/share/ReloadExtensions";
 import type { Connection } from "../useConnection";
 import { AsideIcon, MenuIcon, SidebarIcon } from "../views/icons";
 import { IconButton } from "./IconButton";
@@ -34,6 +35,7 @@ export function TopBar(props: TopBarProps) {
       <h1 className={classes.title}>{title}</h1>
       <div className={classes.actions}>
         <OpenOnPhone connection={connection} />
+        <ReloadExtensions connection={connection} />
         <IconButton
           label={asideOpen ? "Hide details" : "Show details"}
           onClick={props.onToggleAside}

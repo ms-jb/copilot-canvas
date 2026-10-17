@@ -67,6 +67,7 @@ declare module "@github/copilot-sdk/extension" {
     model?: SessionModelRpc;
     permissions?: SessionPermissionsRpc;
     ui?: SessionUiRpc;
+    extensions?: { reload?: () => Promise<void> };
   }
 
   // Pending-request RPCs (experimental). Feature-detected at runtime like the settings above.

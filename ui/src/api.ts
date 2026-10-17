@@ -208,6 +208,32 @@ export async function sendMessage(
   return { kind: "uncertain", message: UNCERTAIN_MESSAGE };
 }
 
+export type ReloadOutcome =
+  | { kind: "scheduled" }
+  | { kind: "unavailable"; message: string }
+  | { kind: "stale"; message: string };
+
+/** Asks the host to reload this session's extensions; the canvas restarts with them. */
+export async function requestReload(context: SendContext): Promise<ReloadOutcome> {
+  let result: { status: number; body: unknown };
+  try {
+    result = await postJson(context, API.reload, { sessionId: context.sessionId });
+  } catch {
+    return { kind: "unavailable", message: "Couldn't reach the session. Try again." };
+  }
+  const { status, body } = result;
+  if (field(body, "code") === ERROR_CODES.staleProvider) {
+    return { kind: "stale", message: "The provider restarted. Reload this panel." };
+  }
+  if (status >= 200 && status < 300 && field(body, "status") === "scheduled") {
+    return { kind: "scheduled" };
+  }
+  return {
+    kind: "unavailable",
+    message: field(body, "message") ?? "Reloading extensions isn't available here.",
+  };
+}
+
 export type RespondOutcome =
   | { kind: "accepted" }
   // Already answered elsewhere or no longer waiting: the card simply goes away.

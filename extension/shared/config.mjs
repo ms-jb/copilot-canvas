@@ -2,7 +2,7 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { isAbsolute, join } from "node:path";
 const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const CANVAS_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 export const DEFAULT_CONFIG = Object.freeze({
@@ -55,6 +55,21 @@ export function resolveConfig(raw = {}, env = process.env) {
         gatewayPort: parsePort(env.GATEWAY_PORT ?? merged.gatewayPort, DEFAULT_CONFIG.gatewayPort),
         gatewayAllowedOrigin: normalizeOrigin(env.GATEWAY_ALLOWED_ORIGIN ?? merged.gatewayAllowedOrigin),
     };
+}
+/** Written next to an installed copy so it can find the clone it came from. */
+export const INSTALL_MARKER = ".installed-by-template.json";
+/**
+ * The clone `npm run install-ext` installed `dir` from, or "". Read on demand: setup installs
+ * over a running copy, and a hint is all it is (the clone can move).
+ */
+export function readSourceDir(dir) {
+    try {
+        const { sourceDir } = JSON.parse(readFileSync(join(dir, INSTALL_MARKER), "utf8"));
+        return typeof sourceDir === "string" && isAbsolute(sourceDir) ? sourceDir : "";
+    }
+    catch {
+        return "";
+    }
 }
 /** Reads `<dir>/template.config.json` (missing file => defaults) and applies env overrides. */
 export function loadConfig(dir, env = process.env) {
