@@ -234,6 +234,29 @@ export async function requestReload(context: SendContext): Promise<ReloadOutcome
   };
 }
 
+export type StopOutcome =
+  | { kind: "stopped" }
+  | { kind: "failed"; message: string }
+  | { kind: "stale"; message: string };
+
+/** Stops the session's running turn, the same as the app's own Stop. */
+export async function requestStop(context: SendContext): Promise<StopOutcome> {
+  let result: { status: number; body: unknown };
+  try {
+    result = await postJson(context, API.stop, { sessionId: context.sessionId });
+  } catch {
+    return { kind: "failed", message: "Couldn't reach the session. Try again." };
+  }
+  const { status, body } = result;
+  if (field(body, "code") === ERROR_CODES.staleProvider) {
+    return { kind: "stale", message: "The provider restarted. Reload this panel." };
+  }
+  if (status >= 200 && status < 300 && field(body, "status") === "stopped") {
+    return { kind: "stopped" };
+  }
+  return { kind: "failed", message: field(body, "message") ?? "The session didn't stop." };
+}
+
 export type RespondOutcome =
   | { kind: "accepted" }
   // Already answered elsewhere or no longer waiting: the card simply goes away.

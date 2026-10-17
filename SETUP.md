@@ -7,8 +7,9 @@ into any Copilot chat). You don't need to run any of it yourself.
 ---
 
 **For Copilot.** Get the user from this page to a canvas they own, on desktop and on their phone,
-in about five minutes. Then help them make it theirs and keep tweaking it. Use the platform's shell
-and paths (Windows or macOS).
+in about five minutes. Then help them make it theirs (Part 2) and walk them through building the
+rest of their Copilot setup (Part 3), while a builder writes the code in the background. Use the
+platform's shell and paths (Windows or macOS).
 
 ## Ground rules
 
@@ -70,22 +71,111 @@ and paths (Windows or macOS).
    - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
      phone and browser, and it then opens like an app.
    - Then offer notifications: in the installed app, tap the bell, **Turn on**, then **Send test**.
-     Confirm the test arrives. Pushes carry no content.
+     Confirm the test arrives. Pushes carry no content. Later notifications stay quiet while the app
+     is open in front; the bell has a switch to change that.
 
 ## Part 2: Make it yours
+
+From here, this conversation is the guide and a builder writes the code. The user keeps answering
+questions and making choices while a build runs; they never wait on code.
 
 1. **Ask what they do** in two or three one-tap questions (one at a time, recommended option first):
    what they want at a glance (open pull requests, today's agenda, a scratchpad, a checklist), what to
    call the assistant, and anything off-limits. If WorkIQ or `gh` is available, offer to look at the
    last few weeks of their calendar or GitHub activity (aggregates only, read-only) to suggest panels.
-2. **Build in their copy, in this session.** Keep working in this conversation so the user can follow
-   along and approve each step from their phone; another session's prompts would wait at the
-   computer. Read `<FOLDER>/AGENTS.md` and follow its loop with `<FOLDER>` as the working folder:
-   change the canvas source, run the checks, `npm run install-ext`, then the user taps **Reload
-   extensions** in the canvas (it works on the phone too).
-3. **Hand over the habit.** Tell them that customizing never ends: they can ask for a change from any
-   chat, or tap a suggestion in the canvas's empty right-hand side. Suggest two or three next tweaks
-   based on what they picked.
+2. **Hand the code to a builder.** Tell the user the smallest useful result and how they will check
+   it. Then start a background `task` agent (general-purpose) in this conversation. Its permission
+   requests show in this chat, so the user can approve them from the phone. Give it:
+   - the user's request in their words, `<FOLDER>`, and the skill to follow (`add-view-or-panel`,
+     `add-data-endpoint` or `theme-and-identity`, plus `customization-workflow`);
+   - its job: change the source in `<FOLDER>`, add a test for new logic, run `npx vp check` and the
+     affected tests (`npx vp test <file>`), then report the changed files, the check results and what
+     the user should see;
+   - its limits: it does not run `npm run install-ext`, commit, push, start other agents or ask the
+     user anything. If it needs a decision, it stops and reports the question.
+
+   Run one builder at a time: builders share `<FOLDER>` and the installed canvas. Keep a list of the
+   next canvas ideas instead. A one-line change to `template.config.json` (name, first view) needs no
+   builder. If the user is at the computer and wants to watch the build in its own chat, offer a
+   nested session instead: register `<FOLDER>` with `create_project`, then `create_session` for that
+   project with `workspace_type: "branch"`, so it edits `<FOLDER>` and not a separate worktree. Tell
+   them its permission requests show in that session on the computer, not on the phone.
+
+3. **Start Part 3 at once.** Don't wait for the build.
+4. **When the builder reports,** let the user finish the current question, then pause the journey:
+   - If the builder stopped with a question, ask the user, then start a new builder with the answer.
+   - Otherwise read the diff, run `npm run install-ext` in `<FOLDER>`, and ask the user to tap
+     **Reload extensions** (the circular arrow in the canvas's top bar; it works on the phone too).
+   - When they confirm they see the change, commit in `<FOLDER>` (source and the rebuilt
+     `extension/`), suggest one next canvas idea, and go back to the journey where it stopped.
+
+## Part 3: Grow your setup
+
+The canvas is one part. The rest is how Copilot works for them in every chat: who they are, how
+they like to work, skills for tasks they repeat, their own agents, automations and dashboards. Walk
+them through it one stage at a time. They make the decisions and supply the content in their own
+words; you ask, draft from their answers, show the draft and write it only after they approve. Do
+not copy someone else's files, including this repository maintainer's. The goal is that they learn
+how each piece works and can ask for the next one on their own.
+
+**For every stage:**
+
+- Say in one or two sentences what it is and what they get. Choices: "Start (Recommended)",
+  "Skip for now", "Stop here".
+- Ask one question at a time, recommended option first. Use what you learned in Part 2.
+- Before you write a file, read what is already there. Show the merged result and keep their
+  existing content. Say that personal files apply to every project, not only this one.
+- Check that it works; each stage says how. If it loads only in a new chat, say so and check there.
+- End with the one sentence they can use to do it again, for example _"Next time, say: make a
+  skill for my weekly status note."_
+- Keep progress in `~/.copilot/canvas-runtime/copilot-canvas/journey.md`: stages done or skipped,
+  the next question, the builder in progress and any change waiting for the user's check. No
+  private content and no approvals. When the user comes back, read it first and check for unfinished
+  builder work before you start another.
+
+`~` is the user's home folder (`%USERPROFILE%` on Windows).
+
+1. **Profile** (`~/.copilot/copilot-instructions.md`). Instructions Copilot reads in every chat. Ask
+   their role and what they work on, the tools and accounts they use, and words or names Copilot
+   should know. Keep it under a page. Check: in a new chat, run `/instructions` and confirm the file
+   is listed, then ask _"What do you know about me?"_. If they also use other agent tools and want one
+   shared file, offer `~/.agents/AGENTS.md` instead, loaded through the
+   `COPILOT_CUSTOM_INSTRUCTIONS_DIRS` environment variable. Setting that variable changes their
+   system settings, so ask first. For small facts, they can say _"remember that ..."_ in any chat.
+2. **Working style.** How they and Copilot work together, added to the same file. Ask how they want
+   replies (short or detailed, plain language, step by step); when Copilot should act and when it
+   should ask first (a good default: act when a change is easy to undo and easy to see; ask before
+   anything that sends, deletes, spends money or speaks for them); how to ask questions (one at a
+   time, with choices); and what is off-limits. Check: ask for a small task in a new chat and
+   confirm the reply follows the rules.
+3. **A first skill** (`~/.copilot/skills/<name>/SKILL.md`). A skill is a written procedure that
+   Copilot loads when a task matches. Ask which task they repeat or explain again and again: a status
+   note, a review checklist, meeting prep. Ask for the steps, the inputs, the result and how they
+   know it is done. Write a `name` and a `description` that says when to use it. Check: in a new
+   chat, ask for the task in their usual words and confirm Copilot uses the skill. Teach the habit:
+   _"When you correct me twice on the same thing, ask me to make it a skill."_
+4. **Their own agent** (`~/.copilot/agents/<name>.agent.md`). An agent is a specialist with its own
+   instructions that Copilot can give a task to: a reviewer, a researcher, a writer in their style.
+   Ask what they want to hand off and what it must never do. They can also make one themselves with
+   `/agent`, then **Create new agent**. Check: give it one small, harmless task and look at the
+   result together.
+5. **A first automation** (the app's **Automations** view). An automation runs a prompt in a new
+   session, on demand or on a schedule: a morning summary, an end-of-week review. Scheduled
+   automation needs its own consent (see Ground rules). Start read-only and manual: draft it with
+   `save_workflow` (`interval: "manual"`, `user_confirmation: "dialog"`) so the user reviews and saves
+   it. Say which project, data and actions it can use. With their approval, run it once and read the
+   result together. Add a schedule only after a separate yes. Each run is a new session in the app;
+   it does not show in this phone conversation.
+6. **A dashboard** in the canvas. Turn something they track into a panel with a chart: open pull
+   requests by age, meetings per day, tasks done this week. Use a builder (Part 2) with
+   `add-data-endpoint` and `add-view-or-panel`. Start with simple bars drawn in CSS or SVG; ask
+   before adding a chart library. The data is read-only, and it shows on the phone only if its route
+   is added to the gateway.
+7. **Keep it growing.** Suggest a backup for `~/.copilot/copilot-instructions.md`, `skills/` and
+   `agents/` (a private git repository or their cloud folder; never secrets). Offer a short weekly
+   review: _"What did I repeat or correct this week?"_ Each answer can become a skill, a rule in their
+   profile or a panel. Remind them they can ask from any chat, and that the canvas's empty right-hand
+   side has ideas.
 
 ## Troubleshooting
 
@@ -98,5 +188,6 @@ and paths (Windows or macOS).
   phone.
 - **Undo:** stop `npm run phone`; `devtunnel delete <tunnel-id>` (the id is in
   `~/.copilot/canvas-runtime/copilot-canvas/phone.json`); remove `~/.copilot/extensions/copilot-canvas`
-  and `~/.copilot/canvas-runtime/copilot-canvas` (tunnel id, notification keys and subscriptions);
-  delete `<FOLDER>`.
+  and `~/.copilot/canvas-runtime/copilot-canvas` (tunnel id, notification keys, subscriptions and
+  journey progress); delete `<FOLDER>`. The profile, skills, agents and automations from Part 3 are
+  not part of the canvas; they stay until the user removes them.

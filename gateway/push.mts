@@ -133,8 +133,8 @@ export interface PushStore {
   endpoints(): readonly string[];
   add(endpoint: string): void;
   remove(endpoint: string): void;
-  /** Pushes to every subscription and drops those the push service reports gone. */
-  sendAll(): Promise<number>;
+  /** Pushes to every subscription not skipped and drops those the push service reports gone. */
+  sendAll(skip?: (endpoint: string) => boolean): Promise<number>;
 }
 
 /** Opens (creating on first use) the private push file at `path`. */
@@ -171,9 +171,10 @@ export function openPushStore(path: string, sender: PushSender = sendPush): Push
       save();
     },
     remove,
-    async sendAll() {
+    async sendAll(skip) {
+      const targets = skip ? file.endpoints.filter((endpoint) => !skip(endpoint)) : file.endpoints;
       const results = await Promise.all(
-        file.endpoints.map(async (endpoint) => {
+        targets.map(async (endpoint) => {
           const status = await sender(endpoint, authorization(endpoint));
           if (status === 404 || status === 410) remove(endpoint);
           return status >= 200 && status < 300;
@@ -181,6 +182,29 @@ export function openPushStore(path: string, sender: PushSender = sendPush): Push
       );
       return results.filter(Boolean).length;
     },
+  };
+}
+
+export interface Presence {
+  /** Records whether the app holding this subscription is open and focused right now. */
+  report(endpoint: string, focused: boolean, nowMs?: number): void;
+  isFocused(endpoint: string, nowMs?: number): boolean;
+  forget(endpoint: string): void;
+}
+
+/**
+ * Which subscribed devices have the app focused, so a push isn't sent to a phone already showing
+ * the conversation. A report lapses after `ttlMs`, so a closed or crashed app is notified again.
+ */
+export function createPresence(ttlMs: number): Presence {
+  const until = new Map<string, number>();
+  return {
+    report(endpoint, focused, now = Date.now()) {
+      if (focused) until.set(endpoint, now + ttlMs);
+      else until.delete(endpoint);
+    },
+    isFocused: (endpoint, now = Date.now()) => (until.get(endpoint) ?? -Infinity) > now,
+    forget: (endpoint) => void until.delete(endpoint),
   };
 }
 

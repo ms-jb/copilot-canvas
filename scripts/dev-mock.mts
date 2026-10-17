@@ -446,7 +446,11 @@ export function devMock(repoRoot: string): Plugin {
     const session = get(scenarioOf(req));
     const method = req.method ?? "GET";
     const expected =
-      route === API.send || route === API.controls || route === API.respond || route === API.reload
+      route === API.send ||
+      route === API.controls ||
+      route === API.respond ||
+      route === API.reload ||
+      route === API.stop
         ? "POST"
         : "GET";
     if (method !== expected) return error(res, ERROR_CODES.methodNotAllowed, "Method not allowed.");
@@ -572,6 +576,15 @@ export function devMock(repoRoot: string): Plugin {
         if (!parsed.ok) return error(res, parsed.code, parsed.message);
         // The preview has no extensions to reload, so it only acknowledges.
         return json(res, 200, { ok: true, status: "scheduled" });
+      }
+      case API.stop: {
+        if (!checkWrite(req, res)) return;
+        const parsed = validateReloadPayload(await readJson(req));
+        if (!parsed.ok) return error(res, parsed.code, parsed.message);
+        // The preview shows the result of a stop; a scripted turn may still finish its steps.
+        setPrompts(session, []);
+        setStatus(session, { phase: "idle" });
+        return json(res, 200, { ok: true, status: "stopped" });
       }
     }
   }

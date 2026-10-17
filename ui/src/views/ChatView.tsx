@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { makeRequestId, sendMessage } from "../api";
+import { makeRequestId, requestStop, sendMessage } from "../api";
 import { ActivityBar } from "../components/ActivityBar";
 import { Composer, type ComposerNotice } from "../components/Composer";
 import { PendingPrompts } from "../components/prompts/PendingPrompts";
+import { useStopOnEscape } from "../components/stopOnEscape";
 import { Transcript, type PendingMessage } from "../components/Transcript";
 import { onSuggestedPrompt } from "../composerDraft";
 import { resolvePending } from "../shared";
@@ -25,8 +26,25 @@ export function ChatView({ connection }: ViewProps) {
   const [busy, setBusy] = useState(false);
   const [uncertain, setUncertain] = useState<UncertainSend | null>(null);
   const input = useRef<HTMLTextAreaElement>(null);
+  const root = useRef<HTMLDivElement>(null);
   // Set synchronously before any await so a double click or key repeat can never send twice.
   const inFlight = useRef(false);
+  const [stopping, setStopping] = useState(false);
+  const running = view.status.phase === "working" || view.status.phase === "waiting";
+
+  const stop = async () => {
+    if (stopping || !context || locked) return;
+    setStopping(true);
+    try {
+      const outcome = await requestStop(context);
+      if (outcome.kind === "stale") markStale();
+      else if (outcome.kind === "failed") setNotice({ kind: "error", message: outcome.message });
+    } finally {
+      setStopping(false);
+    }
+  };
+  const onStop = running && context && !locked ? () => void stop() : undefined;
+  useStopOnEscape(root, onStop);
 
   // Optimistic copies disappear as soon as the transcript confirms them, so a message never shows twice.
   const visiblePending = useMemo(
@@ -105,7 +123,7 @@ export function ChatView({ connection }: ViewProps) {
   };
 
   return (
-    <div className={styles.chat}>
+    <div className={styles.chat} ref={root}>
       <Transcript
         entries={view.entries}
         pending={visiblePending}
@@ -136,6 +154,8 @@ export function ChatView({ connection }: ViewProps) {
           notice={notice}
           assistantName={assistantName}
           inputRef={input}
+          onStop={onStop}
+          stopping={stopping}
         />
       </div>
     </div>

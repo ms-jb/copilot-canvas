@@ -402,6 +402,30 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
         }
         sendJson(res, 200, { ok: true, status: "scheduled" });
     }
+    async function handleStop(req, res) {
+        const parsed = await readJsonPost(req, res, "error");
+        if (!parsed)
+            return;
+        const validation = validateReloadPayload(parsed.value);
+        if (!validation.ok) {
+            sendError(res, validation.code, validation.message);
+            return;
+        }
+        if (validation.value.sessionId !== bridge.sessionId) {
+            sendError(res, ERROR_CODES.sessionMismatch, "This panel belongs to a different session.");
+            return;
+        }
+        const outcome = await bridge.stop();
+        if (outcome === "unavailable") {
+            sendError(res, ERROR_CODES.stopUnavailable, "This Copilot version cannot stop from the canvas.");
+            return;
+        }
+        if (outcome === "failed") {
+            sendError(res, ERROR_CODES.stopFailed, "The session didn't stop. Try again.");
+            return;
+        }
+        sendJson(res, 200, { ok: true, status: "stopped" });
+    }
     async function handleSend(req, res) {
         const parsed = await readJsonPost(req, res, SEND_STATUS.rejected);
         if (!parsed)
@@ -544,6 +568,10 @@ export function createProviderServer({ config, bridge, uiDir, log = () => { }, g
                 if (method !== "POST")
                     return notAllowed(res, "POST");
                 return handleReload(req, res);
+            case API.stop:
+                if (method !== "POST")
+                    return notAllowed(res, "POST");
+                return handleStop(req, res);
             case API.share:
                 if (method !== "GET")
                     return notAllowed(res, "GET");

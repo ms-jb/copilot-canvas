@@ -139,11 +139,11 @@ it("refuses a stale or missing generation on send and never forwards it", async 
   expect((await send(GENERATION)).status).toBe(200);
 });
 
-it("forwards a reload only when pinned to the live provider run", async () => {
+it("forwards a reload or a stop only when pinned to the live provider run", async () => {
   publish(GENERATION);
-  const reload = (generation?: string) =>
+  const post = (path: string, generation?: string) =>
     call(
-      "/api/reload",
+      path,
       {
         "content-type": "application/json",
         origin: `http://127.0.0.1:${gatewayPort}`,
@@ -152,12 +152,16 @@ it("forwards a reload only when pinned to the live provider run", async () => {
       "POST",
       "{}",
     );
-  expect((await reload()).status).toBe(409);
-  expect((await reload("generation-old-0000000")).status).toBe(409);
+  for (const path of ["/api/reload", "/api/stop"]) {
+    expect((await post(path)).status).toBe(409);
+    expect((await post(path, "generation-old-0000000")).status).toBe(409);
+  }
   expect(upstreamPaths).toEqual([]);
-  expect((await reload(GENERATION)).status).toBe(200);
-  expect(upstreamPaths).toEqual([`${CAPABILITY}api/reload`]);
+  expect((await post("/api/reload", GENERATION)).status).toBe(200);
+  expect((await post("/api/stop", GENERATION)).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/reload`, `${CAPABILITY}api/stop`]);
   expect((await call("/api/reload")).status).toBe(405);
+  expect((await call("/api/stop")).status).toBe(405);
 });
 
 it("rejects a bad Host or Origin with 403", async () => {

@@ -16,6 +16,7 @@ import { createGateway } from "../gateway/gateway.mts";
 import type { Gateway } from "../gateway/gateway.mts";
 import {
   createNotifier,
+  createPresence,
   isAllowedPushEndpoint,
   openPushStore,
   parseSse,
@@ -95,6 +96,32 @@ it("keeps keys across restarts and drops subscriptions the push service reports 
   expect(again.publicKey).toBe(first.publicKey);
   expect(await again.sendAll()).toBe(1);
   expect(again.endpoints()).toEqual([FCM]);
+});
+
+it("treats a device as focused until it reports otherwise or its report lapses", () => {
+  const presence = createPresence(1000);
+  expect(presence.isFocused(APPLE, 0)).toBe(false);
+  presence.report(APPLE, true, 0);
+  expect(presence.isFocused(APPLE, 999)).toBe(true);
+  expect(presence.isFocused(FCM, 999)).toBe(false);
+  expect(presence.isFocused(APPLE, 1000)).toBe(false);
+  presence.report(APPLE, true, 2000);
+  presence.report(APPLE, false, 2100);
+  expect(presence.isFocused(APPLE, 2200)).toBe(false);
+  presence.report(APPLE, true, 3000);
+  presence.forget(APPLE);
+  expect(presence.isFocused(APPLE, 3100)).toBe(false);
+});
+
+it("skips the subscriptions a filter excludes", async () => {
+  const store = openPushStore(join(dir, "push.json"), async (endpoint) => {
+    sent.push(endpoint);
+    return 201;
+  });
+  store.add(APPLE);
+  store.add(FCM);
+  expect(await store.sendAll((endpoint) => endpoint === APPLE)).toBe(1);
+  expect(sent).toEqual([FCM]);
 });
 
 const waiting = (waitingFor: SessionStatus["waitingFor"]): SessionStatus => ({
@@ -198,6 +225,17 @@ it("serves the service worker, key and latest notice, and validates subscription
     expect((await call("/api/push/subscribe", "GET")).status).toBe(405);
     expect((await call("/api/push/subscribe", "POST", { endpoint: APPLE })).status).toBe(200);
 
+    expect(
+      (await call("/api/push/presence", "POST", { endpoint: FCM, focused: true })).status,
+    ).toBe(400);
+    expect(
+      (await call("/api/push/presence", "POST", { endpoint: APPLE, focused: "yes" })).status,
+    ).toBe(400);
+    expect(
+      (await call("/api/push/presence", "POST", { endpoint: APPLE, focused: true })).status,
+    ).toBe(200);
+
+    // A test is asked for from the open app, so it ignores focus.
     expect((await call("/api/push/test", "POST", {})).status).toBe(200);
     expect(sent).toEqual([APPLE]);
     expect((await call("/api/push/test", "POST", {})).status).toBe(400);
@@ -246,6 +284,9 @@ it("pushes when the live provider starts waiting on the user", async () => {
   };
   try {
     await call("/api/push/subscribe", "POST", { endpoint: APPLE });
+    await call("/api/push/subscribe", "POST", { endpoint: FCM });
+    // The phone with the app in front is skipped; the other device still hears about it.
+    await call("/api/push/presence", "POST", { endpoint: FCM, focused: true });
     await until(() => events !== undefined);
     const status = { phase: "waiting", waitingFor: "permission" };
     events?.write(`event: status\ndata: ${JSON.stringify({ seq: 2, status })}\n\n`);

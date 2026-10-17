@@ -21,7 +21,13 @@ import {
   validateIdentity,
 } from "../extension-src/shared/contract.mts";
 import type { Notice, PushSender } from "./push.mts";
-import { createNotifier, isAllowedPushEndpoint, openPushStore, parseSse } from "./push.mts";
+import {
+  createNotifier,
+  createPresence,
+  isAllowedPushEndpoint,
+  openPushStore,
+  parseSse,
+} from "./push.mts";
 import {
   gatewayStatePath,
   loadConfig,
@@ -76,9 +82,10 @@ const ROUTES: Record<string, string> = {
   [`/${API.respond}`]: "POST",
   [`/${API.share}`]: "GET",
   [`/${API.reload}`]: "POST",
+  [`/${API.stop}`]: "POST",
 };
 // Writes must be pinned to the provider run the page was loaded from.
-const PINNED_WRITES = new Set<string>([API.send, API.controls, API.respond, API.reload]);
+const PINNED_WRITES = new Set<string>([API.send, API.controls, API.respond, API.reload, API.stop]);
 
 const NOT_CONNECTED_PAGE = `<!doctype html>
 <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
@@ -185,6 +192,7 @@ export function createGateway(options: GatewayOptions): Gateway {
   const push = options.push && {
     store: openPushStore(options.push.statePath, options.push.sender),
     notifier: createNotifier(options.push.assistantName),
+    presence: createPresence(LIMITS.pushPresenceTtlMs),
     fallback: { title: options.push.assistantName, body: "Open the canvas to see what's new." },
   };
   let latest: Notice | null = null;
@@ -194,7 +202,7 @@ export function createGateway(options: GatewayOptions): Gateway {
   function notify(notice: Notice | null) {
     if (!notice || !push) return;
     latest = notice;
-    void push.store.sendAll();
+    void push.store.sendAll((endpoint) => push.presence.isFocused(endpoint));
   }
 
   function openStream(state: ProviderState) {
@@ -290,7 +298,12 @@ export function createGateway(options: GatewayOptions): Gateway {
       [API.pushKey, () => sendJson(response, 200, { publicKey: push.store.publicKey })],
       [API.pushLatest, () => sendJson(response, 200, latest ?? push.fallback)],
     ]);
-    const writes = new Set<string>([API.pushSubscribe, API.pushUnsubscribe, API.pushTest]);
+    const writes = new Set<string>([
+      API.pushSubscribe,
+      API.pushUnsubscribe,
+      API.pushTest,
+      API.pushPresence,
+    ]);
     const read = reads.get(path);
     if (!read && !writes.has(path)) return false;
     const expected = read ? "GET" : "POST";
@@ -308,14 +321,14 @@ export function createGateway(options: GatewayOptions): Gateway {
       return true;
     }
     const body = await readBody(request, PUSH_BODY_MAX_BYTES);
-    let endpoint: unknown;
+    let fields: { endpoint?: unknown; focused?: unknown } = {};
     try {
-      endpoint = body
-        ? (JSON.parse(body.toString("utf8")) as { endpoint?: unknown }).endpoint
-        : null;
+      const parsed: unknown = body ? JSON.parse(body.toString("utf8")) : null;
+      if (parsed && typeof parsed === "object") fields = parsed;
     } catch {
-      endpoint = null;
+      // Malformed JSON leaves no endpoint, which is rejected below.
     }
+    const { endpoint } = fields;
     if (path === API.pushTest) {
       const now = Date.now();
       if (now - lastTestAt < PUSH_TEST_INTERVAL_MS) {
@@ -331,8 +344,21 @@ export function createGateway(options: GatewayOptions): Gateway {
       sendError(request, response, ERROR_CODES.badRequest, "Not a supported push service.");
       return true;
     }
+    if (path === API.pushPresence) {
+      // Only subscribed devices are tracked, which also caps the map at the subscription limit.
+      if (typeof fields.focused !== "boolean" || !push.store.endpoints().includes(endpoint)) {
+        sendError(request, response, ERROR_CODES.badRequest, "Not a subscribed device.");
+        return true;
+      }
+      push.presence.report(endpoint, fields.focused);
+      sendJson(response, 200, { ok: true });
+      return true;
+    }
     if (path === API.pushSubscribe) push.store.add(endpoint);
-    else push.store.remove(endpoint);
+    else {
+      push.store.remove(endpoint);
+      push.presence.forget(endpoint);
+    }
     sendJson(response, 200, { ok: true });
     return true;
   }

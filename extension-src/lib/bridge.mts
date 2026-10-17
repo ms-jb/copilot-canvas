@@ -39,7 +39,11 @@ export interface SessionLike {
   on(handler: (event: SessionEventLike) => void): () => void;
   getEvents(): Promise<readonly SessionEventLike[]>;
   send(options: { prompt: string }): Promise<string>;
-  readonly rpc?: ControlsRpcLike & PromptsRpcLike & { extensions?: ExtensionsRpcLike };
+  readonly rpc?: ControlsRpcLike &
+    PromptsRpcLike & {
+      extensions?: ExtensionsRpcLike;
+      abort?: (params: { reason?: string }) => Promise<unknown>;
+    };
 }
 
 /** Experimental like the other RPCs, so feature-detected before use. */
@@ -76,6 +80,11 @@ export interface Bridge {
   applyControl(change: ControlChange): Promise<SessionControls>;
   /** Asks the session to reload its extensions shortly. False when this Copilot cannot. */
   reloadExtensions(): boolean;
+  /**
+   * Stops the running turn, as the app's own Stop does. "stopped" only when the session confirms;
+   * "unavailable" when this Copilot has no abort. With nothing running, the session answers itself.
+   */
+  stop(): Promise<"stopped" | "unavailable" | "failed">;
   /** Answers one pending prompt with the user's explicit decision. */
   respond(requestId: string, response: PromptResponse): Promise<RespondOutcome>;
   /** Re-reads pending requests from the session (for example when a client reconnects). */
@@ -350,6 +359,21 @@ export function createSessionBridge(
     return true;
   }
 
+  async function stop(): Promise<"stopped" | "unavailable" | "failed"> {
+    if (disposed) return "unavailable";
+    const rpc = session.rpc;
+    if (!rpc || typeof rpc.abort !== "function") return "unavailable";
+    try {
+      const result: unknown = await rpc.abort({ reason: "user_initiated" });
+      const ok =
+        typeof result === "object" && result !== null && "success" in result && result.success;
+      return ok === true ? "stopped" : "failed";
+    } catch (error) {
+      log(`Stopping the turn failed: ${describeError(error)}`, "warning");
+      return "failed";
+    }
+  }
+
   function dispose(): void {
     if (disposed) return;
     disposed = true;
@@ -378,6 +402,7 @@ export function createSessionBridge(
     send,
     applyControl,
     reloadExtensions,
+    stop,
     respond: (requestId, response) => prompts.respond(requestId, response),
     refreshPrompts: () => prompts.refresh(),
     dispose,

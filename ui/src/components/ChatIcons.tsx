@@ -27,6 +27,12 @@ export const SendIcon = ({ size }: { size?: number }) => (
   </Icon>
 );
 
+export const StopIcon = ({ size }: { size?: number }) => (
+  <Icon size={size}>
+    <rect x="7" y="7" width="10" height="10" rx="1.5" fill="currentColor" />
+  </Icon>
+);
+
 export const ArrowDownIcon = ({ size }: { size?: number }) => (
   <Icon size={size}>
     <path d="M12 5v14M19 12l-7 7-7-7" />

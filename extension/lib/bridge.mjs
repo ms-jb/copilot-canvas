@@ -246,6 +246,22 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         }
         return true;
     }
+    async function stop() {
+        if (disposed)
+            return "unavailable";
+        const rpc = session.rpc;
+        if (!rpc || typeof rpc.abort !== "function")
+            return "unavailable";
+        try {
+            const result = await rpc.abort({ reason: "user_initiated" });
+            const ok = typeof result === "object" && result !== null && "success" in result && result.success;
+            return ok === true ? "stopped" : "failed";
+        }
+        catch (error) {
+            log(`Stopping the turn failed: ${describeError(error)}`, "warning");
+            return "failed";
+        }
+    }
     function dispose() {
         if (disposed)
             return;
@@ -277,6 +293,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         send,
         applyControl,
         reloadExtensions,
+        stop,
         respond: (requestId, response) => prompts.respond(requestId, response),
         refreshPrompts: () => prompts.refresh(),
         dispose,

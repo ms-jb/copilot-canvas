@@ -27,6 +27,9 @@ route in `extension-src/lib/server.mts`, and the read in the host (for example `
 
 ## The loop
 
+A background builder does steps 1 and 2 and reports. The conversation the user talks to does the
+rest and keeps guiding them meanwhile (see `customization-workflow`).
+
 1. Preview without Copilot: `npx vp dev` (`?state=empty|waiting|busy|offline` for other states).
 2. Check: `npx vp check` and `npx vp test`. Add a test for new logic.
 3. Install: `npm run install-ext` (builds, then installs from this copy).
@@ -36,6 +39,7 @@ route in `extension-src/lib/server.mts`, and the read in the host (for example `
    `origin` is still `ms-jb/copilot-canvas` and they don't own it, remind them a push needs their own
    fork first (`gh repo fork --remote` makes the fork `origin`).
 6. Suggest one or two next tweaks that build on what they just asked for. Customizing never ends.
+   During setup, go back to the `SETUP.md` Part 3 stage where the user stopped.
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).
 

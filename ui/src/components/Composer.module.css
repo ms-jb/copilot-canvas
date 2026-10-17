@@ -167,6 +167,16 @@
   cursor: not-allowed;
 }
 
+/* Stop is neutral: it ends work rather than starting it. */
+.send[data-variant="stop"] {
+  background: var(--cc-text);
+  color: var(--cc-surface);
+}
+
+.send[data-variant="stop"]:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--cc-text) 85%, var(--cc-surface));
+}
+
 /* 16px stops iOS Safari from zooming into the field; bigger targets for touch. */
 @media (max-width: 768px), (pointer: coarse) {
   .field .input {

@@ -21,8 +21,17 @@ replacement for the implementation skills:
   `extension-src/shared/config.mts` documents that the install hint can be stale.
 - Inspect `git status --short` and `git remote -v` before editing. Preserve
   unrelated work. Change source files in that copy, not a downloaded install.
-- Keep the same session so the user can follow along and approve from the phone.
-  Do not move the work to another conversation whose prompts wait on the computer.
+- **Guide in the user's conversation; let a builder write the code.** The
+  conversation the user talks to (often the canvas's own) keeps asking, guiding
+  and approving, so the user never waits on a build. It hands sections 3 and
+  4.2 to a background `task` agent in the same conversation, whose permission
+  requests then still reach the phone. The conversation keeps the rest: user
+  questions, `npm run install-ext`, the reload request, the installed check and
+  the commit. One builder at a time per copy. Small configuration edits (a name
+  in `template.config.json`) need no builder. `SETUP.md` Part 2 has the brief.
+- **If you are the builder,** do only sections 3 and 4.2, then report the changed
+  files, check results and what the user should see. Do not install, commit,
+  push, start other agents or ask the user; stop and report any decision you need.
 
 ## 2. Pick one useful step
 
@@ -86,7 +95,8 @@ it is not a substitute for a UI build. Never hand-edit generated output.
   their own fork before pushing. With their approval, use `gh repo fork --remote`
   and verify the resulting remotes before publishing. A public fork is public.
 - Finish with the change, verification result and any remaining human step.
-  Suggest one or two small next tweaks based on what the user chose.
+  Suggest one or two small next tweaks based on what the user chose. During
+  setup, return to the `SETUP.md` Part 3 stage where the user stopped.
 
 ## Don't
 

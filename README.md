@@ -40,8 +40,11 @@ by asking.
    yours; sharing them is up to you), installs it and opens it next to your chat.
 4. For your phone, it shows a QR code. Scan it, sign in with the same account, and say hello. The
    canvas then walks you through adding it to your home screen like an app.
-5. Then, in the same chat, it asks what you'd like to see and builds your first panels. You can
-   follow along and approve each step from your phone.
+5. Then, in the same chat, it asks what you'd like to see and starts building your first panels in
+   the background. You can approve each step from your phone.
+6. While that builds, it walks you through the rest of your Copilot setup, one choice at a time:
+   your profile and working style, a first skill, your own agent, a first automation and a
+   dashboard. You decide what goes in each; Copilot drafts it and shows you before saving.
 
 The full playbook Copilot follows is in [SETUP.md](SETUP.md).
 
@@ -74,6 +77,9 @@ circular arrow at the top) to see it. Then ask for the next thing. Some ideas:
 Copilot follows [AGENTS.md](AGENTS.md) when it works on your copy, so it edits the canvas itself
 instead of opening something else.
 
+To build the rest of your Copilot setup (a profile, skills, your own agents, automations), say
+_"Walk me through Part 3 of SETUP.md in my Copilot Canvas copy."_ You can stop and pick it up later.
+
 ## Open on phone
 
 Setup does this for you. To start it again later (for example after a restart), run this in your copy:
@@ -86,7 +92,9 @@ It creates (once) a private dev tunnel that only you can sign in to, starts the 
 the link and a QR code; the canvas's **Open on phone** button shows the same code. Keep it running,
 and your computer awake, while you use your phone. On the phone, the canvas walks you through
 adding it to your home screen so it opens like an app. In the installed app, tap the bell to get a
-notification when Copilot needs you or finishes (on iPhone this needs iOS 16.4 or later).
+notification when Copilot needs you or finishes (on iPhone this needs iOS 16.4 or later). While the
+app is open in front of you it stays quiet; turn on **Also notify while this app is open** under the
+bell to change that.
 
 <details>
 <summary>What it does, step by step</summary>

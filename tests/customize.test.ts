@@ -8,6 +8,7 @@ import { INSTALL_MARKER, readSourceDir } from "../extension-src/shared/config.mt
 import { validateReloadPayload } from "../extension-src/shared/contract.mts";
 import { isOwnerOnly, parseForwardingUrl } from "../scripts/phone.mts";
 import { copyExtension, isOwnInstall } from "../scripts/install-ext.mts";
+import { escapeStops } from "../ui/src/components/stopOnEscape.ts";
 
 afterEach(() => {
   vi.useRealTimers();
@@ -47,6 +48,54 @@ it("schedules one extension reload after replying, and reports when it cannot", 
   const without = createSessionBridge(fakeSession({}));
   expect(without.reloadExtensions()).toBe(false);
   without.dispose();
+});
+
+it("stops the turn only when the session confirms, and reports when it cannot", async () => {
+  const abort = vi.fn(async () => ({ success: true }));
+  const bridge = createSessionBridge(fakeSession({ abort }));
+  expect(await bridge.stop()).toBe("stopped");
+  expect(abort).toHaveBeenCalledWith({ reason: "user_initiated" });
+  bridge.dispose();
+
+  for (const reply of [
+    async () => ({ success: false }),
+    async () => undefined,
+    async () => {
+      throw new Error("gone");
+    },
+  ]) {
+    const refused = createSessionBridge(fakeSession({ abort: reply }));
+    expect(await refused.stop()).toBe("failed");
+    refused.dispose();
+  }
+
+  const without = createSessionBridge(fakeSession({}));
+  expect(await without.stop()).toBe("unavailable");
+  without.dispose();
+});
+
+it("lets Escape stop only for a plain press that nothing else used", () => {
+  const press = {
+    key: "Escape",
+    defaultPrevented: false,
+    repeat: false,
+    isComposing: false,
+    modified: false,
+    fromChat: true,
+    overlayOpen: false,
+  };
+  expect(escapeStops(press)).toBe(true);
+  for (const change of [
+    { key: "Enter" },
+    { defaultPrevented: true },
+    { repeat: true },
+    { isComposing: true },
+    { modified: true },
+    { fromChat: false },
+    { overlayOpen: true },
+  ]) {
+    expect(escapeStops({ ...press, ...change })).toBe(false);
+  }
 });
 
 it("reads the source clone from the install marker only", () => {

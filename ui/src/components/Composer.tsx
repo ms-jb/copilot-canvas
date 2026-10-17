@@ -2,7 +2,7 @@ import { Loader, Textarea } from "@mantine/core";
 import type { KeyboardEvent, Ref } from "react";
 import { LIMITS } from "../shared";
 import type { Connection } from "../useConnection";
-import { AlertIcon, SendIcon } from "./ChatIcons";
+import { AlertIcon, SendIcon, StopIcon } from "./ChatIcons";
 import { SessionControls } from "./controls/SessionControls";
 import styles from "./Composer.module.css";
 
@@ -22,6 +22,9 @@ interface ComposerProps {
   notice: ComposerNotice | null;
   assistantName: string;
   inputRef?: Ref<HTMLTextAreaElement>;
+  /** Set while a turn is running: an empty composer offers Stop instead of Send. */
+  onStop?: () => void;
+  stopping?: boolean;
 }
 
 // Show the counter only when the limit is close enough to matter.
@@ -37,8 +40,11 @@ export function Composer({
   notice,
   assistantName,
   inputRef,
+  onStop,
+  stopping = false,
 }: ComposerProps) {
   const canSend = !disabled && !busy && value.trim().length > 0;
+  const showStop = onStop !== undefined && !busy && value.trim().length === 0;
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     // Enter sends, Shift+Enter inserts a newline; never fire while an IME is composing.
@@ -94,15 +100,29 @@ export function Composer({
               {value.length.toLocaleString()} / {LIMITS.maxPromptChars.toLocaleString()}
             </span>
           )}
-          <button
-            type="submit"
-            className={styles.send}
-            disabled={!canSend}
-            aria-label={busy ? "Sending" : "Send message"}
-            title="Send (Enter)"
-          >
-            {busy ? <Loader size={14} color="currentColor" /> : <SendIcon size={16} />}
-          </button>
+          {showStop ? (
+            <button
+              type="button"
+              className={styles.send}
+              data-variant="stop"
+              disabled={disabled || stopping}
+              onClick={onStop}
+              aria-label={stopping ? "Stopping" : "Stop"}
+              title="Stop (Esc)"
+            >
+              {stopping ? <Loader size={14} color="currentColor" /> : <StopIcon size={16} />}
+            </button>
+          ) : (
+            <button
+              type="submit"
+              className={styles.send}
+              disabled={!canSend}
+              aria-label={busy ? "Sending" : "Send message"}
+              title="Send (Enter)"
+            >
+              {busy ? <Loader size={14} color="currentColor" /> : <SendIcon size={16} />}
+            </button>
+          )}
         </div>
       </div>
     </form>
