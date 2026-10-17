@@ -7,11 +7,11 @@ in the middle, your own panels on the right. Answer permission requests, questio
 approvals right in the canvas, even from your phone, and shape the whole thing just by asking
 Copilot. It works with any Copilot chat session where the extension is loaded, with no extra setup.
 
+[![Install in GitHub Copilot](https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DInstall%2520the%2520Copilot%2520Canvas%2520extension%2520from%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Ftree%252Fmain%252Fextension%2520for%2520my%2520user%252C%2520reload%2520extensions%252C%2520then%2520open%2520the%2520canvas.)
 [![Get started](https://img.shields.io/badge/Get_started-0078d4?style=for-the-badge&logo=readthedocs&logoColor=white)](#getting-started)
 [![Contributing](https://img.shields.io/badge/Contributing-6e5494?style=for-the-badge&logo=github&logoColor=white)](CONTRIBUTING.md)
 [![Report an issue](https://img.shields.io/badge/Report_an_issue-e74c3c?style=for-the-badge&logo=github&logoColor=white)](https://github.com/ms-jb/copilot-canvas/issues/new/choose)
 [![Make it yours](https://img.shields.io/badge/Make_it_yours-0078d4?style=for-the-badge&logo=githubcopilot&logoColor=white)](#make-it-yours)
-[![Try latest](https://img.shields.io/badge/Try_latest-339933?style=for-the-badge&logo=githubcopilot&logoColor=white)](https://github.com/ms-jb/copilot-canvas/tree/main/extension)
 
 <table>
   <tr>
@@ -29,14 +29,26 @@ Copilot. It works with any Copilot chat session where the extension is loaded, w
 
 ## Getting started
 
-In the Copilot app, open the **Install canvas extension** dialog and paste:
+**One click:** [**Install in GitHub Copilot**](https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DInstall%2520the%2520Copilot%2520Canvas%2520extension%2520from%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Ftree%252Fmain%252Fextension%2520for%2520my%2520user%252C%2520reload%2520extensions%252C%2520then%2520open%2520the%2520canvas.)
 
-```
-https://github.com/ms-jb/copilot-canvas/tree/main/extension
-```
+1. The link opens the GitHub Copilot app. If the app is not installed yet, the page that opens
+   offers to download it first.
+2. Confirm the new session. It is prefilled with a request to install the canvas, reload
+   extensions and open it.
 
-Or install from a clone with `npm install` and `npm run install-ext`. Reload extensions, then open
-the canvas from your chat session.
+> [!NOTE]
+> Installing from a GitHub URL requires the Copilot app to be signed in with a **github.com**
+> account. Without one, use the download option below.
+
+**Other ways to install**
+
+- **From the app:** open the **Install canvas extension** dialog and paste
+  `https://github.com/ms-jb/copilot-canvas/tree/main/extension`.
+- **By asking:** in any chat, say _"Install the canvas extension from
+  https://github.com/ms-jb/copilot-canvas/tree/main/extension"_.
+- **Without a github.com account:** download the repository (**Code** → **Download ZIP**), then run
+  `npm install` and `npm run install-ext` in the unzipped folder (Node.js 22.18+). Reload
+  extensions, then open the canvas from your chat session.
 
 > [!TIP]
 > The canvas binds to the session that opens it. Open it from each chat you want to follow; every
