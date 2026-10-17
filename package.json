@@ -19,7 +19,6 @@
   "dependencies": {
     "@mantine/core": "^9.7.1",
     "@mantine/hooks": "^9.7.1",
-    "qrcode-generator": "2.0.4",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },

@@ -18,21 +18,6 @@
   }
 }
 
-/* Always dark modules on a white plate, even in dark mode, so phones scan it reliably. */
-.plate {
-  background: #fff;
-  padding: var(--cc-space-1);
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-md);
-  line-height: 0;
-}
-
-.qr {
-  display: block;
-  width: 224px;
-  height: 224px;
-}
-
 .url {
   font-family: var(--cc-font-mono);
   font-size: var(--cc-text-sm);

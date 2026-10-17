@@ -1,4 +1,5 @@
 import { expect, it } from "vite-plus/test";
+import * as contract from "../extension-src/shared/contract.mts";
 import {
   CONTRACT_VERSION,
   IDENTITY_APP,
@@ -20,6 +21,43 @@ const controls = {
   models: [],
 };
 const payload = { requestId: "abcd1234", sessionId: "session-1", text: "hello" };
+
+it("keeps the public contract exports stable without exposing domain helpers", () => {
+  expect(Object.keys(contract).sort()).toEqual([
+    "ACTIVITIES",
+    "API",
+    "CONTEXT_TIERS",
+    "CONTRACT_VERSION",
+    "ENTRY_KINDS",
+    "ERROR_CODES",
+    "HEADERS",
+    "HTTP_STATUS_BY_CODE",
+    "IDENTITY_APP",
+    "LIMITS",
+    "PHASES",
+    "PLAN_ACTIONS",
+    "SEND_STATUS",
+    "SESSION_MODES",
+    "SSE_EVENTS",
+    "WAITING_FOR",
+    "isPlainObject",
+    "makeError",
+    "toPublicOrigin",
+    "validateBootstrap",
+    "validateControls",
+    "validateControlsPayload",
+    "validateEntry",
+    "validateIdentity",
+    "validatePrompt",
+    "validatePrompts",
+    "validateReloadPayload",
+    "validateRespondPayload",
+    "validateSendPayload",
+    "validateServerEvent",
+    "validateSnapshot",
+    "validateStatus",
+  ]);
+});
 
 it("accepts a valid send payload and rejects malformed ones", () => {
   expect(validateSendPayload(payload)).toEqual({ ok: true, value: payload });

@@ -10,7 +10,8 @@ import { fileURLToPath } from "node:url";
 import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/config.mts";
 import type { TemplateConfig } from "./shared/config.mts";
 import { createSessionBridge } from "./lib/bridge.mts";
-import type { LogLevel, SessionBridge } from "./lib/bridge.mts";
+import type { SessionBridge } from "./lib/bridge.mts";
+import type { LogLevel } from "./lib/logging.mts";
 import { createChatCanvas } from "./lib/canvas.mts";
 import { startProvider } from "./lib/provider.mts";
 

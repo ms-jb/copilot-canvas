@@ -1,7 +1,7 @@
 import { Button, Group, Modal, Stack, Switch, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useState } from "react";
-import { API, LIMITS } from "../../../../extension-src/shared/contract.mts";
+import { API, LIMITS } from "../../shared";
 import { getJson } from "../../api";
 import { IconButton } from "../../layout/IconButton";
 import { usePersistentFlag } from "../../layout/usePersistentFlag";

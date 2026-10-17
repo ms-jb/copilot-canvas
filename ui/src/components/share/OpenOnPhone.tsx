@@ -1,15 +1,12 @@
 import { Button, CopyButton, Modal, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { lazy, Suspense, useEffect, useState, type JSX } from "react";
-import { API, toPublicOrigin } from "../../../../extension-src/shared/contract.mts";
-import type { ShareInfo } from "../../../../extension-src/shared/contract.mts";
+import { useEffect, useState, type JSX } from "react";
+import { API, toPublicOrigin, type ShareInfo } from "../../shared";
 import { getJson } from "../../api";
+import { suggestPrompt } from "../../composerDraft";
 import { isRemote } from "../../remote";
 import type { Connection } from "../../useConnection";
 import styles from "./OpenOnPhone.module.css";
-
-// The encoder loads only when the dialog opens, keeping it out of the main bundle.
-const QrCode = lazy(() => import("./QrCode"));
 
 function PhoneIcon() {
   return (
@@ -65,11 +62,6 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
       </Button>
       <Modal opened={opened} onClose={close} title="Open on phone" centered size="sm">
         <Stack gap="md" align="center">
-          <div className={styles.plate}>
-            <Suspense fallback={<div className={styles.qr} />}>
-              <QrCode value={publicUrl} />
-            </Suspense>
-          </div>
           <Text className={styles.url}>{publicUrl}</Text>
           <CopyButton value={publicUrl}>
             {({ copied, copy }) => (
@@ -78,6 +70,17 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
               </Button>
             )}
           </CopyButton>
+          <Button
+            variant="default"
+            onClick={() => {
+              suggestPrompt(
+                `Make a QR code image for ${publicUrl} and post it here so I can scan it with my phone.`,
+              );
+              close();
+            }}
+          >
+            Ask Copilot for a QR code
+          </Button>
           <Text className={styles.note}>
             Use an owner-only tunnel and open it in a browser signed in as the tunnel owner.
           </Text>

@@ -62,9 +62,10 @@ platform's shell and paths (Windows or macOS).
      link. The user finishes it in a browser with the account they will use on their phone.
    - In `<FOLDER>`, start `npm run phone` with `NO_COLOR=1` as a long-lived, detached background
      process. It creates or reuses their owner-only tunnel, refuses one with extra access, hosts it and
-     starts the gateway, then prints `Open on phone: <link>` and a QR code.
-   - **The moment that appears, post the link and the QR code in chat** (the QR exactly as printed, in a
-     plain code block) and ask the user to scan it and sign in. Don't wait for the rest of setup: the
+     starts the gateway, then prints `Open on phone: <link>`.
+   - **The moment that appears, post the link in chat with a QR code image of it** (make the image
+     yourself, for example with a short script in your session files, never in `<FOLDER>`) and ask
+     the user to scan it and sign in. Don't wait for the rest of setup: the
      phone shows "Not connected" and reconnects on its own once the canvas is open.
    - Once the canvas is open, reopen it so its **Open on phone** button appears, and ask the user to
      send a message from the phone. Confirm it arrives in this conversation.

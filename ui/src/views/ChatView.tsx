@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { makeRequestId, requestStop, sendMessage } from "../api";
 import { ActivityBar } from "../components/ActivityBar";
 import { Composer, type ComposerNotice } from "../components/Composer";
-import { PendingPrompts } from "../components/prompts/PendingPrompts";
+import { PendingPrompts } from "../features/prompts/PendingPrompts";
 import { useStopOnEscape } from "../components/stopOnEscape";
 import { Transcript, type PendingMessage } from "../components/Transcript";
 import { onSuggestedPrompt } from "../composerDraft";
@@ -33,7 +33,7 @@ export function ChatView({ connection }: ViewProps) {
   const running = view.status.phase === "working" || view.status.phase === "waiting";
 
   const stop = async () => {
-    if (stopping || !context || locked) return;
+    if (stopping || !context) return;
     setStopping(true);
     try {
       const outcome = await requestStop(context);

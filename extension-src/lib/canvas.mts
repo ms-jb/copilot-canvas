@@ -5,7 +5,7 @@
 
 import type { SessionStatus } from "../shared/contract.mts";
 import type { TemplateConfig } from "../shared/config.mts";
-import type { Logger } from "./bridge.mts";
+import type { Logger } from "./logging.mts";
 
 export interface CanvasOpenContext {
   instanceId: string;

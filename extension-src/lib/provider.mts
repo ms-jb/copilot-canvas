@@ -17,7 +17,8 @@ import {
   writeProviderState,
 } from "../shared/runtime-state.mts";
 import type { ProviderState } from "../shared/runtime-state.mts";
-import type { Bridge, Logger } from "./bridge.mts";
+import type { Bridge } from "./bridge.mts";
+import type { Logger } from "./logging.mts";
 import { createProviderServer } from "./server.mts";
 import type { ProviderServer, ProviderServerOptions } from "./server.mts";
 

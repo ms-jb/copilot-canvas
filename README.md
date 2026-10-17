@@ -38,8 +38,8 @@ by asking.
 2. Copilot asks you one question: go ahead, skip the phone, or pick another folder.
 3. It makes your own copy of Copilot Canvas (a fork on your GitHub account, so your changes are
    yours; sharing them is up to you), installs it and opens it next to your chat.
-4. For your phone, it shows a QR code. Scan it, sign in with the same account, and say hello. The
-   canvas then walks you through adding it to your home screen like an app.
+4. For your phone, it shows the link and a QR code of it. Scan it, sign in with the same account,
+   and say hello. The canvas then walks you through adding it to your home screen like an app.
 5. Then, in the same chat, it asks what you'd like to see and starts building your first panels in
    the background. You can approve each step from your phone.
 6. While that builds, it walks you through the rest of your Copilot setup, one choice at a time:
@@ -89,8 +89,15 @@ npm run phone
 ```
 
 It creates (once) a private dev tunnel that only you can sign in to, starts the gateway, and prints
-the link and a QR code; the canvas's **Open on phone** button shows the same code. Keep it running,
-and your computer awake, while you use your phone. On the phone, the canvas walks you through
+the link; the canvas's **Open on phone** button shows the same link. For a QR code, ask Copilot:
+_"Make a QR code of my phone link."_ Keep it running, and your computer awake, while you use your
+phone.
+
+**The phone follows the chat that last opened the canvas.** Open the canvas from any chat in the
+Copilot app and your phone switches to that conversation; there is nothing to configure. Open it
+from another chat later and the phone moves with you.
+
+On the phone, the canvas walks you through
 adding it to your home screen so it opens like an app. In the installed app, tap the bell to get a
 notification when Copilot needs you or finishes (on iPhone this needs iOS 16.4 or later). While the
 app is open in front of you it stays quiet; turn on **Also notify while this app is open** under the
@@ -123,8 +130,12 @@ flowchart LR
 | --------------- | ---------------------------------------------------------------------- |
 | Extension host  | Binds to the session, serves the canvas and its API on loopback only   |
 | Canvas renderer | The React UI: conversation, composer, decisions, your views and panels |
-| Gateway         | Optional; forwards only the canvas's own requests to a dev tunnel      |
+| Gateway         | Optional; follows the newest open canvas and forwards it to a tunnel   |
 | Dev preview     | A scripted stand-in for the host, used by `npx vp dev`                 |
+
+Each chat that opens the canvas gets its own extension host, bound to that chat. Opening the canvas
+marks that host as the newest, and the gateway always serves the newest one. So the phone shows
+whichever chat you last opened the canvas from, with no settings or session ids to manage.
 
 ## Safety
 

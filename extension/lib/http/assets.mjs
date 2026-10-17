@@ -1,0 +1,117 @@
+import { createReadStream } from "node:fs";
+import { readFile, realpath, stat } from "node:fs/promises";
+import { extname, resolve, sep } from "node:path";
+import { ERROR_CODES } from "../../shared/contract.mjs";
+import { baseHeaders, sendError } from "./responses.mjs";
+const MIME_TYPES = Object.freeze({
+    ".html": "text/html; charset=utf-8",
+    ".js": "text/javascript; charset=utf-8",
+    ".mjs": "text/javascript; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".json": "application/json; charset=utf-8",
+    ".webmanifest": "application/manifest+json; charset=utf-8",
+    ".map": "application/json; charset=utf-8",
+    ".svg": "image/svg+xml",
+    ".png": "image/png",
+    ".jpg": "image/jpeg",
+    ".jpeg": "image/jpeg",
+    ".gif": "image/gif",
+    ".webp": "image/webp",
+    ".ico": "image/x-icon",
+    ".woff": "font/woff",
+    ".woff2": "font/woff2",
+    ".ttf": "font/ttf",
+    ".otf": "font/otf",
+    ".txt": "text/plain; charset=utf-8",
+    ".wasm": "application/wasm",
+});
+function buildCsp(frameAncestors) {
+    const directives = [
+        "default-src 'none'",
+        "script-src 'self'",
+        "style-src 'self' 'unsafe-inline'",
+        "connect-src 'self'",
+        "img-src 'self' data:",
+        "manifest-src 'self'",
+        "font-src 'self' data:",
+        "base-uri 'none'",
+        "form-action 'none'",
+    ];
+    if (frameAncestors)
+        directives.push(`frame-ancestors ${frameAncestors}`);
+    return directives.join("; ");
+}
+function fallbackPage(assistantName) {
+    const title = assistantName.replace(/[<>&"']/g, "");
+    return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${title}</title><style>body{font:16px system-ui,sans-serif;margin:2rem;color:CanvasText;background:Canvas}code{font-family:ui-monospace,monospace}</style></head><body><h1>UI not built</h1><p>The renderer has not been built yet. Run <code>npx vp build</code> in the template repository, then reload extensions and reopen this canvas.</p></body></html>`;
+}
+export function createAssetHandler({ uiDir, assistantName, frameAncestors, log, }) {
+    const uiRoot = uiDir ? resolve(uiDir) : null;
+    const csp = buildCsp(frameAncestors);
+    async function serveIndex(req, res) {
+        let html = null;
+        if (uiRoot) {
+            try {
+                html = await readFile(resolve(uiRoot, "index.html"));
+            }
+            catch (error) {
+                const code = error?.code;
+                if (code !== "ENOENT" && code !== "EISDIR") {
+                    log(`Could not read index.html: ${code ?? "error"}`, "warning");
+                }
+            }
+        }
+        const body = html ?? Buffer.from(fallbackPage(assistantName));
+        res.writeHead(200, {
+            ...baseHeaders("text/html; charset=utf-8"),
+            "content-security-policy": csp,
+            "content-length": body.length,
+        });
+        res.end(req.method === "HEAD" ? undefined : body);
+    }
+    async function serveAsset(req, res, relative) {
+        const notFound = () => sendError(res, ERROR_CODES.notFound, "Not found.");
+        if (!uiRoot)
+            return notFound();
+        let decoded;
+        try {
+            decoded = decodeURIComponent(relative);
+        }
+        catch {
+            return notFound();
+        }
+        if (decoded.includes("\0") || decoded.includes("\\"))
+            return notFound();
+        const segments = decoded.split("/");
+        if (segments.some((s) => s === "" || s.startsWith(".") || s.includes(":")))
+            return notFound();
+        const target = resolve(uiRoot, ...segments);
+        if (!target.startsWith(uiRoot + sep))
+            return notFound();
+        try {
+            const [realTarget, realRoot] = await Promise.all([realpath(target), realpath(uiRoot)]);
+            if (!realTarget.startsWith(realRoot + sep))
+                return notFound();
+            const info = await stat(realTarget);
+            if (!info.isFile())
+                return notFound();
+            res.writeHead(200, {
+                ...baseHeaders(MIME_TYPES[extname(realTarget).toLowerCase()] ?? "application/octet-stream"),
+                "content-length": info.size,
+            });
+            if (req.method === "HEAD") {
+                res.end();
+                return;
+            }
+            const stream = createReadStream(realTarget);
+            stream.on("error", () => res.destroy());
+            res.on("close", () => stream.destroy());
+            stream.pipe(res);
+        }
+        catch {
+            if (!res.headersSent)
+                notFound();
+        }
+    }
+    return { serveIndex, serveAsset };
+}

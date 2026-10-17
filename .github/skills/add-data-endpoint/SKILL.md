@@ -46,15 +46,15 @@ Reads do not authorize sending, editing, scheduling or other external writes.
 - If repeated reads need caching, keep it in the host with a short explicit TTL.
   Separate account/scope entries, share concurrent refreshes and discard expired
   data unless the response explicitly labels it stale. Avoid tight retry loops.
-- In `extension-src/lib/server.mts`, add a case to `route` inside
-  `createProviderServer`, after the existing Host, Origin and capability checks.
+- In `extension-src/lib/http/routes.mts`, add a case to `route` inside
+  `createRoutes`, after the existing Host, Origin and capability checks.
   Follow `API.share` for the GET-only method check using `notAllowed`.
 - Return through `sendJson` or `sendError` so sensitive-response headers remain.
   If adding an error code, update `ERROR_CODES` and `HTTP_STATUS_BY_CODE`.
   Map upstream failures to short, safe messages; do not log raw command output,
   headers, tokens, private records or credential-bearing error strings.
-- Preserve `readJsonPost`, `staleGeneration` and the existing handlers'
-  `bridge.sessionId` checks. The new read is not a reason to alter POST security.
+- Preserve `readJsonPost`, `staleGeneration` and the session checks in
+  `extension-src/lib/http/request-policy.mts`. The new read is not a reason to alter POST security.
 
 ## 4. Connect the UI and optional phone route
 
