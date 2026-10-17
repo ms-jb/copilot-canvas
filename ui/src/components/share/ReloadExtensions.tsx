@@ -44,17 +44,11 @@ export function ReloadExtensions({ connection }: { connection: Connection }) {
       </IconButton>
       <Modal opened={opened} onClose={dismiss} title="Reload extensions" centered size="sm">
         <Stack gap="md">
-          {state.kind === "done" ? (
-            <Text size="sm">
-              Reloading. This canvas closes with the old extension; open it again from Copilot to
-              see your changes.
-            </Text>
-          ) : (
-            <Text size="sm">
-              Restart this session's extensions so a rebuilt canvas takes effect. Your conversation
-              is kept; other sessions are not affected.
-            </Text>
-          )}
+          <Text size="sm">
+            {state.kind === "done"
+              ? "Reloading. This canvas closes with the old extension; open it again from Copilot to see your changes."
+              : "Restart this session's extensions so a rebuilt canvas takes effect. Your conversation is kept; other sessions are not affected."}
+          </Text>
           {state.kind === "failed" && (
             <Text size="sm" c="red" role="alert">
               {state.message}
