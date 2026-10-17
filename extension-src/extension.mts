@@ -1,0 +1,87 @@
+// Extension entry point. The only file that imports the Copilot SDK.
+// Joins the current session once; that session is the only transcript source and composer target.
+
+import { createCanvas, joinSession } from "@github/copilot-sdk/extension";
+import type { CopilotSession } from "@github/copilot-sdk/extension";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/config.mts";
+import type { TemplateConfig } from "./shared/config.mts";
+import { createSessionBridge } from "./lib/bridge.mts";
+import type { LogLevel, SessionBridge } from "./lib/bridge.mts";
+import { createChatCanvas } from "./lib/canvas.mts";
+import { startProvider } from "./lib/provider.mts";
+
+const extensionDir = dirname(fileURLToPath(import.meta.url));
+const uiDir = join(extensionDir, "ui");
+
+let session: CopilotSession | null = null;
+const earlyLogs: Array<[string, LogLevel]> = [];
+
+// stdout is the JSON-RPC channel, so everything goes through the session logger.
+function log(message: string, level: LogLevel = "info"): void {
+  if (!session) {
+    earlyLogs.push([message, level]);
+    return;
+  }
+  session.log(message, { level, ephemeral: level === "info" }).catch(() => {});
+}
+
+let config: TemplateConfig;
+try {
+  config = loadConfig(extensionDir);
+} catch (error) {
+  log(
+    `Invalid template.config.json, using defaults: ${error instanceof Error ? error.message : "error"}`,
+    "warning",
+  );
+  config = resolveConfig(DEFAULT_CONFIG, {});
+}
+
+let bridge: SessionBridge | null = null;
+let resolveBridge: (value: SessionBridge) => void = () => {};
+const bridgeReady = new Promise<SessionBridge>((resolve) => {
+  resolveBridge = resolve;
+});
+
+const chat = createChatCanvas({
+  config,
+  createCanvas,
+  log,
+  ensureProvider: async () => startProvider({ config, bridge: await bridgeReady, uiDir, log }),
+});
+
+const joined = await joinSession({
+  streaming: true,
+  canvases: [chat.canvas],
+});
+session = joined;
+
+for (const [message, level] of earlyLogs.splice(0)) log(message, level);
+
+bridge = createSessionBridge(joined, { log });
+await Promise.race([
+  bridge.ready,
+  new Promise<void>((resolve) => setTimeout(resolve, 10000).unref()),
+]);
+resolveBridge(bridge);
+
+let shutdownPromise: Promise<void> | null = null;
+function shutdown(reason: string): Promise<void> {
+  shutdownPromise ??= (async () => {
+    bridge?.dispose();
+    await chat.shutdown().catch(() => {});
+    log(`${config.displayName} stopped (${reason}).`);
+  })();
+  return shutdownPromise;
+}
+
+joined.on("session.shutdown", () => {
+  void shutdown("session shutdown");
+});
+process.once("SIGINT", () => {
+  void shutdown("SIGINT").finally(() => process.exit(0));
+});
+process.once("SIGTERM", () => {
+  void shutdown("SIGTERM").finally(() => process.exit(0));
+});

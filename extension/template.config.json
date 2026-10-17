@@ -1,0 +1,9 @@
+{
+  "extensionName": "canvas-chat-starter",
+  "canvasId": "chat-panel",
+  "displayName": "Chat Panel",
+  "description": "A connected chat panel for this session's own conversation.",
+  "defaultView": "chat",
+  "gatewayPort": 47600,
+  "gatewayAllowedOrigin": ""
+}

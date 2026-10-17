@@ -1,0 +1,94 @@
+import { expect, it } from "vite-plus/test";
+import type { TranscriptEntry } from "../extension-src/shared/contract.mts";
+import { applyServerEvent, createViewState } from "../extension-src/shared/entries.mts";
+import { createTranscriptStore } from "../extension-src/shared/transcript.mts";
+
+let n = 0;
+function event(
+  type: string,
+  data: Record<string, unknown> = {},
+  extra: Record<string, unknown> = {},
+) {
+  n += 1;
+  return {
+    id: `evt-${n}`,
+    type,
+    timestamp: new Date(Date.UTC(2026, 0, 1, 0, 0, n)).toISOString(),
+    data,
+    ...extra,
+  };
+}
+const user = (messageId: string, content: string, data: Record<string, unknown> = {}) =>
+  event("user.message", { messageId, content, ...data });
+
+it("merges history after a live subscription without duplicates", () => {
+  const store = createTranscriptStore();
+  const first = user("m1", "one");
+  const live = user("m2", "two");
+  store.applyEvent(live);
+  store.mergeHistory([first, live]);
+  expect(store.snapshot().entries.map((e) => e.id)).toEqual(["user:m1", "user:m2"]);
+});
+
+it("replaces streamed deltas with the final message", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(event("assistant.message_delta", { messageId: "a1", deltaContent: "Hel" }));
+  store.applyEvent(event("assistant.message_delta", { messageId: "a1", deltaContent: "lo" }));
+  expect(store.snapshot().entries[0]).toMatchObject({ text: "Hello", streaming: true });
+  store.applyEvent(event("assistant.message", { messageId: "a1", content: "Hello world" }));
+  expect(store.snapshot().entries[0]).toMatchObject({ text: "Hello world", streaming: false });
+});
+
+it("hides system, plumbing and sub-agent events", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(user("m1", "x", { source: "skill-foo" }));
+  store.applyEvent(user("m2", "<system_notification>done</system_notification>"));
+  store.applyEvent(event("user.message", { messageId: "m3", content: "x" }, { agentId: "sub" }));
+  store.applyEvent(
+    event("assistant.message", { messageId: "a1", content: "x" }, { agentId: "sub" }),
+  );
+  expect(store.snapshot().entries).toEqual([]);
+});
+
+it("shows a tool-request message that has text", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(
+    event("assistant.message", { messageId: "a1", content: "Looking.", toolRequests: [{}] }),
+  );
+  expect(store.snapshot().entries).toMatchObject([{ text: "Looking." }]);
+});
+
+it("tags a request before or after the user entry arrives", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(user("m1", "hi"));
+  store.tagRequest("m1", "req-1");
+  store.tagRequest("m2", "req-2");
+  store.applyEvent(user("m2", "again"));
+  expect(store.snapshot().entries.map((e) => e.requestId)).toEqual(["req-1", "req-2"]);
+});
+
+it("tracks waiting status without answering", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(event("permission.requested"));
+  expect(store.snapshot().status).toEqual({ phase: "waiting", waitingFor: "permission" });
+});
+
+it("resyncs the client view from a snapshot and ignores stale events", () => {
+  const entry = (id: string): TranscriptEntry => ({
+    id,
+    kind: "user",
+    text: id,
+    timestamp: "2026-01-01",
+  });
+  const snap = (seq: number, generation: string, ids: string[]) => ({
+    seq,
+    generation,
+    snapshot: { entries: ids.map(entry), status: { phase: "idle" as const } },
+  });
+  let state = applyServerEvent(createViewState(), "snapshot", snap(5, "g1", ["a"]));
+  state = applyServerEvent(state, "entry", { seq: 6, entry: entry("b") });
+  expect(applyServerEvent(state, "entry", { seq: 6, entry: entry("c") })).toBe(state);
+  state = applyServerEvent(state, "snapshot", snap(0, "g2", ["z"]));
+  expect(state).toMatchObject({ generation: "g2", seq: 0 });
+  expect(state.entries.map((e) => e.id)).toEqual(["z"]);
+});
