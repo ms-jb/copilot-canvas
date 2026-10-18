@@ -6,7 +6,7 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 <br>
 
 <p align="center">
-  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520by%2520following%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252FSETUP.md"><img src="https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install in GitHub Copilot" height="56"></a>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Fmode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520by%2520following%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252FSETUP.md"><img src="https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install in GitHub Copilot" height="56"></a>
 </p>
 
 <p align="center">
@@ -30,15 +30,6 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 ![Copilot Canvas on desktop, dark theme](docs/screenshots/desktop-dark.png)
 
 </details>
-
-> [!NOTE]
-> The one-click link needs the Copilot app signed in with a **github.com** account. Its `repo`
-> setting has no host, so an app signed in to GitHub Enterprise Cloud (`*.ghe.com`) looks for
-> `ms-jb/copilot-canvas` there and fails. In that case, in the app click **+** next to **Projects**,
-> choose **Repository URL**, clone `https://github.com/ms-jb/copilot-canvas`, start a session in
-> that folder and paste: _"Set up Copilot Canvas by following
-> https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_. You can also paste that sentence
-> into any Copilot chat.
 
 ## What you need
 
