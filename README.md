@@ -6,7 +6,7 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 <br>
 
 <p align="center">
-  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Fmode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520by%2520following%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252FSETUP.md"><img src="https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install in GitHub Copilot" height="56"></a>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520by%2520following%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252FSETUP.md"><img src="https://img.shields.io/badge/Install_in_GitHub_Copilot-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install in GitHub Copilot" height="56"></a>
 </p>
 
 <p align="center">
@@ -14,6 +14,13 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
   <sub>Opens the GitHub Copilot app (or offers to install it first). Copilot asks before it
   installs software, publishes anything or turns on phone access.</sub>
 </p>
+
+<p align="center">
+  <sub>Using a GHE.com account? <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fgithub.com%2Fms-jb%2Fcopilot-canvas">Open the repository in the app</a> instead, then:</sub>
+</p>
+
+1. In the repository, start a new session.
+2. Paste: _"Set up Copilot Canvas for me by following SETUP.md"_
 
 <br>
 
