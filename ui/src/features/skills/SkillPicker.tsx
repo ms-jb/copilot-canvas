@@ -1,5 +1,6 @@
-import { ActionIcon, Combobox, Group, Text } from "@mantine/core";
+import { Combobox, Group, Text } from "@mantine/core";
 import type { ReactElement } from "react";
+import { ComposerIconButton } from "../../components/ComposerIconButton";
 import type { SkillPickerState } from "./useSkillPicker";
 import styles from "./Skills.module.css";
 
@@ -53,25 +54,13 @@ export function SkillPicker({
 }
 
 /** Starts a slash command from the footer, for touch screens without a handy `/` key. */
-export function SkillButton({
-  picker,
-  size,
-  disabled,
-}: {
-  picker: SkillPickerState;
-  size: number;
-  disabled: boolean;
-}) {
+export function SkillButton({ picker, disabled }: { picker: SkillPickerState; disabled: boolean }) {
   if (!picker.available) return null;
   return (
-    <ActionIcon
-      size={size}
-      radius="md"
-      variant="subtle"
-      color="gray"
+    <ComposerIconButton
+      label="Use a skill"
+      tip="Use a skill (type /)"
       disabled={disabled}
-      aria-label="Use a skill"
-      title="Use a skill (type /)"
       // Keep the field focused so the soft keyboard stays up.
       onMouseDown={(event) => event.preventDefault()}
       onClick={picker.start}
@@ -85,6 +74,6 @@ export function SkillButton({
           strokeLinecap="round"
         />
       </svg>
-    </ActionIcon>
+    </ComposerIconButton>
   );
 }

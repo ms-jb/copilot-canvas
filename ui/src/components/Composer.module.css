@@ -31,6 +31,39 @@
   border-color: var(--cc-border);
 }
 
+/* The session mode tints the card's edge (Interactive keeps the plain one). Palette tokens only;
+   the steps are chosen for at least 3:1 against the page and the card in both schemes. */
+.card[data-mode="plan"] {
+  --cc-mode: var(--mantine-color-blue-7);
+}
+
+.card[data-mode="autopilot"] {
+  --cc-mode: var(--mantine-color-green-8);
+}
+
+:global([data-mantine-color-scheme="dark"]) .card[data-mode="plan"] {
+  --cc-mode: var(--mantine-color-blue-6);
+}
+
+:global([data-mantine-color-scheme="dark"]) .card[data-mode="autopilot"] {
+  --cc-mode: var(--mantine-color-green-7);
+}
+
+/* A 2px edge: the border plus an inset line, so it reads as a mode and not as a focus ring. */
+.card[data-mode="plan"]:not([data-disabled]),
+.card[data-mode="autopilot"]:not([data-disabled]) {
+  border-color: var(--cc-mode);
+  box-shadow: inset 0 0 0 1px var(--cc-mode);
+}
+
+.card[data-mode="plan"]:not([data-disabled]):focus-within,
+.card[data-mode="autopilot"]:not([data-disabled]):focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--cc-mode),
+    0 0 0 1px var(--cc-mode),
+    var(--cc-shadow-sm);
+}
+
 .field {
   padding: var(--cc-space-3) var(--cc-space-3) 0;
 }
@@ -83,6 +116,7 @@
   min-width: 0;
   display: flex;
   align-items: center;
+  gap: var(--cc-space-1);
   overflow-x: auto;
   scrollbar-width: none;
 }

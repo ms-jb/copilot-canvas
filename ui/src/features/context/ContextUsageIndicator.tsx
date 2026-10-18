@@ -1,6 +1,7 @@
 import { Button, Group, Loader, Popover, RingProgress, Text, UnstyledButton } from "@mantine/core";
 import { useEffect, useRef, useState } from "react";
 import { fetchContextUsage } from "../../api";
+import { ComposerTooltip } from "../../components/ComposerIconButton";
 import type { Connection } from "../../useConnection";
 import {
   describeCompaction,
@@ -78,29 +79,30 @@ export function ContextUsageIndicator({
         returnFocus
       >
         <Popover.Target>
-          <UnstyledButton
-            className={styles.trigger}
-            data-tone={usage ? tone : "empty"}
-            aria-label={compacting ? `${summary}. Compacting.` : summary}
-            aria-haspopup="dialog"
-            aria-expanded={opened}
-            title={summary}
-            onClick={() => setOpened((open) => !open)}
-          >
-            {compacting ? (
-              <Loader size={14} color="currentColor" />
-            ) : (
-              <RingProgress
-                size={16}
-                thickness={2.5}
-                roundCaps
-                rootColor="var(--cc-border-strong)"
-                sections={[{ value: percent, color: TONE_COLORS[tone] }]}
-                aria-hidden="true"
-              />
-            )}
-            {withLabel && <span className={styles.label}>{usage ? `${percent}%` : "–"}</span>}
-          </UnstyledButton>
+          <ComposerTooltip label={summary} hidden={opened}>
+            <UnstyledButton
+              className={styles.trigger}
+              data-tone={usage ? tone : "empty"}
+              aria-label={compacting ? `${summary}. Compacting.` : summary}
+              aria-haspopup="dialog"
+              aria-expanded={opened}
+              onClick={() => setOpened((open) => !open)}
+            >
+              {compacting ? (
+                <Loader size={14} color="currentColor" />
+              ) : (
+                <RingProgress
+                  size={16}
+                  thickness={2.5}
+                  roundCaps
+                  rootColor="var(--cc-border-strong)"
+                  sections={[{ value: percent, color: TONE_COLORS[tone] }]}
+                  aria-hidden="true"
+                />
+              )}
+              {withLabel && <span className={styles.label}>{usage ? `${percent}%` : "–"}</span>}
+            </UnstyledButton>
+          </ComposerTooltip>
         </Popover.Target>
         <Popover.Dropdown className={styles.panel} aria-label="Context window">
           <div className={styles.head}>

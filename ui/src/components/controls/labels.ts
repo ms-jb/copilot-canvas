@@ -52,20 +52,21 @@ export function tierLabel(model: ModelOption | undefined, tier: ContextTier): st
 }
 
 /**
- * The compact settings control's text, e.g. "Claude Opus 5.5 · High": the model and effort in use.
- * A mode other than Interactive leads, since it changes how the session behaves; with no model or
- * effort to show, the mode stands alone.
+ * The settings control's text, e.g. "Claude Opus 5.5 · High": the model and effort in use, plus the
+ * context window on a wide composer (`full`) when the model offers a choice. The mode has its own
+ * chip.
  */
 export function settingsSummary(
   controls: SessionControls,
-  shown: { mode: boolean; model: boolean; effort: boolean },
+  shown: { model: boolean; effort: boolean; tier?: boolean },
+  full = false,
 ): string {
   const effort = shown.effort ? effectiveEffort(controls) : undefined;
-  const parts = [
+  return [
     shown.model ? modelLabel(controls) : null,
     effort ? effortLabel(effort) : null,
-  ].filter((part): part is string => part !== null);
-  const mode = shown.mode && controls.mode ? MODE_LABELS[controls.mode].label : null;
-  if (mode && (parts.length === 0 || controls.mode !== "interactive")) parts.unshift(mode);
-  return parts.join(" · ");
+    full && shown.tier ? tierLabel(activeModel(controls), controls.contextTier ?? "default") : null,
+  ]
+    .filter((part): part is string => part !== null)
+    .join(" · ");
 }
