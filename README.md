@@ -15,15 +15,15 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 </p>
 
 <p align="center">
-  <sub>First time installing the Copilot app? It may still be installing or signing in when you click, which can lose the link. Come back to this README and click the buttons again.</sub>
+  <sub>First time here? Either button opens the Copilot app, and if it isn't installed yet, the page it lands on has a button to install it. After installing, come back to this README and click Step 1 (Add the project), then Step 2 (Start setup), again.</sub>
 </p>
 
 <br>
 
 <table>
   <tr>
-    <td width="72%"><img src="docs/screenshots/desktop.png" alt="Copilot Canvas on desktop"></td>
-    <td width="28%"><img src="docs/screenshots/phone.png" alt="Copilot Canvas on a phone"></td>
+    <td width="72%"><img src="docs/screenshots/desktop.png" alt="Copilot Canvas on desktop, light theme, with a queued message and the Plan mode chip"></td>
+    <td width="28%"><img src="docs/screenshots/phone.png" alt="Copilot Canvas on a phone, light theme"></td>
   </tr>
 </table>
 
@@ -39,10 +39,6 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 - A GitHub account with any Copilot plan. [Copilot Free](https://github.com/features/copilot/plans)
   works, but its monthly limits can run out during setup. On Copilot Business or Enterprise, your
   organization must leave the GitHub Copilot app policy on (it is on by default).
-- The [GitHub Copilot app](https://docs.github.com/copilot/concepts/copilot-surfaces/github-copilot-app)
-  on Windows, macOS or Linux.
-- For the phone: nothing extra. Setup asks before it installs the other tools it needs (Node.js,
-  the dev tunnel CLI).
 
 ## What you get
 
