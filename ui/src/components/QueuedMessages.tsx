@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ActionIcon, Button, Group, Paper, Text, Textarea } from "@mantine/core";
 import { QUEUE_LIMITS, type QueueChange, type QueueItem } from "../shared";
+import { makeRequestId } from "../api";
 import { AttachmentList } from "../features/attachments/AttachmentList";
 import type { PendingMessage } from "./Transcript";
 import styles from "./QueuedMessages.module.css";
@@ -117,11 +118,31 @@ export function QueuedMessages({ rows, onChange, disabled }: QueuedMessagesProps
                   </Group>
                 </>
               ) : (
-                <Group gap="xs" wrap="nowrap" align="flex-start">
-                  <Text size="sm" className={styles.text} flex={1}>
-                    {item.text}
-                  </Text>
-                  <Group gap={2} wrap="nowrap">
+                <Group gap="xs" wrap="wrap" align="flex-start">
+                  <div className={styles.message}>
+                    <Text size="sm" className={styles.text}>
+                      {item.text}
+                    </Text>
+                  </div>
+                  <Group gap={2} wrap="nowrap" align="flex-start">
+                    {item.kind === "message" && !item.truncated && (
+                      <Button
+                        size="compact-xs"
+                        variant="default"
+                        className={styles.sendNow}
+                        aria-label="Send queued message now"
+                        disabled={locked}
+                        onClick={() =>
+                          void apply({
+                            action: "send_now",
+                            id: item.id,
+                            requestId: makeRequestId(),
+                          })
+                        }
+                      >
+                        Send now
+                      </Button>
+                    )}
                     {item.kind === "message" && (
                       <ActionIcon
                         size="sm"

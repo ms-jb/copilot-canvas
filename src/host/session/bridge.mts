@@ -104,9 +104,14 @@ export function createSessionBridge(
 ): SessionBridge {
   let disposed = false;
   const events = createEventSequencer({ log, coalesceMs });
-  const queue = createQueueTracker(session.rpc?.queue, (state) => {
-    if (!disposed) events.emitNow({ type: "queue", queue: state });
-  });
+  const queue = createQueueTracker(
+    session.rpc?.queue,
+    (state) => {
+      if (!disposed) events.emitNow({ type: "queue", queue: state });
+    },
+    // `sends` is created below; the tracker only calls this once a client asks to send now.
+    { sendImmediate: async (text, requestId) => (await sends.send(text, requestId)).ok },
+  );
   const context = createContextTracker(
     session.rpc,
     (state) => {

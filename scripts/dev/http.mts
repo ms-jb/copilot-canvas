@@ -226,6 +226,7 @@ export function createMockHandler(options: {
             session.removedRequestIds = [...session.removedRequestIds, item.requestId].slice(-500);
         }
         publishQueue(session);
+        if (change.action === "send_now") item.deliver(item.text);
         return json(res, 200, { ok: true, status: "done" });
       }
       case API.controls: {

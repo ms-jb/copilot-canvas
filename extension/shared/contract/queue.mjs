@@ -21,13 +21,13 @@ export function validateQueueState(value) {
                     (item.truncated === undefined || typeof item.truncated === "boolean") &&
                     item.text.length <= QUEUE_LIMITS.maxTextChars))));
 }
-/** Validates POST api/queue: { sessionId, action, id, text? | toPosition? }. */
+/** Validates POST api/queue: { sessionId, action, id, text? | toPosition? | requestId? }. */
 export function validateQueuePayload(body) {
     if (!isPlainObject(body) ||
-        !onlyKeys(body, ["sessionId", "action", "id", "text", "toPosition"])) {
+        !onlyKeys(body, ["sessionId", "action", "id", "text", "toPosition", "requestId"])) {
         return makeError(ERROR_CODES.badRequest, "Body must be { sessionId, action, id }.");
     }
-    const { sessionId, action, id, text, toPosition } = body;
+    const { sessionId, action, id, text, toPosition, requestId } = body;
     if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
         return makeError(ERROR_CODES.badRequest, "sessionId is missing or malformed.");
     }
@@ -54,5 +54,11 @@ export function validateQueuePayload(body) {
             value: { sessionId, change: { action, id, toPosition: toPosition } },
         };
     }
-    return makeError(ERROR_CODES.badRequest, "action must be remove, edit or move.");
+    if (action === "send_now" && text === undefined && toPosition === undefined) {
+        if (typeof requestId !== "string" || !REQUEST_ID.test(requestId)) {
+            return makeError(ERROR_CODES.badRequest, "requestId is missing or malformed.");
+        }
+        return { ok: true, value: { sessionId, change: { action, id, requestId } } };
+    }
+    return makeError(ERROR_CODES.badRequest, "action must be remove, edit, move or send_now.");
 }

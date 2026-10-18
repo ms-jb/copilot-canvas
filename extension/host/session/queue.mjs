@@ -1,10 +1,11 @@
 import { isPlainObject, QUEUE_LIMITS, } from "../../shared/contract.mjs";
 import { readWithTimeout } from "../read-timeout.mjs";
 /** Reconcile only sends we admitted, never infer queue removal from an idle status alone. */
-export function createQueueTracker(rpc, notify, { timeoutMs = 5000 } = {}) {
+export function createQueueTracker(rpc, notify, { timeoutMs = 5000, sendImmediate } = {}) {
     const pending = new Map();
     const confirmed = new Set();
     const removed = new Set();
+    const sentNow = new Map();
     let items = [];
     let shown = "[]";
     let disposed = false;
@@ -16,6 +17,12 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000 } = {}) {
         set.add(value);
         if (set.size > 500)
             set.delete(set.values().next().value);
+    };
+    const rememberSendNow = (requestId, outcome) => {
+        sentNow.set(requestId, outcome);
+        if (sentNow.size > 500)
+            sentNow.delete(sentNow.keys().next().value);
+        return outcome;
     };
     function refresh() {
         if (disposed || typeof rpc?.pendingItems !== "function")
@@ -112,7 +119,41 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000 } = {}) {
         if (!(await refresh()))
             throw new Error("Queue could not be refreshed.");
     }
+    /** Sends the item's text as a normal message, then drops it from the queue; a repeat request id replays the outcome. */
+    async function sendNow(change) {
+        const replay = sentNow.get(change.requestId);
+        if (replay)
+            return replay;
+        if (disposed ||
+            typeof sendImmediate !== "function" ||
+            typeof rpc?.removeAt !== "function" ||
+            typeof rpc.pendingItems !== "function")
+            return "unavailable";
+        try {
+            await freshRead();
+            if (disposed)
+                return "unavailable";
+            const item = items.find((candidate) => candidate.id === change.id);
+            if (!item)
+                return rememberSendNow(change.requestId, "gone");
+            // A clipped copy would send a partial message.
+            if (item.kind !== "message" || item.truncated)
+                return "unavailable";
+            if (!(await sendImmediate(item.text, change.requestId))) {
+                return rememberSendNow(change.requestId, "failed");
+            }
+            const result = await readWithTimeout(() => rpc.removeAt({ id: change.id }), timeoutMs);
+            await freshRead();
+            const gone = isPlainObject(result) && result.removed === false;
+            return rememberSendNow(change.requestId, gone ? "gone" : "done");
+        }
+        catch {
+            return rememberSendNow(change.requestId, "failed");
+        }
+    }
     async function apply(change) {
+        if (change.action === "send_now")
+            return sendNow(change);
         const method = change.action === "remove"
             ? rpc?.removeAt
             : change.action === "edit"

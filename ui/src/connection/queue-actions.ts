@@ -8,7 +8,7 @@ export type QueueOutcome =
   | { kind: "failed"; message: string }
   | { kind: "stale"; message: string };
 
-/** Edits, removes or moves one queued message (POST api/queue); every client then sees the new list. */
+/** Edits, removes, moves or sends one queued message now (POST api/queue); every client then sees the new list. */
 export async function requestQueueChange(
   context: SendContext,
   change: QueueChange,
