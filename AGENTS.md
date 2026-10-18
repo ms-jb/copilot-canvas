@@ -65,3 +65,11 @@ colors and the phone app's branding.
   an explicit tap from the user.
 - The phone tunnel stays owner-only. Never add anonymous, tenant or organization access.
 - No secrets in `template.config.json`, the repository or `extension/`: it all ships to the canvas.
+
+## Contributing to the template
+
+This applies only when you are changing `ms-jb/copilot-canvas` itself, not a user's copy. The
+template accepts pull requests, but only its owner pushes to `main`: open a branch and a pull
+request, never push to `main` directly. Keep a pull request to one generic change, with no personal
+names, accounts, hosts, keys or branding, and pass `npx vp check`, `npx vp test` and
+`npm run build` (commit the rebuilt `extension/`) before opening it.
