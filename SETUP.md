@@ -134,6 +134,9 @@ and check on it.
      session files and attach it. If you cannot attach images, paste the printed QR exactly as
      printed in a plain code block. Ask the user to scan it and sign in. The canvas is already
      open, so the phone connects as soon as the gateway is up.
+   - Tell the user, in one line, that the phone only works while the Copilot app stays open on this
+     computer: use an always-on machine, or turn on **Close to taskbar** so closing the window
+     keeps the app (and the phone link) running.
    - The canvas's **Open on phone** button shows the same link and QR code. If the button is
      missing (the gateway started after the canvas opened), open the canvas again. Ask the user to
      send a message from the phone and confirm it arrives in this conversation.
