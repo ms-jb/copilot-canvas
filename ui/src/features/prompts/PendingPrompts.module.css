@@ -118,6 +118,11 @@
   color: var(--cc-text);
 }
 
+/* Only carries the keyboard handlers; the card lays out the question's parts itself. */
+.question {
+  display: contents;
+}
+
 .message {
   max-width: 70ch;
   font-size: var(--cc-text-md);
