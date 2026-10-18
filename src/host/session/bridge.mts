@@ -7,6 +7,9 @@ import type {
   Snapshot,
   SendAttachment,
   SendMode,
+  ContextState,
+  SkillsInfo,
+  QueueChange,
 } from "../../shared/contract.mts";
 import { createTranscriptStore } from "../../shared/transcript.mts";
 import type { SessionEventLike, TranscriptStore } from "../../shared/transcript.mts";
@@ -25,7 +28,9 @@ import type { NativeAttachment } from "./attachments.mts";
 import type { SendOutcome } from "./send-controller.mts";
 import { createSessionActions } from "./actions.mts";
 import type { ExtensionsRpcLike } from "./actions.mts";
-import { createQueueTracker, type QueueRpcLike } from "./queue.mts";
+import { createQueueTracker, type QueueRpcLike, type QueueOutcome } from "./queue.mts";
+import { createContextTracker, type ContextRpcLike } from "./context.mts";
+import { createSkillCatalog, type SkillsRpcLike } from "../skills/catalog.mts";
 
 /** The slice of the SDK session the bridge uses. Tests can pass a fake. */
 export interface SessionLike {
@@ -34,11 +39,14 @@ export interface SessionLike {
   getEvents(): Promise<readonly SessionEventLike[]>;
   send(options: {
     prompt: string;
+    displayPrompt?: string;
     attachments?: NativeAttachment[];
     mode?: SendMode;
   }): Promise<string>;
   readonly rpc?: ControlsRpcLike &
-    PromptsRpcLike & {
+    PromptsRpcLike &
+    ContextRpcLike &
+    SkillsRpcLike & {
       extensions?: ExtensionsRpcLike;
       abort?: (params: { reason?: string }) => Promise<unknown>;
       queue?: QueueRpcLike;
@@ -63,6 +71,9 @@ export interface Bridge {
   stop(): Promise<"stopped" | "unavailable" | "failed">;
   respond(requestId: string, response: PromptResponse): Promise<RespondOutcome>;
   refreshPrompts(): void;
+  listSkills(): Promise<SkillsInfo>;
+  readContext(): Promise<ContextState | null>;
+  changeQueue(change: QueueChange): Promise<QueueOutcome>;
 }
 export interface SessionBridge extends Bridge {
   /** Resolves once history has been merged (or failed to load). */
@@ -96,16 +107,30 @@ export function createSessionBridge(
   const queue = createQueueTracker(session.rpc?.queue, (state) => {
     if (!disposed) events.emitNow({ type: "queue", queue: state });
   });
-  const sends = createSendController(session, {
-    log,
-    sendTimeoutMs,
-    admit(messageId, requestId, mode) {
-      if (typeof messageId === "string" && messageId.length > 0) {
-        events.emit(store.tagRequest(messageId, requestId));
-        if (mode === "enqueue") queue.admitted(messageId, requestId);
-      }
+  const context = createContextTracker(
+    session.rpc,
+    (state) => {
+      if (!disposed) events.emitNow({ type: "context", context: state });
     },
-  });
+    { log },
+  );
+  const skills = createSkillCatalog(session.rpc, { log });
+  const sends = createSendController(
+    {
+      send: async (options: Parameters<SessionLike["send"]>[0]) =>
+        session.send({ ...options, ...(await skills.expand(options.prompt)) }),
+    },
+    {
+      log,
+      sendTimeoutMs,
+      admit(messageId, requestId, mode) {
+        if (typeof messageId === "string" && messageId.length > 0) {
+          events.emit(store.tagRequest(messageId, requestId));
+          if (mode === "enqueue") queue.admitted(messageId, requestId);
+        }
+      },
+    },
+  );
   const actions = createSessionActions(session, log);
   function onSessionEvent(event: SessionEventLike): void {
     if (!event.agentId) {
@@ -113,7 +138,11 @@ export function createSessionBridge(
         const id = event.data?.messageId ?? event.id;
         if (typeof id === "string") queue.confirmed(id);
       }
-      if (["abort", "session.idle", "pending_messages.modified"].includes(event.type)) {
+      if (
+        ["abort", "assistant.idle", "session.idle", "pending_messages.modified"].includes(
+          event.type,
+        )
+      ) {
         void queue.refresh();
       }
     }
@@ -127,6 +156,7 @@ export function createSessionBridge(
     } catch (error) {
       log(`Failed to track a pending request: ${describeSessionError(error)}`, "warning");
     }
+    context.applyEvent(event);
   }
   // History overlaps live events; the transcript store de-duplicates them by event id.
   const unsubscribeSession = session.on(onSessionEvent);
@@ -143,6 +173,10 @@ export function createSessionBridge(
     } catch (error) {
       log(`Could not load session history: ${describeSessionError(error)}`, "warning");
     }
+    if (!disposed) {
+      void context.refresh();
+      await queue.refresh();
+    }
   })();
   const ready = Promise.all([history, controls.ready, prompts.ready]).then(() => undefined);
   return {
@@ -150,11 +184,19 @@ export function createSessionBridge(
     ready,
     getSnapshot: () => ({
       seq: events.seq,
-      snapshot: { ...store.snapshot(), prompts: prompts.list(), queue: queue.snapshot() },
+      snapshot: {
+        ...store.snapshot(),
+        prompts: prompts.list(),
+        queue: queue.snapshot(),
+        context: context.snapshot(),
+      },
       controls: controls.get(),
     }),
     subscribe: events.subscribe,
     send: sends.send,
+    listSkills: () => skills.list(),
+    readContext: async () => ((await context.refresh()) === "failed" ? null : context.snapshot()),
+    changeQueue: (change) => queue.change(change),
     applyControl: (change) => controls.apply(change),
     reloadExtensions: actions.reloadExtensions,
     stop: async () => {
@@ -180,6 +222,7 @@ export function createSessionBridge(
       events.dispose();
       sends.dispose();
       queue.dispose();
+      context.dispose();
     },
   };
 }

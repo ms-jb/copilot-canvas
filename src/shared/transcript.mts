@@ -2,8 +2,15 @@
 // renderer-facing model (user / assistant / error entries plus a coarse status).
 // Pure and synchronous so it can be unit-tested without the SDK.
 
-import { LIMITS } from "./contract.mts";
-import type { SessionStatus, Snapshot, TranscriptEntry } from "./contract.mts";
+import { ACTIVITY_LIMITS, LIMITS } from "./contract.mts";
+import type {
+  Activity,
+  ActivityItem,
+  SessionStatus,
+  Snapshot,
+  TranscriptEntry,
+} from "./contract.mts";
+import { createActivityTracker, isHiddenTool, oneLine } from "./activity.mts";
 import { upsertEntry } from "./entries.mts";
 import { transcriptAttachments } from "./contract/attachments.mts";
 
@@ -18,7 +25,8 @@ export interface SessionEventLike {
 
 export type TranscriptChange =
   | { type: "entry"; entry: TranscriptEntry }
-  | { type: "status"; status: SessionStatus };
+  | { type: "status"; status: SessionStatus }
+  | { type: "activity"; item: ActivityItem };
 
 export interface TranscriptStore {
   /** Applies one event; replaying the same event id is a no-op. */
@@ -60,6 +68,8 @@ export function createTranscriptStore({
   const seenEvents = new Set<string>();
   const finalized = new Set<string>();
   const requestByMessage = new Map<string, string>();
+  const activity = createActivityTracker();
+  let intent: string | undefined;
 
   function markSeen(eventId: unknown): boolean {
     if (typeof eventId !== "string") return false;
@@ -83,12 +93,23 @@ export function createTranscriptStore({
       status.phase === next.phase &&
       status.activity === next.activity &&
       status.toolName === next.toolName &&
-      status.waitingFor === next.waitingFor
+      status.waitingFor === next.waitingFor &&
+      status.intent === next.intent
     ) {
       return null;
     }
     status = next;
     return { type: "status", status: { ...next } };
+  }
+
+  /** A working status that keeps the turn's latest intent. */
+  function working(kind: Activity, toolName?: string): SessionStatus {
+    return {
+      phase: "working",
+      activity: kind,
+      ...(toolName ? { toolName } : {}),
+      ...(intent ? { intent } : {}),
+    };
   }
 
   function applyEvent(
@@ -103,6 +124,10 @@ export function createTranscriptStore({
     const push = (change: TranscriptChange | null) => {
       if (change) changes.push(change);
     };
+    const pushActivity = (items: ActivityItem[]) => {
+      for (const item of items) changes.push({ type: "activity", item: { ...item } });
+    };
+    pushActivity(activity.apply(event));
 
     switch (event.type) {
       case "user.message": {
@@ -119,7 +144,9 @@ export function createTranscriptStore({
         const requestId = messageId ? requestByMessage.get(messageId) : undefined;
         if (requestId) entry.requestId = requestId;
         push(putEntry(entry));
-        push(setStatus({ phase: "working", activity: "thinking" }, history));
+        activity.startTurn(event.timestamp);
+        intent = undefined;
+        push(setStatus(working("thinking"), history));
         break;
       }
       case "assistant.message_delta": {
@@ -136,7 +163,7 @@ export function createTranscriptStore({
             streaming: true,
           }),
         );
-        push(setStatus({ phase: "working", activity: "responding" }, history));
+        push(setStatus(working("responding"), history));
         break;
       }
       case "assistant.message": {
@@ -164,16 +191,29 @@ export function createTranscriptStore({
       case "assistant.turn_start":
       case "assistant.reasoning_delta":
       case "tool.execution_complete":
-        push(setStatus({ phase: "working", activity: "thinking" }, history));
+        push(setStatus(working("thinking"), history));
         break;
       case "tool.execution_start": {
+        if (isHiddenTool(data.toolName)) break;
         const toolName =
           typeof data.toolName === "string" ? data.toolName.slice(0, MAX_TOOL_NAME) : undefined;
-        push(setStatus({ phase: "working", activity: "tool", toolName }, history));
+        push(setStatus(working("tool", toolName), history));
         break;
       }
+      case "assistant.intent": {
+        intent = oneLine(data.intent, ACTIVITY_LIMITS.maxDetailChars);
+        if (status.phase === "working") {
+          push(setStatus(working(status.activity ?? "thinking", status.toolName), history));
+        }
+        break;
+      }
+      // assistant.idle ends the main agent's turn; session.idle waits for every background agent
+      // and attached shell as well, so it may not come at all while background work runs.
+      case "assistant.idle":
       case "session.idle":
       case "abort":
+        intent = undefined;
+        pushActivity(activity.endTurn());
         push(setStatus({ phase: "idle" }, history));
         break;
       case "permission.requested":
@@ -193,7 +233,7 @@ export function createTranscriptStore({
       case "user_input.completed":
       case "elicitation.completed":
       case "exit_plan_mode.completed":
-        push(setStatus({ phase: "working", activity: "thinking" }, history));
+        push(setStatus(working("thinking"), history));
         break;
       case "session.error": {
         const message =
@@ -233,7 +273,11 @@ export function createTranscriptStore({
   }
 
   function snapshot(): Snapshot {
-    return { entries: entries.map((entry) => ({ ...entry })), status: { ...status } };
+    return {
+      entries: entries.map((entry) => ({ ...entry })),
+      status: { ...status },
+      activity: activity.items(),
+    };
   }
 
   return { applyEvent, mergeHistory, tagRequest, snapshot };

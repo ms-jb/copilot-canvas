@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 
 // Small stroke icons for the conversation UI. Decorative: callers provide the accessible name.
 
-function Icon({ size = 16, children }: { size?: number; children: ReactNode }) {
+export function Icon({ size = 16, children }: { size?: number; children: ReactNode }) {
   return (
     <svg
       width={size}

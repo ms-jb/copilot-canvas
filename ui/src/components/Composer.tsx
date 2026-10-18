@@ -1,14 +1,25 @@
-import { Loader, Textarea } from "@mantine/core";
-import { useRef, type KeyboardEvent, type Ref } from "react";
+import { Alert, Box, Group, Paper, Text, Textarea } from "@mantine/core";
+import { useElementSize, useMergedRef } from "@mantine/hooks";
+import { useLayoutEffect, useRef, type KeyboardEvent, type ReactNode, type Ref } from "react";
 import { LIMITS, type SendMode } from "../shared";
 import type { Connection } from "../useConnection";
 import { AlertIcon } from "./ChatIcons";
 import { SendButton } from "./SendButton";
+import { useTouchSize } from "./touchSize";
+import { composerFit } from "./composerFit";
+import { ComposerTools } from "./ComposerTools";
 import { SessionControls } from "./controls/SessionControls";
 import styles from "./Composer.module.css";
-import { ATTACHMENT_ACCEPT, clipboardFiles } from "../features/attachments/files";
+import { clipboardFiles } from "../features/attachments/files";
 import { DraftAttachments } from "../features/attachments/AttachmentList";
 import type { useAttachments } from "../features/attachments/useAttachments";
+import { queuesOnEnter } from "./sendPress";
+import { MicButton } from "../features/dictation/MicButton";
+import { useDictation } from "../features/dictation/useDictation";
+import { appendDictation, editWithInterim, withInterim } from "../features/dictation/model";
+import { ContextUsageIndicator } from "../features/context/ContextUsageIndicator";
+import { SkillPicker } from "../features/skills/SkillPicker";
+import { useSkillPicker } from "../features/skills/useSkillPicker";
 
 export interface ComposerNotice {
   kind: "error" | "uncertain";
@@ -19,7 +30,8 @@ interface ComposerProps {
   connection: Connection;
   value: string;
   onChange: (value: string) => void;
-  onSubmit: (mode: SendMode) => void;
+  /** `text` is the draft to send when dictation just added its last words to it. */
+  onSubmit: (mode: SendMode, text?: string) => void;
   busy: boolean;
   /** Disabled while not connected; the connection banner explains why when it matters. */
   disabled: boolean;
@@ -30,6 +42,8 @@ interface ComposerProps {
   onStop?: () => void;
   stopping?: boolean;
   attachments: ReturnType<typeof useAttachments>;
+  /** Receives dictated text; the caller appends it to the draft. */
+  onDictation: (text: string) => void;
 }
 
 // Show the counter only when the limit is close enough to matter.
@@ -48,18 +62,60 @@ export function Composer({
   onStop,
   stopping = false,
   attachments,
+  onDictation,
 }: ComposerProps) {
-  const picker = useRef<HTMLInputElement>(null);
-  const hasContent = value.trim().length > 0 || attachments.items.length > 0;
+  const field = useRef<HTMLTextAreaElement>(null);
+  const fieldRef = useMergedRef(field, inputRef);
+  const mirror = useRef<HTMLDivElement>(null);
+  const size = useTouchSize();
+  const { ref: cardRef, width: cardWidth } = useElementSize<HTMLDivElement>();
+  const fit = composerFit(cardWidth);
+  const dictation = useDictation({
+    onText: onDictation,
+    enabled: !disabled && !busy,
+  });
+  // Words heard but not final yet follow the draft, dimmed; they count as content so Send works.
+  const { shown, interim } = withInterim(value, dictation.state.interim);
+  const hasContent = shown.trim().length > 0 || attachments.items.length > 0;
   const canSend = !disabled && !busy && !attachments.reading && hasContent;
   const showStop = onStop !== undefined && !busy && !hasContent;
   const attachmentsDisabled = disabled || busy || attachments.reading;
+  const skills = useSkillPicker({
+    text: value,
+    onChange,
+    enabled: !disabled && !busy && !interim,
+    sessionId: disabled ? undefined : connection.context?.sessionId,
+    field,
+  });
+
+  // Keep the newest words in view, in the field and in the dimmed copy painted under it.
+  useLayoutEffect(() => {
+    const input = field.current;
+    if (!interim || !input) return;
+    input.scrollTop = input.scrollHeight;
+    if (mirror.current) mirror.current.scrollTop = input.scrollTop;
+  }, [shown, interim]);
+
+  // Sending ends dictation; the words still interim go with the message.
+  const submit = (mode: SendMode) => {
+    const text = appendDictation(value, dictation.finishForSend());
+    if (text !== value) onChange(text);
+    onSubmit(mode, text);
+  };
+
+  const edit = (next: string) => {
+    const { draft, absorbed } = editWithInterim(next, interim);
+    if (absorbed) dictation.absorbInterim();
+    onChange(draft);
+  };
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    // Enter sends, Shift+Enter inserts a newline; never fire while an IME is composing.
+    if (skills.onKeyDown(event)) return;
+    // Enter sends, Ctrl/Cmd/Alt+Enter queues, Shift+Enter inserts a newline; never fire while an
+    // IME is composing.
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
     event.preventDefault();
-    if (!event.repeat && canSend) onSubmit(event.altKey ? "enqueue" : "immediate");
+    if (!event.repeat && canSend) submit(queuesOnEnter(event) ? "enqueue" : "immediate");
   };
 
   return (
@@ -67,113 +123,149 @@ export function Composer({
       className={styles.composer}
       onSubmit={(event) => {
         event.preventDefault();
-        if (canSend) onSubmit("immediate");
+        if (canSend) submit("immediate");
       }}
     >
-      <div className={styles.card} data-disabled={disabled ? "true" : undefined}>
-        {attachments.items.length > 0 && (
-          <DraftAttachments
-            items={attachments.items}
-            disabled={attachmentsDisabled}
-            onRemove={(id) => attachments.remove([id])}
-          />
-        )}
-        {attachments.error && (
-          <div className={styles.notice} data-kind="error" role="alert">
-            {attachments.error}
-          </div>
-        )}
-        {notice && (
-          <div className={styles.notice} data-kind={notice.kind} role="alert">
-            <span className={styles.noticeIcon}>
-              <AlertIcon size={14} />
-            </span>
-            <span>{notice.message}</span>
-          </div>
-        )}
-        <Textarea
-          ref={inputRef}
-          variant="unstyled"
-          classNames={{ root: styles.field, input: styles.input }}
-          aria-label={`Message ${assistantName}`}
-          placeholder={`Message ${assistantName}…`}
-          autosize
-          minRows={1}
-          maxRows={10}
-          maxLength={LIMITS.maxPromptChars}
-          value={value}
-          readOnly={busy}
-          disabled={disabled}
-          onChange={(event) => onChange(event.currentTarget.value)}
-          onKeyDown={onKeyDown}
-          onPaste={(event) => {
-            const files = clipboardFiles(event.clipboardData);
-            if (files.length === 0) return;
-            // Preserve ordinary text in a mixed clipboard; never replace it with image markup.
-            if (!event.clipboardData.getData("text/plain")) event.preventDefault();
-            if (!attachmentsDisabled) void attachments.add(files);
-          }}
-          enterKeyHint="send"
-          autoComplete="off"
-        />
-        <div className={styles.footer}>
-          <input
-            ref={picker}
-            type="file"
-            hidden
-            multiple
-            accept={ATTACHMENT_ACCEPT}
-            disabled={attachmentsDisabled}
+      <SkillPicker picker={skills}>
+        <Paper
+          withBorder
+          radius="lg"
+          shadow={disabled ? undefined : "sm"}
+          ref={cardRef}
+          className={styles.card}
+          data-composer-fit={fit}
+          data-disabled={disabled || undefined}
+        >
+          {attachments.items.length > 0 && (
+            <DraftAttachments
+              items={attachments.items}
+              disabled={attachmentsDisabled}
+              onRemove={(id) => attachments.remove([id])}
+            />
+          )}
+          {attachments.error && <Notice kind="error">{attachments.error}</Notice>}
+          {dictation.state.problem && (
+            <Notice kind="error" onDismiss={dictation.dismiss}>
+              {dictation.state.problem}
+            </Notice>
+          )}
+          {notice && <Notice kind={notice.kind}>{notice.message}</Notice>}
+          <Textarea
+            ref={fieldRef}
+            variant="unstyled"
+            classNames={{ root: styles.field, input: styles.input }}
+            inputContainer={(children) => (
+              <Box className={styles.stack}>
+                {interim && (
+                  <Box ref={mirror} className={styles.mirror} aria-hidden="true">
+                    {value}
+                    <Text span inherit c="dimmed">
+                      {interim}
+                    </Text>
+                  </Box>
+                )}
+                {children}
+              </Box>
+            )}
+            {...skills.fieldProps}
+            data-interim={interim ? true : undefined}
+            aria-label={`Message ${assistantName}`}
+            placeholder={`Message ${assistantName}…`}
+            autosize
+            minRows={1}
+            maxRows={10}
+            maxLength={LIMITS.maxPromptChars}
+            value={shown}
+            readOnly={busy}
+            disabled={disabled}
             onChange={(event) => {
-              const files = Array.from(event.currentTarget.files ?? []);
-              event.currentTarget.value = "";
+              skills.track(event.currentTarget);
+              edit(event.currentTarget.value);
+            }}
+            onSelect={(event) => skills.track(event.currentTarget)}
+            onScroll={(event) => {
+              if (mirror.current) mirror.current.scrollTop = event.currentTarget.scrollTop;
+            }}
+            onKeyDown={onKeyDown}
+            onPaste={(event) => {
+              const files = clipboardFiles(event.clipboardData);
+              if (files.length === 0) return;
+              // Preserve ordinary text in a mixed clipboard; never replace it with image markup.
+              if (!event.clipboardData.getData("text/plain")) event.preventDefault();
               if (!attachmentsDisabled) void attachments.add(files);
             }}
+            enterKeyHint="send"
+            autoComplete="off"
           />
-          <button
-            type="button"
-            className={styles.attach}
-            disabled={attachmentsDisabled}
-            aria-label={attachments.reading ? "Reading attachments" : "Attach files"}
-            title="Attach images, PDF or text files"
-            onClick={() => picker.current?.click()}
+          <Group
+            gap={size === 44 ? 4 : "xs"}
+            wrap="nowrap"
+            className={styles.footer}
+            data-composer-toolbar
           >
-            {attachments.reading ? (
-              <Loader size={16} color="currentColor" />
-            ) : (
-              <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                <path
-                  d="m8 13 7-7a3 3 0 0 1 4 4l-9 9a5 5 0 0 1-7-7l9-9"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.8"
-                  strokeLinecap="round"
-                />
-              </svg>
+            <ComposerTools
+              fit={fit}
+              attachments={attachments}
+              attachmentsDisabled={attachmentsDisabled}
+              skills={skills}
+              skillsDisabled={disabled || busy}
+              mic={<MicButton dictation={dictation} disabled={disabled || busy} />}
+            />
+            <Box className={styles.controls}>
+              <SessionControls connection={connection} fit={fit} />
+            </Box>
+            {shown.length >= COUNTER_FROM && (
+              <Text
+                span
+                size="xs"
+                c={shown.length >= LIMITS.maxPromptChars ? "red" : "dimmed"}
+                className={styles.counter}
+              >
+                {shown.length.toLocaleString()} / {LIMITS.maxPromptChars.toLocaleString()}
+              </Text>
             )}
-          </button>
-          <div className={styles.controls}>
-            <SessionControls connection={connection} />
-          </div>
-          {value.length >= COUNTER_FROM && (
-            <span
-              className={styles.counter}
-              data-full={value.length >= LIMITS.maxPromptChars ? "true" : undefined}
-            >
-              {value.length.toLocaleString()} / {LIMITS.maxPromptChars.toLocaleString()}
-            </span>
-          )}
-          <SendButton
-            canSend={canSend}
-            busy={busy}
-            disabled={disabled}
-            showStop={showStop}
-            stopping={stopping}
-            onStop={onStop}
-            onSubmit={onSubmit}
-          />
-        </div>
-      </div>
+            <ContextUsageIndicator connection={connection} />
+            <SendButton
+              canSend={canSend}
+              busy={busy}
+              disabled={disabled}
+              showStop={showStop}
+              stopping={stopping}
+              onStop={onStop}
+              onSubmit={submit}
+            />
+          </Group>
+        </Paper>
+      </SkillPicker>
     </form>
+  );
+}
+
+/** A short alert above the field: a failed send, an unconfirmed one or a dictation problem. */
+function Notice({
+  kind,
+  onDismiss,
+  children,
+}: {
+  kind: ComposerNotice["kind"];
+  onDismiss?: () => void;
+  children: ReactNode;
+}) {
+  return (
+    <Alert
+      variant="light"
+      color={kind === "error" ? "red" : "yellow"}
+      radius="md"
+      py="xs"
+      px="sm"
+      mx="xs"
+      mt="xs"
+      icon={<AlertIcon size={14} />}
+      withCloseButton={onDismiss !== undefined}
+      closeButtonLabel="Dismiss"
+      onClose={onDismiss}
+    >
+      {children}
+    </Alert>
   );
 }

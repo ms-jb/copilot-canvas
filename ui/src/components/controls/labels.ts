@@ -1,4 +1,5 @@
-import type { ModelOption, SessionControls, SessionMode } from "../../shared";
+import { formatTokens } from "../../features/context/usage";
+import type { ContextTier, ModelOption, SessionControls, SessionMode } from "../../shared";
 
 export const MODE_LABELS: Readonly<Record<SessionMode, { label: string; hint: string }>> = {
   interactive: { label: "Interactive", hint: "Works with you turn by turn" },
@@ -37,4 +38,34 @@ export function modelLabel(controls: SessionControls, modelId = controls.modelId
 /** The effort in use: the session's override, else the model's advertised default. */
 export function effectiveEffort(controls: SessionControls): string | undefined {
   return controls.reasoningEffort ?? activeModel(controls)?.defaultReasoningEffort;
+}
+
+export const TIER_LABELS: Readonly<Record<ContextTier, string>> = {
+  default: "Standard",
+  long_context: "Long context",
+};
+
+/** The window size for a tier when the catalog publishes it, else the tier's name. */
+export function tierLabel(model: ModelOption | undefined, tier: ContextTier): string {
+  const tokens = model?.contextTokens?.[tier];
+  return tokens ? formatTokens(tokens) : TIER_LABELS[tier];
+}
+
+/**
+ * The compact settings control's text, e.g. "Claude Opus 5.5 · High": the model and effort in use.
+ * A mode other than Interactive leads, since it changes how the session behaves; with no model or
+ * effort to show, the mode stands alone.
+ */
+export function settingsSummary(
+  controls: SessionControls,
+  shown: { mode: boolean; model: boolean; effort: boolean },
+): string {
+  const effort = shown.effort ? effectiveEffort(controls) : undefined;
+  const parts = [
+    shown.model ? modelLabel(controls) : null,
+    effort ? effortLabel(effort) : null,
+  ].filter((part): part is string => part !== null);
+  const mode = shown.mode && controls.mode ? MODE_LABELS[controls.mode].label : null;
+  if (mode && (parts.length === 0 || controls.mode !== "interactive")) parts.unshift(mode);
+  return parts.join(" · ");
 }

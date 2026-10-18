@@ -8,6 +8,8 @@ import { createEventSequencer } from "./event-sequencer.mjs";
 import { createSendController } from "./send-controller.mjs";
 import { createSessionActions } from "./actions.mjs";
 import { createQueueTracker } from "./queue.mjs";
+import { createContextTracker } from "./context.mjs";
+import { createSkillCatalog } from "../skills/catalog.mjs";
 export function createSessionBridge(session, { store = createTranscriptStore(), log = () => { }, controls = createControlsService(session, { log }), prompts = createPromptService(session, { log }), coalesceMs = 50, sendTimeoutMs = LIMITS.sendTimeoutMs, } = {}) {
     let disposed = false;
     const events = createEventSequencer({ log, coalesceMs });
@@ -15,7 +17,14 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         if (!disposed)
             events.emitNow({ type: "queue", queue: state });
     });
-    const sends = createSendController(session, {
+    const context = createContextTracker(session.rpc, (state) => {
+        if (!disposed)
+            events.emitNow({ type: "context", context: state });
+    }, { log });
+    const skills = createSkillCatalog(session.rpc, { log });
+    const sends = createSendController({
+        send: async (options) => session.send({ ...options, ...(await skills.expand(options.prompt)) }),
+    }, {
         log,
         sendTimeoutMs,
         admit(messageId, requestId, mode) {
@@ -34,7 +43,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
                 if (typeof id === "string")
                     queue.confirmed(id);
             }
-            if (["abort", "session.idle", "pending_messages.modified"].includes(event.type)) {
+            if (["abort", "assistant.idle", "session.idle", "pending_messages.modified"].includes(event.type)) {
                 void queue.refresh();
             }
         }
@@ -50,6 +59,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         catch (error) {
             log(`Failed to track a pending request: ${describeSessionError(error)}`, "warning");
         }
+        context.applyEvent(event);
     }
     // History overlaps live events; the transcript store de-duplicates them by event id.
     const unsubscribeSession = session.on(onSessionEvent);
@@ -70,6 +80,10 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         catch (error) {
             log(`Could not load session history: ${describeSessionError(error)}`, "warning");
         }
+        if (!disposed) {
+            void context.refresh();
+            await queue.refresh();
+        }
     })();
     const ready = Promise.all([history, controls.ready, prompts.ready]).then(() => undefined);
     return {
@@ -77,11 +91,19 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
         ready,
         getSnapshot: () => ({
             seq: events.seq,
-            snapshot: { ...store.snapshot(), prompts: prompts.list(), queue: queue.snapshot() },
+            snapshot: {
+                ...store.snapshot(),
+                prompts: prompts.list(),
+                queue: queue.snapshot(),
+                context: context.snapshot(),
+            },
             controls: controls.get(),
         }),
         subscribe: events.subscribe,
         send: sends.send,
+        listSkills: () => skills.list(),
+        readContext: async () => ((await context.refresh()) === "failed" ? null : context.snapshot()),
+        changeQueue: (change) => queue.change(change),
         applyControl: (change) => controls.apply(change),
         reloadExtensions: actions.reloadExtensions,
         stop: async () => {
@@ -110,6 +132,7 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
             events.dispose();
             sends.dispose();
             queue.dispose();
+            context.dispose();
         },
     };
 }

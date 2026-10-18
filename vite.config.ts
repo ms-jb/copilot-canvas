@@ -30,13 +30,6 @@ const mantineInstead = [
 const rawMarkupExempt = ["ui/src/MarkdownView.tsx"];
 // Template code predating the rule. Migrate a file to Mantine, then delete it here; never add one.
 const mantineDebt = [
-  "ui/src/components/Composer.tsx",
-  "ui/src/components/Message.tsx",
-  "ui/src/components/SendButton.tsx",
-  "ui/src/components/Transcript.tsx",
-  "ui/src/components/controls/ControlPicker.tsx",
-  "ui/src/components/controls/SessionControls.tsx",
-  "ui/src/features/attachments/AttachmentList.tsx",
   "ui/src/features/prompts/FormBody.tsx",
   "ui/src/features/prompts/PendingPrompts.tsx",
   "ui/src/features/sessions/SessionsSection.tsx",

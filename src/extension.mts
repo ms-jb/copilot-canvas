@@ -7,12 +7,18 @@ import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/exte
 import type { CopilotSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/node/config.mts";
+import {
+  DEFAULT_CONFIG,
+  INSTALL_MARKER,
+  loadConfig,
+  resolveConfig,
+} from "./shared/node/config.mts";
 import type { TemplateConfig } from "./shared/node/config.mts";
 import { createSessionBridge } from "./host/bridge.mts";
 import type { SessionBridge } from "./host/bridge.mts";
 import type { LogLevel } from "./host/logging.mts";
 import { createChatCanvas } from "./host/canvas.mts";
+import { markerTime, watchInstall } from "./host/install-watch.mts";
 import { startProvider } from "./host/provider.mts";
 import { createSessionsReader } from "./host/sessions/reader.mts";
 
@@ -25,6 +31,9 @@ declare module "@github/copilot-sdk/extension" {
 }
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 const uiDir = join(extensionDir, "ui");
+// Read before any await, so a build installed while this one starts up is still noticed.
+const installMarker = join(extensionDir, INSTALL_MARKER);
+const loadedMarkerTime = markerTime(installMarker);
 
 let session: CopilotSession | null = null;
 const earlyLogs: Array<[string, LogLevel]> = [];
@@ -106,9 +115,20 @@ await Promise.race([
 ]);
 resolveBridge(bridge);
 
+// A rebuilt canvas takes over by itself: `npm run install-ext` rewrites the marker last.
+const stopInstallWatch = watchInstall(
+  installMarker,
+  () => {
+    log(`${config.assistantName} canvas: new build installed, reloading.`);
+    bridge?.reloadExtensions();
+  },
+  { baseline: loadedMarkerTime },
+);
+
 let shutdownPromise: Promise<void> | null = null;
 function shutdown(reason: string): Promise<void> {
   shutdownPromise ??= (async () => {
+    stopInstallWatch();
     bridge?.dispose();
     await chat.shutdown().catch(() => {});
     log(`${config.assistantName} canvas stopped (${reason}).`);

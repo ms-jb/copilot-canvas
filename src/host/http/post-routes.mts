@@ -7,6 +7,7 @@ import {
   validateReloadPayload,
   validateRespondPayload,
   validateSendPayload,
+  validateQueuePayload,
 } from "../../shared/contract.mts";
 import type { RespondResult } from "../../shared/contract.mts";
 import type { Bridge } from "../session/bridge.mts";
@@ -130,5 +131,21 @@ export function createPostRoutes(bridge: Bridge, policy: RequestPolicy, log: Log
     const body: RespondResult = outcome;
     sendJson(res, outcome.ok ? 200 : statusFor(outcome.code), body);
   }
-  return { handleControls, handleReload, handleStop, handleSend, handleRespond };
+  async function handleQueue(req: IncomingMessage, res: ServerResponse): Promise<void> {
+    const payload = await policy.readPost(req, res, "error", validateQueuePayload);
+    if (!payload) return;
+    const outcome = await bridge.changeQueue(payload.change).catch(() => "failed" as const);
+    if (outcome === "unavailable")
+      return sendError(
+        res,
+        ERROR_CODES.queueUnavailable,
+        "This session cannot change queued messages.",
+      );
+    if (outcome === "gone")
+      return sendError(res, ERROR_CODES.queueItemGone, "That message already left the queue.");
+    if (outcome === "failed")
+      return sendError(res, ERROR_CODES.queueFailed, "The queue didn't change. Try again.");
+    sendJson(res, 200, { ok: true, status: "done" });
+  }
+  return { handleControls, handleReload, handleStop, handleSend, handleRespond, handleQueue };
 }

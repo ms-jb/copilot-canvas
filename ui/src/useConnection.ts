@@ -1,6 +1,7 @@
 import { useNetwork } from "@mantine/hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchBootstrap, fetchIdentity, type SendContext } from "./api";
+import { createStreamBatcher, flushesBufferedText } from "./connection/streamBatcher";
 import {
   API,
   applyServerEvent,
@@ -32,7 +33,17 @@ export interface Connection {
   markStale: () => void;
 }
 
-const SSE_EVENT_NAMES = ["snapshot", "entry", "status", "controls", "prompts", "queue"] as const;
+const SSE_EVENT_NAMES = [
+  "snapshot",
+  "entry",
+  "status",
+  "controls",
+  "prompts",
+  "queue",
+  "activity",
+  "context",
+  "append",
+] as const;
 const RETRY_BASE_MS = 1000;
 const RETRY_MAX_MS = 15000;
 // EventSource retries on its own; after this long without a connection we call it "not connected".
@@ -65,15 +76,31 @@ export function useConnection(): Connection {
     let retryDelay = RETRY_BASE_MS;
     let stale = false;
     const controller = new AbortController();
+    const batcher = createStreamBatcher({
+      commit: (events) => {
+        if (disposed || stale) return;
+        setView((current) =>
+          events.reduce((state, event) => applyServerEvent(state, event.name, event.data), current),
+        );
+      },
+      scheduler: {
+        requestFrame: (callback) => requestAnimationFrame(callback),
+        cancelFrame: (handle) => cancelAnimationFrame(handle),
+        setTimer: (callback, ms) => setTimeout(callback, ms),
+        clearTimer: (handle) => clearTimeout(handle as ReturnType<typeof setTimeout> | undefined),
+      },
+      frameFallbackMs: 50,
+    });
 
     const closeSource = () => {
+      batcher.flush();
       source?.close();
       source = null;
       clearTimeout(offlineTimer);
     };
 
     const markStale = () => {
-      if (disposed) return;
+      if (disposed || stale) return;
       stale = true;
       closeSource();
       clearTimeout(retryTimer);
@@ -101,13 +128,14 @@ export function useConnection(): Connection {
         markStale();
         return;
       }
-      setView((current) => applyServerEvent(current, event.name, event.data));
+      batcher.push(event);
+      if (flushesBufferedText(event)) batcher.flush();
     };
 
     const recheckAfterClose = async () => {
       try {
         const identity = await fetchIdentity(controller.signal);
-        if (disposed) return;
+        if (disposed || stale) return;
         if (identity.generation !== generation) {
           markStale();
           return;
@@ -119,7 +147,7 @@ export function useConnection(): Connection {
     };
 
     function open() {
-      if (disposed) return;
+      if (disposed || stale) return;
       closeSource();
       const next = new EventSource(`./${API.events}`);
       source = next;
@@ -129,7 +157,9 @@ export function useConnection(): Connection {
         setPhase((current) => (current === "stale" ? current : "connected"));
       });
       for (const name of SSE_EVENT_NAMES) {
-        next.addEventListener(name, (event) => handleEvent(name, event as MessageEvent));
+        next.addEventListener(name, (event) => {
+          if (!disposed && !stale && source === next) handleEvent(name, event as MessageEvent);
+        });
       }
       next.addEventListener("error", () => {
         if (disposed || source !== next) return;
@@ -167,7 +197,9 @@ export function useConnection(): Connection {
           status: bootstrap.snapshot.status,
           controls: bootstrap.controls,
           prompts: bootstrap.snapshot.prompts ?? [],
+          activity: bootstrap.snapshot.activity ?? [],
           ...(bootstrap.snapshot.queue ? { queue: bootstrap.snapshot.queue } : {}),
+          ...(bootstrap.snapshot.context ? { context: bootstrap.snapshot.context } : {}),
         });
         setPhase("connecting");
         open();
@@ -196,6 +228,7 @@ export function useConnection(): Connection {
       controller.abort();
       clearTimeout(retryTimer);
       closeSource();
+      batcher.dispose();
     };
   }, []);
 

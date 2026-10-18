@@ -1,6 +1,6 @@
 // Pure helpers for keeping an ordered, de-duplicated list of transcript entries.
 // Used by the host (authoritative store) and by the renderer (client view state).
-import { LIMITS } from "./contract.mjs";
+import { LIMITS, pruneActivity } from "./contract.mjs";
 export const NO_CONTROLS = Object.freeze({
     available: { mode: false, model: false, reasoningEffort: false, contextTier: false },
     models: [],
@@ -29,7 +29,16 @@ export function createViewState() {
         status: { phase: "idle" },
         controls: NO_CONTROLS,
         prompts: [],
+        activity: [],
     };
+}
+/** Tool calls belong to the turn the latest user message started; earlier ones are dropped. */
+function latestUserTimestamp(entries) {
+    for (let index = entries.length - 1; index >= 0; index -= 1) {
+        if (entries[index].kind === "user")
+            return entries[index].timestamp;
+    }
+    return undefined;
 }
 /**
  * Applies one parsed SSE event to the client view state and returns a new state.
@@ -46,7 +55,9 @@ export function applyServerEvent(state, name, data) {
             status: event.snapshot.status,
             controls: event.controls,
             prompts: event.snapshot.prompts ?? [],
+            activity: event.snapshot.activity ?? [],
             ...(event.snapshot.queue ? { queue: event.snapshot.queue } : {}),
+            ...(event.snapshot.context ? { context: event.snapshot.context } : {}),
         };
     }
     if (data.seq <= state.seq) {
@@ -55,7 +66,11 @@ export function applyServerEvent(state, name, data) {
     switch (name) {
         case "entry": {
             const event = data;
-            return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+            const entries = upsertEntry(state.entries, event.entry);
+            const activity = event.entry.kind === "user"
+                ? pruneActivity(state.activity, latestUserTimestamp(entries))
+                : state.activity;
+            return { ...state, seq: event.seq, entries, activity };
         }
         case "status": {
             const event = data;
@@ -72,6 +87,31 @@ export function applyServerEvent(state, name, data) {
         case "queue": {
             const event = data;
             return { ...state, seq: event.seq, queue: event.queue };
+        }
+        case "context": {
+            const event = data;
+            return { ...state, seq: event.seq, context: event.context };
+        }
+        case "activity": {
+            const event = data;
+            const activity = pruneActivity(upsertEntry(state.activity, event.item, Number.POSITIVE_INFINITY), latestUserTimestamp(state.entries));
+            return { ...state, seq: event.seq, activity };
+        }
+        case "append": {
+            const { seq, target, id, text } = data;
+            // The host only appends to a text item this connection has; anything else is ignored.
+            const grow = (list) => {
+                const index = list.findIndex((item) => item.id === id);
+                const item = list[index];
+                if (!item || !("text" in item) || typeof item.text !== "string")
+                    return list;
+                const next = list.slice();
+                next[index] = { ...item, text: item.text + text };
+                return next;
+            };
+            return target === "entry"
+                ? { ...state, seq, entries: grow(state.entries) }
+                : { ...state, seq, activity: grow(state.activity) };
         }
         default:
             return state;

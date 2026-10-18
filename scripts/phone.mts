@@ -7,6 +7,7 @@
 import { spawn, spawnSync } from "node:child_process";
 import type { ChildProcess } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { userInfo } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadConfig, runtimeDir } from "../src/shared/node/config.mts";
@@ -50,9 +51,20 @@ function fail(message: string): never {
 
 function ensureSignedIn(): void {
   if (/Logged in as/i.test(devtunnel(["user", "show"]).out)) return;
-  console.log("Sign in to dev tunnels (the account you will also use on your phone):");
-  const login = spawnSync("devtunnel", ["user", "login", "-d"], { stdio: "inherit" });
+  console.log("Sign in to dev tunnels with GitHub (the account you will also use on your phone):");
+  const login = spawnSync("devtunnel", ["user", "login", "-g", "-d"], { stdio: "inherit" });
   if (login.status !== 0) fail("Sign-in did not finish. Run npm run phone again.");
+}
+
+/** A readable tunnel id from the computer's user name, like `jordan-canvas`; null if none fits. */
+export function tunnelName(user: string): string | null {
+  const slug = user
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 40)
+    .replace(/-+$/, "");
+  return slug ? `${slug}-canvas` : null;
 }
 
 function ensureTunnel(statePath: string): string {
@@ -64,14 +76,11 @@ function ensureTunnel(statePath: string): string {
   }
   if (tunnelId && devtunnel(["show", tunnelId, "--json"]).ok) return tunnelId;
 
-  const created = devtunnel([
-    "create",
-    "--expiration",
-    "30d",
-    "--description",
-    "Copilot Canvas (owner-only)",
-    "--json",
-  ]);
+  const options = ["--expiration", "30d", "--description", "Copilot Canvas (owner-only)", "--json"];
+  // Tunnel ids are unique across all users, so a taken name falls back to a random one.
+  const name = tunnelName(userInfo().username);
+  let created = name ? devtunnel(["create", name, ...options]) : null;
+  if (!created?.ok) created = devtunnel(["create", ...options]);
   try {
     tunnelId = (JSON.parse(created.out) as { tunnel: { tunnelId: string } }).tunnel.tunnelId;
   } catch {

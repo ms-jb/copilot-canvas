@@ -10,9 +10,6 @@
 
 .bubble {
   max-width: 100%;
-  padding: var(--cc-space-2) var(--cc-space-3);
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-lg);
   border-end-end-radius: var(--cc-radius-sm);
   background: var(--cc-surface-raised);
   color: var(--cc-text);
@@ -26,18 +23,6 @@
   opacity: 0.65;
 }
 
-.meta {
-  display: flex;
-  align-items: center;
-  min-height: 16px;
-  padding-inline: var(--cc-space-1);
-}
-
-.pending {
-  font-size: var(--cc-text-xs);
-  color: var(--cc-text-faint);
-}
-
 /* Assistant turn: full-width prose under a small author row. */
 .assistant {
   display: flex;
@@ -46,21 +31,9 @@
   min-width: 0;
 }
 
-.header {
-  display: flex;
-  align-items: center;
-  gap: var(--cc-space-2);
-  min-height: 24px;
-}
-
-.author {
-  font-size: var(--cc-text-sm);
-  font-weight: 600;
-  color: var(--cc-text);
-}
-
+/* Aligned with the name, past the 28px avatar and its gap. */
 .body {
-  padding-inline-start: 32px;
+  padding-inline-start: 36px;
   min-width: 0;
 }
 
@@ -70,89 +43,31 @@
   margin-top: calc(var(--cc-space-2) - var(--turn-gap));
 }
 
-.assistant[data-continued] {
-  position: relative;
+/* The run's time, in flow below the last message, so it never covers text. */
+.time {
+  display: block;
+  margin-top: var(--cc-space-2);
+  line-height: 1.2;
 }
 
-.hoverTime {
-  position: absolute;
-  top: 0;
-  inset-inline-end: 0;
-  padding: 3px var(--cc-space-2);
-  border: 1px solid var(--cc-border);
-  border-radius: 999px;
-  background: var(--cc-surface-raised);
-  box-shadow: var(--cc-shadow-sm);
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity var(--cc-duration) var(--cc-ease);
-}
-
-.assistant:hover .hoverTime,
-.assistant:focus-within .hoverTime {
-  opacity: 1;
-}
-
-.avatar {
-  flex: none;
-  display: inline-grid;
-  place-items: center;
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  background: var(--cc-accent-soft);
-  color: var(--cc-accent);
+.avatarInitial {
   font-size: var(--cc-text-xs);
   font-weight: 600;
-  line-height: 1;
 }
 
-.avatar[data-size="lg"] {
-  width: 40px;
-  height: 40px;
+[data-size="lg"] > .avatarInitial {
   font-size: var(--cc-text-lg);
 }
 
 /* Error: quiet danger callout. */
 .error {
-  display: flex;
-  gap: var(--cc-space-2);
-  padding: var(--cc-space-2) var(--cc-space-3);
+  min-width: 0;
   border: 1px solid color-mix(in srgb, var(--cc-danger) 25%, transparent);
-  border-radius: var(--cc-radius-md);
-  background: var(--cc-danger-soft);
-  min-width: 0;
-}
-
-.errorIcon {
-  flex: none;
-  display: inline-flex;
-  padding-top: 2px;
-  color: var(--cc-danger);
-}
-
-.errorBody {
-  flex: 1;
-  min-width: 0;
-}
-
-.errorHead {
-  display: flex;
-  align-items: baseline;
-  gap: var(--cc-space-2);
-}
-
-.errorTitle {
-  font-size: var(--cc-text-sm);
-  font-weight: 600;
-  color: var(--cc-danger);
 }
 
 .errorText {
-  margin-top: 2px;
-  font-size: var(--cc-text-sm);
-  line-height: 1.5;
   color: var(--cc-text);
+  line-height: 1.5;
   white-space: pre-wrap;
   overflow-wrap: anywhere;
 }
@@ -164,11 +79,5 @@
 
   .body {
     padding-inline-start: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .hoverTime {
-    transition: none;
   }
 }

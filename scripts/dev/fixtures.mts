@@ -3,6 +3,9 @@ import type {
   PendingPrompt,
   SessionControls,
   TranscriptEntry,
+  ActivityItem,
+  ContextState,
+  SkillsInfo,
 } from "../../src/shared/contract.mts";
 
 export const SESSION_ID = "dev-mock-session";
@@ -18,6 +21,7 @@ const MODELS: SessionControls["models"] = [
     reasoningEfforts: ["low", "medium", "high"],
     defaultReasoningEffort: "medium",
     contextTiers: ["default", "long_context"],
+    contextTokens: { default: 128000, long_context: 256000 },
   },
   {
     id: "model-b",
@@ -145,6 +149,7 @@ export function initialControls(scenario: Scenario): SessionControls {
       models: [],
     };
   }
+
   return {
     available: { mode: true, model: true, reasoningEffort: true, contextTier: true },
     mode: "interactive",
@@ -155,6 +160,55 @@ export function initialControls(scenario: Scenario): SessionControls {
   };
 }
 
+export const SAMPLE_SKILLS: SkillsInfo = {
+  available: true,
+  skills: [
+    {
+      name: "review",
+      description: "Review the current change for correctness.",
+      hint: "files or change",
+    },
+    { name: "explain", description: "Explain how a module works.", hint: "module name" },
+    { name: "test", description: "Find and run relevant tests.", hint: null },
+  ],
+};
+
+export const SAMPLE_CONTEXT: ContextState = {
+  usage: {
+    currentTokens: 32000,
+    tokenLimit: 128000,
+    systemTokens: 8000,
+    conversationTokens: 20000,
+    toolDefinitionsTokens: 4000,
+    compactionThreshold: 102400,
+    messages: 7,
+  },
+  compacting: false,
+  actions: { refresh: true },
+};
+
+export function sampleActivity(timestamp: string): ActivityItem[] {
+  return [
+    {
+      id: "reasoning:sample",
+      kind: "reasoning",
+      timestamp,
+      text: "I will inspect the helper, then check its boundary cases.",
+    },
+    {
+      id: "tool:sample",
+      kind: "tool",
+      name: "read_file",
+      title: "Inspect duration helper",
+      timestamp,
+      state: "succeeded",
+      durationMs: 182,
+      detail: "src/format.ts",
+      args: '{"path":"src/format.ts"}',
+      result: "Read the helper and its tests.",
+    },
+  ];
+}
 // Sample requests for `?state=waiting` and the scripted live loop. Generic, public-safe content.
 export function samplePermission(): PendingPrompt {
   return {

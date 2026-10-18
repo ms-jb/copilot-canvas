@@ -1,5 +1,5 @@
 import type { ServerResponse } from "node:http";
-import { ERROR_CODES } from "../../src/shared/contract.mts";
+import { ERROR_CODES, QUEUE_LIMITS, pruneActivity } from "../../src/shared/contract.mts";
 import type {
   ControlChange,
   PendingPrompt,
@@ -7,6 +7,8 @@ import type {
   SessionControls,
   SessionStatus,
   TranscriptEntry,
+  ActivityItem,
+  ContextState,
 } from "../../src/shared/contract.mts";
 import {
   SCRIPT,
@@ -14,6 +16,8 @@ import {
   samplePermission,
   sampleQuestion,
   sampleTranscript,
+  sampleActivity,
+  SAMPLE_CONTEXT,
 } from "./fixtures.mts";
 import type { Scenario } from "./fixtures.mts";
 
@@ -24,9 +28,11 @@ export interface MockSession {
   status: SessionStatus;
   controls: SessionControls;
   prompts: PendingPrompt[];
+  activity: ActivityItem[];
+  context: ContextState;
   seq: number;
   clients: Set<ServerResponse>;
-  queued: { requestId: string; deliver: () => void }[];
+  queued: { id: string; requestId: string; text: string; deliver: (text: string) => void }[];
   removedRequestIds: string[];
 }
 
@@ -59,6 +65,8 @@ function createSession(scenario: Scenario): MockSession {
   return {
     entries,
     status,
+    activity: scenario === "empty" ? [] : sampleActivity(entries.at(-1)!.timestamp),
+    context: structuredClone(SAMPLE_CONTEXT),
     controls: initialControls(scenario),
     prompts,
     seq: 0,
@@ -97,12 +105,40 @@ export function upsert(session: MockSession, entry: TranscriptEntry) {
   if (session.entries.length > MAX_ENTRIES)
     session.entries.splice(0, session.entries.length - MAX_ENTRIES);
   broadcast(session, "entry", { entry });
+  if (entry.kind === "user") session.activity = pruneActivity(session.activity, entry.timestamp);
 }
 
 export function setStatus(session: MockSession, status: SessionStatus) {
   session.status = status;
   broadcast(session, "status", { status });
-  if (status.phase === "idle") session.queued.shift()?.deliver();
+  if (status.phase === "idle") {
+    const next = session.queued.shift();
+    if (next) {
+      publishQueue(session);
+      next.deliver(next.text);
+    }
+  }
+}
+
+export const queueState = (session: MockSession) => ({
+  removedRequestIds: session.removedRequestIds,
+  items: session.queued.slice(0, QUEUE_LIMITS.maxItems).map(({ id, requestId, text }) => ({
+    id,
+    requestId,
+    text: text.slice(0, QUEUE_LIMITS.maxTextChars),
+    kind: "message" as const,
+    ...(text.length > QUEUE_LIMITS.maxTextChars ? { truncated: true } : {}),
+  })),
+});
+export const publishQueue = (session: MockSession) =>
+  broadcast(session, "queue", { queue: queueState(session) });
+
+export function showActivity(session: MockSession, item: ActivityItem) {
+  const index = session.activity.findIndex((existing) => existing.id === item.id);
+  if (index < 0) session.activity.push(item);
+  else session.activity[index] = item;
+  session.activity = session.activity.slice(-30);
+  broadcast(session, "activity", { item });
 }
 
 export function setPrompts(session: MockSession, prompts: PendingPrompt[]) {

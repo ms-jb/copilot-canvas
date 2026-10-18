@@ -4,6 +4,8 @@ import { ERROR_CODES } from "./errors.mjs";
 import { LIMITS } from "./limits.mjs";
 import { validatePrompts } from "./prompts.mjs";
 import { validateQueueState } from "./queue.mjs";
+import { validateContextState } from "./context.mjs";
+import { validateActivityItem } from "./activity.mjs";
 import { validateEntry, validateSnapshot, validateStatus, } from "./transcript.mjs";
 import { isPlainObject, makeError, SESSION_ID_PATTERN, } from "./validation.mjs";
 export const CONTRACT_VERSION = 2;
@@ -20,6 +22,9 @@ export const API = Object.freeze({
     respond: "api/respond",
     reload: "api/reload",
     stop: "api/stop",
+    queue: "api/queue",
+    skills: "api/skills",
+    context: "api/context",
     // Served by the gateway itself (phone only), never forwarded to the provider.
     pushKey: "api/push/key",
     pushSubscribe: "api/push/subscribe",
@@ -39,6 +44,9 @@ export const SSE_EVENTS = Object.freeze({
     controls: "controls",
     prompts: "prompts",
     queue: "queue",
+    context: "context",
+    activity: "activity",
+    append: "append",
 });
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
 /**
@@ -122,6 +130,15 @@ export function validateServerEvent(name, data) {
             return validatePrompts(data.prompts);
         case SSE_EVENTS.queue:
             return validateQueueState(data.queue);
+        case SSE_EVENTS.context:
+            return validateContextState(data.context);
+        case SSE_EVENTS.activity:
+            return validateActivityItem(data.item);
+        case SSE_EVENTS.append:
+            return ((data.target === "entry" || data.target === "activity") &&
+                typeof data.id === "string" &&
+                data.id.length > 0 &&
+                typeof data.text === "string");
         default:
             return false;
     }

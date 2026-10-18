@@ -4,6 +4,8 @@ import { ERROR_CODES, type SendStatus } from "./errors.mts";
 import { LIMITS } from "./limits.mts";
 import { type PendingPrompt, validatePrompts } from "./prompts.mts";
 import { type QueueState, validateQueueState } from "./queue.mts";
+import { type ContextState, validateContextState } from "./context.mts";
+import { type ActivityItem, validateActivityItem } from "./activity.mts";
 import {
   type SessionStatus,
   type Snapshot,
@@ -75,6 +77,13 @@ export interface SendResult {
   message?: string;
 }
 
+export interface AppendData {
+  seq: number;
+  target: "entry" | "activity";
+  id: string;
+  text: string;
+}
+
 export type ServerEvent =
   | {
       name: "snapshot";
@@ -84,6 +93,9 @@ export type ServerEvent =
   | { name: "status"; data: { seq: number; status: SessionStatus } }
   | { name: "controls"; data: { seq: number; controls: SessionControls } }
   | { name: "queue"; data: { seq: number; queue: QueueState } }
+  | { name: "context"; data: { seq: number; context: ContextState } }
+  | { name: "activity"; data: { seq: number; item: ActivityItem } }
+  | { name: "append"; data: AppendData }
   | { name: "prompts"; data: { seq: number; prompts: PendingPrompt[] } };
 
 // Paths are relative to the provider's capability prefix (or to the gateway root).
@@ -98,6 +110,9 @@ export const API = Object.freeze({
   respond: "api/respond",
   reload: "api/reload",
   stop: "api/stop",
+  queue: "api/queue",
+  skills: "api/skills",
+  context: "api/context",
   // Served by the gateway itself (phone only), never forwarded to the provider.
   pushKey: "api/push/key",
   pushSubscribe: "api/push/subscribe",
@@ -119,6 +134,9 @@ export const SSE_EVENTS = Object.freeze({
   controls: "controls",
   prompts: "prompts",
   queue: "queue",
+  context: "context",
+  activity: "activity",
+  append: "append",
 } as const);
 
 const REQUEST_ID_PATTERN = /^[A-Za-z0-9_-]{8,64}$/;
@@ -210,6 +228,17 @@ export function validateServerEvent(name: string, data: unknown): boolean {
       return validatePrompts(data.prompts);
     case SSE_EVENTS.queue:
       return validateQueueState(data.queue);
+    case SSE_EVENTS.context:
+      return validateContextState(data.context);
+    case SSE_EVENTS.activity:
+      return validateActivityItem(data.item);
+    case SSE_EVENTS.append:
+      return (
+        (data.target === "entry" || data.target === "activity") &&
+        typeof data.id === "string" &&
+        data.id.length > 0 &&
+        typeof data.text === "string"
+      );
     default:
       return false;
   }

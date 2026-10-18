@@ -1,0 +1,190 @@
+/* Context window meter and its panel. Tokens only. */
+
+.trigger {
+  position: relative;
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 var(--cc-space-2);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--cc-text-muted);
+  font: inherit;
+  font-size: var(--cc-text-xs);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  transition:
+    background-color var(--cc-duration) var(--cc-ease),
+    color var(--cc-duration) var(--cc-ease);
+}
+
+.trigger::after {
+  content: "";
+  position: absolute;
+  inset: -8px -2px;
+}
+
+.trigger:hover,
+.trigger[aria-expanded="true"] {
+  background: var(--cc-surface-sunken);
+  color: var(--cc-text);
+}
+
+.trigger:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 1px;
+}
+
+.trigger[data-tone="warn"] {
+  color: var(--cc-warning);
+}
+
+.trigger[data-tone="danger"] {
+  color: var(--cc-danger);
+}
+
+.label {
+  min-width: 3ch;
+  text-align: start;
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-2);
+}
+
+.head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.percent {
+  font-variant-numeric: tabular-nums;
+  color: var(--cc-text-muted);
+}
+
+.percent[data-tone="warn"] {
+  color: var(--cc-warning);
+}
+
+.percent[data-tone="danger"] {
+  color: var(--cc-danger);
+}
+
+.bar {
+  position: relative;
+  display: flex;
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: var(--cc-surface-sunken);
+}
+
+.segment {
+  height: 100%;
+}
+
+.segment[data-part="conversation"],
+.swatch[data-part="conversation"],
+.segment[data-part="total"] {
+  background: var(--cc-accent);
+}
+
+.segment[data-part="system"],
+.swatch[data-part="system"] {
+  background: color-mix(in srgb, var(--cc-accent) 55%, var(--cc-surface));
+}
+
+.segment[data-part="tools"],
+.swatch[data-part="tools"] {
+  background: color-mix(in srgb, var(--cc-text-muted) 70%, var(--cc-surface));
+}
+
+.segment[data-part="other"],
+.swatch[data-part="other"] {
+  background: var(--cc-border-strong);
+}
+
+.segment[data-tone="warn"] {
+  background: var(--cc-warning);
+}
+
+.segment[data-tone="danger"] {
+  background: var(--cc-danger);
+}
+
+.threshold {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--cc-text);
+  opacity: 0.55;
+}
+
+.parts {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: var(--cc-text-xs);
+}
+
+.parts li {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+}
+
+.swatch {
+  width: 8px;
+  height: 8px;
+  flex: none;
+  border-radius: 2px;
+}
+
+.partLabel {
+  flex: 1;
+  color: var(--cc-text-muted);
+}
+
+.partValue {
+  font-variant-numeric: tabular-nums;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--cc-text-muted);
+}
+
+.actions {
+  margin-top: var(--cc-space-1);
+}
+
+/* The composer's 44px touch size (components/touchSize.ts). */
+@media (max-width: 768px), (pointer: coarse) {
+  .trigger {
+    min-width: 44px;
+    height: 44px;
+    justify-content: center;
+  }
+
+  .trigger::after {
+    content: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .trigger {
+    transition: none;
+  }
+}

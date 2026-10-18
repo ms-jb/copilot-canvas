@@ -107,6 +107,27 @@ favor of native Mantine components (see "UI: native Mantine first" in AGENTS.md)
 Keep the defaults; add a rule only when it guards a real boundary or a bug class this repository has
 hit.
 
+## Chat input and transcript
+
+The composer uses native Mantine controls, a width-aware toolbar, attachments, a slash-skill
+picker and browser speech recognition when supported. Dictation only fills the draft; it never
+sends automatically. Recognition uses the browser's speech service and may require network access.
+There are no host audio endpoints, API keys or paid speech integrations.
+
+`GET api/skills` reads the current session's bounded skill catalog. Skill expansion happens only
+after an explicit send, through that session's command RPC. `GET api/context` reads measured
+context usage; automatic compaction events are displayed, but the canvas cannot initiate compaction.
+Queue editing uses `POST api/queue` behind the existing CSRF, generation and session policy.
+These new endpoints are not forwarded by the phone gateway's existing allowlist.
+
+Activity summaries are bounded and redacted on the host. Reasoning remains expandable; tools
+are shown for the running turn. Streaming SSE appends are batched in sequence per animation frame.
+Long transcripts are virtualized; browser find only covers mounted rows above 80 rows.
+Markdown uses `markdown-to-jsx` with raw HTML disabled, safe link validation and no remote images.
+Fenced code is highlighted lazily with `highlight.js` and has a clipboard action.
+
+Preview fixtures include a skill catalog, context usage, code fences and tool activity (`?state=busy`).
+
 ## Changing the structure
 
 1. Add or update characterization tests for the area.

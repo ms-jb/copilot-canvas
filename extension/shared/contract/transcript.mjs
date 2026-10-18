@@ -1,7 +1,9 @@
 import { validatePrompts } from "./prompts.mjs";
 import { isPlainObject } from "./validation.mjs";
+import { validateContextState } from "./context.mjs";
 import { validateQueueState } from "./queue.mjs";
 import { ATTACHMENT_LIMITS, validateTranscriptAttachment, } from "./attachments.mjs";
+import { ACTIVITY_LIMITS, validateActivity } from "./activity.mjs";
 export const PHASES = Object.freeze(["idle", "working", "waiting"]);
 export const ACTIVITIES = Object.freeze([
     "thinking",
@@ -54,6 +56,10 @@ export function validateStatus(status) {
     if (status.waitingFor !== undefined && !WAITING_FOR.includes(status.waitingFor)) {
         return false;
     }
+    if (status.intent !== undefined &&
+        (typeof status.intent !== "string" || status.intent.length > ACTIVITY_LIMITS.maxDetailChars)) {
+        return false;
+    }
     return true;
 }
 export function validateSnapshot(snapshot) {
@@ -62,5 +68,7 @@ export function validateSnapshot(snapshot) {
         snapshot.entries.every(validateEntry) &&
         validateStatus(snapshot.status) &&
         (snapshot.prompts === undefined || validatePrompts(snapshot.prompts)) &&
-        (snapshot.queue === undefined || validateQueueState(snapshot.queue)));
+        (snapshot.queue === undefined || validateQueueState(snapshot.queue)) &&
+        (snapshot.context === undefined || validateContextState(snapshot.context)) &&
+        (snapshot.activity === undefined || validateActivity(snapshot.activity)));
 }

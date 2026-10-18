@@ -1,3 +1,4 @@
+import { Alert, Avatar as MantineAvatar, Box, Group, Paper, Text } from "@mantine/core";
 import { MarkdownView } from "../MarkdownView";
 import { AlertIcon } from "./ChatIcons";
 import styles from "./Message.module.css";
@@ -12,6 +13,8 @@ interface UserMessageProps {
   pendingLabel?: string;
   /** Follows another turn of yours, so it sits closer to it. */
   continued?: boolean;
+  /** Last of a run of your turns: shows the run's time below it. */
+  endsRun?: boolean;
   attachments?: TranscriptAttachment[];
 }
 
@@ -20,6 +23,7 @@ export function UserMessage({
   timestamp,
   pendingLabel,
   continued,
+  endsRun = true,
   attachments,
 }: UserMessageProps) {
   return (
@@ -29,17 +33,21 @@ export function UserMessage({
       data-pending={pendingLabel ? "true" : undefined}
       data-continued={continued || undefined}
     >
-      <div className={styles.bubble}>
+      <Paper withBorder radius="lg" px="sm" py="xs" className={styles.bubble}>
         {text}
         {attachments && attachments.length > 0 && <AttachmentList attachments={attachments} />}
-      </div>
-      <div className={styles.meta}>
-        {pendingLabel ? (
-          <span className={styles.pending}>{pendingLabel}</span>
-        ) : (
-          <Timestamp value={timestamp} />
-        )}
-      </div>
+      </Paper>
+      {(pendingLabel || endsRun) && (
+        <Group gap={0} px={4} mih={16}>
+          {pendingLabel ? (
+            <Text span size="xs" c="var(--cc-text-faint)">
+              {pendingLabel}
+            </Text>
+          ) : (
+            <Timestamp value={timestamp} />
+          )}
+        </Group>
+      )}
     </article>
   );
 }
@@ -49,8 +57,10 @@ interface AssistantMessageProps {
   timestamp: string;
   streaming?: boolean;
   assistantName: string;
-  /** Follows another assistant turn, so it skips the avatar and name and shows its time on hover. */
+  /** Follows another assistant turn, so it skips the avatar and name. */
   continued?: boolean;
+  /** Last of a run of assistant turns: shows the run's time below it once it has finished. */
+  endsRun?: boolean;
 }
 
 export function AssistantMessage({
@@ -59,6 +69,7 @@ export function AssistantMessage({
   streaming,
   assistantName,
   continued,
+  endsRun = true,
 }: AssistantMessageProps) {
   return (
     <article
@@ -67,45 +78,64 @@ export function AssistantMessage({
       aria-busy={streaming || undefined}
       data-continued={continued || undefined}
     >
-      {continued ? (
-        <Timestamp value={timestamp} className={styles.hoverTime} />
-      ) : (
-        <header className={styles.header}>
+      {!continued && (
+        <Group gap="xs" mih={28} wrap="nowrap">
           <Avatar name={assistantName} />
-          <span className={styles.author}>{assistantName}</span>
-          <Timestamp value={timestamp} />
-        </header>
+          <Text span size="sm" fw={600}>
+            {assistantName}
+          </Text>
+        </Group>
       )}
-      <div className={styles.body}>
+      <Box className={styles.body}>
         <MarkdownView text={text} streaming={streaming} />
-      </div>
+        {endsRun && !streaming && <Timestamp value={timestamp} className={styles.time} />}
+      </Box>
     </article>
   );
 }
 
 export function ErrorMessage({ text, timestamp }: { text: string; timestamp: string }) {
   return (
-    <div className={styles.error} role="note" aria-label="Error">
-      <span className={styles.errorIcon}>
-        <AlertIcon size={16} />
-      </span>
-      <div className={styles.errorBody}>
-        <div className={styles.errorHead}>
-          <span className={styles.errorTitle}>Error</span>
+    <Alert
+      // A past error in the log, not a live interruption.
+      role="note"
+      aria-label="Error"
+      variant="light"
+      color="red"
+      radius="md"
+      py="xs"
+      px="sm"
+      className={styles.error}
+      icon={<AlertIcon size={16} />}
+      title={
+        <Group component="span" gap="xs" align="baseline">
+          Error
           <Timestamp value={timestamp} />
-        </div>
-        <div className={styles.errorText}>{text}</div>
-      </div>
-    </div>
+        </Group>
+      }
+    >
+      <Text size="sm" className={styles.errorText}>
+        {text}
+      </Text>
+    </Alert>
   );
 }
 
-/** First letter of the assistant name in a small accent-tinted circle. */
+/** A neutral author initial, independent of personal branding. */
 export function Avatar({ name, size = "sm" }: { name: string; size?: "sm" | "lg" }) {
   const initial = Array.from(name.trim())[0]?.toUpperCase() ?? "?";
   return (
-    <span className={styles.avatar} data-size={size} aria-hidden="true">
+    <MantineAvatar
+      alt=""
+      size={size === "lg" ? 40 : 28}
+      radius="xl"
+      color="accent"
+      variant="light"
+      classNames={{ placeholder: styles.avatarInitial }}
+      data-size={size}
+      aria-hidden="true"
+    >
       {initial}
-    </span>
+    </MantineAvatar>
   );
 }

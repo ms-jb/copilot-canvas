@@ -1,5 +1,13 @@
-import { afterEach, describe, expect, it, vi } from "vite-plus/test";
-import { createSessionsReader, type SessionsSource } from "../../src/host/sessions/reader.mts";
+import { existsSync } from "node:fs";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { dirname, isAbsolute, join } from "node:path";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vite-plus/test";
+import {
+  createSessionsReader,
+  readSavedOutput,
+  type SessionsSource,
+} from "../../src/host/sessions/reader.mts";
 import { parseSessionMetadata } from "../../src/host/sessions/metadata.mts";
 import { validateSessions, type SessionsInfo } from "../../src/shared/contract.mts";
 import { deferred } from "./fixtures";
@@ -72,13 +80,95 @@ it("requests only native read-only status and returns sorted display fields, nev
     toolCallId: expect.stringMatching(/^canvas-sessions-/),
   });
   expect(info.sessions.map((row) => [row.id, row.state, row.current])).toEqual([
-    [id(2), "waiting", false],
     [current, "idle", true],
+    [id(2), "waiting", false],
+    [id(3), "unknown", false],
   ]);
   expect(info.sessions.every((row) => row.canOpen)).toBe(true);
   expect(JSON.stringify(info)).not.toContain(secret);
   expect(JSON.stringify(info)).not.toContain("evil");
   expect(validateSessions(info)).toBe(true);
+});
+
+it("keeps the app's newest-first order, running sessions first, and names untitled rows", async () => {
+  const { session } = source(
+    vi.fn(async () =>
+      result(
+        status([
+          { id: id(2), name: "Recent stopped", is_running: false, activity: { status: "idle" } },
+          { id: current, name: "Current", activity: { status: "busy" } },
+          { id: id(3), is_running: false, project_name: "repo", activity: { status: "idle" } },
+          ...Array.from({ length: 40 }, (_, n) => ({ id: id(n + 10), is_running: false })),
+          { id: id(9), name: "Old but running", activity: { status: "idle" } },
+        ]),
+      ),
+    ),
+  );
+  const info = await createSessionsReader({ ...base, session })();
+  expect(info.sessions).toHaveLength(30);
+  expect(info.sessions.slice(0, 4).map((row) => [row.id, row.title, row.state])).toEqual([
+    [id(2), "Recent stopped", "idle"],
+    [current, "Current", "busy"],
+    [id(3), "Session in repo", "idle"],
+    [id(10), "Untitled session", "unknown"],
+  ]);
+  expect(info.sessions.at(-1)?.id).toBe(id(9));
+  expect(validateSessions(info)).toBe(true);
+});
+
+it("keeps the current session even when 30 other sessions are running", async () => {
+  const { session } = source(
+    vi.fn(async () =>
+      result(
+        status([
+          ...Array.from({ length: 31 }, (_, n) => ({ id: id(n + 10), name: `Run ${n}` })),
+          { id: current, name: "Current" },
+        ]),
+      ),
+    ),
+  );
+  const info = await createSessionsReader({ ...base, session })();
+  expect(info.sessions).toHaveLength(30);
+  expect(info.sessions.at(-1)).toMatchObject({ id: current, current: true });
+  expect(validateSessions(info)).toBe(true);
+});
+
+describe("saved large results", () => {
+  const name = `1792347624009-copilot-tool-output-${"a".repeat(32)}.txt`;
+  let dir: string;
+  beforeEach(async () => {
+    dir = await mkdtemp(join(tmpdir(), "canvas-sessions-"));
+  });
+  afterEach(async () => {
+    await rm(dir, { recursive: true, force: true });
+  });
+  const pointer = (path: string) =>
+    `Output too large to read at once (530.7 KB). Saved to: ${path}\nConsider using tools...\n{"summary":`;
+
+  it.each([
+    ["another folder", (root: string) => join(root, "nested", name)],
+    ["another name", (root: string) => join(root, "result.txt")],
+    ["a relative path", () => name],
+  ])("never reads or removes a file in %s", async (_label, at) => {
+    const path = at(dir);
+    if (isAbsolute(path)) {
+      await mkdir(dirname(path), { recursive: true });
+      await writeFile(path, "{}");
+    }
+    expect(await readSavedOutput(pointer(path), dir)).toBeNull();
+    if (isAbsolute(path)) expect(existsSync(path)).toBe(true);
+  });
+
+  it("reads the saved file through the native read and removes it", async () => {
+    const path = join(tmpdir(), `${Date.now()}-copilot-tool-output-${"b".repeat(32)}.txt`);
+    await writeFile(path, JSON.stringify(status([{ id: current, name: "From file" }])));
+    const { session } = source(
+      vi.fn(async () => ({ resultType: "success", textResultForLlm: pointer(path) })),
+    );
+    const info = await createSessionsReader({ ...base, session })();
+    expect(info).toMatchObject({ source: "app", sessions: [{ title: "From file" }] });
+    expect(existsSync(path)).toBe(false);
+  });
 });
 
 it("limits to 30 newest rows and keeps the current session", async () => {
@@ -127,6 +217,26 @@ it.each([
     vi.fn(async () => ({ resultType: "success", textResultForLlm: text })),
   );
   expect((await createSessionsReader({ ...base, session })()).source).toBe("local");
+});
+
+it("answers with local rows while a slow app list loads, then shows the app list", async () => {
+  vi.useFakeTimers();
+  const slow = deferred<ReturnType<typeof result>>();
+  const { session } = source(vi.fn(() => slow.promise));
+  let now = timestamp;
+  const read = createSessionsReader({
+    ...base,
+    session,
+    now: () => now,
+    readMetadata: async () => [{ id: current, updatedAt: time }],
+  });
+  const first = read();
+  await vi.advanceTimersByTimeAsync(3000);
+  expect((await first).source).toBe("local");
+  slow.resolve(result(status([{ id: current, name: "Named" }])));
+  await vi.advanceTimersByTimeAsync(0);
+  now += 1000;
+  expect(await read()).toMatchObject({ source: "app", sessions: [{ title: "Named" }] });
 });
 
 it("times out once without overlapping or retrying the native invocation", async () => {

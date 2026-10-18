@@ -34,7 +34,40 @@ export {
   type SendStatus,
 } from "./contract/errors.mts";
 export { LIMITS } from "./contract/limits.mts";
-export type { QueueState } from "./contract/queue.mts";
+export {
+  QUEUE_LIMITS,
+  validateQueueState,
+  validateQueuePayload,
+  type QueueState,
+  type QueueItem,
+  type QueueChange,
+} from "./contract/queue.mts";
+export {
+  ACTIVITY_LIMITS,
+  pruneActivity,
+  validateActivity,
+  validateActivityItem,
+  type ActivityItem,
+  type ReasoningItem,
+  type ToolItem,
+  type ToolState,
+} from "./contract/activity.mts";
+export {
+  CONTEXT_LIMITS,
+  validateContextState,
+  validateContextUsage,
+  type ContextUsage,
+  type ContextState,
+  type CompactionReport,
+} from "./contract/context.mts";
+export {
+  SKILL_LIMITS,
+  isSkillName,
+  parseSlashCommand,
+  validateSkills,
+  type SkillsInfo,
+  type SkillSummary,
+} from "./contract/skills.mts";
 export {
   APP_SESSION_ID,
   MAX_SESSIONS,
@@ -70,6 +103,7 @@ export {
   IDENTITY_APP,
   SSE_EVENTS,
   type Bootstrap,
+  type AppendData,
   type Identity,
   type PanelConfig,
   type ReloadPayload,

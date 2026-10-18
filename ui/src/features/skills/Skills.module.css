@@ -1,0 +1,24 @@
+/* The composer's skill picker: a list above the card, rows big enough to tap. */
+.dropdown {
+  padding: var(--cc-space-1);
+}
+
+.options {
+  max-height: min(320px, 45dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.option {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-height: 44px;
+}
+
+/* A soft highlight keeps the dimmed description readable on the active row. */
+.option[data-combobox-selected] {
+  background: var(--cc-accent-soft);
+  color: var(--cc-text);
+}

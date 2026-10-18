@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { makeRequestId, requestStop, sendMessage } from "../api";
+import { makeRequestId, requestQueueChange, requestStop, sendMessage } from "../api";
 import { ActivityBar } from "../components/ActivityBar";
 import { Composer, type ComposerNotice } from "../components/Composer";
 import { PendingPrompts } from "../features/prompts/PendingPrompts";
 import { useStopOnEscape } from "../components/stopOnEscape";
 import { Transcript, type PendingMessage } from "../components/Transcript";
-import { QueuedMessages } from "../components/QueuedMessages";
+import { QueuedMessages, queueRows } from "../components/QueuedMessages";
 import { onSuggestedPrompt } from "../composerDraft";
-import { resolvePending, transcriptAttachments, type SendMode } from "../shared";
+import { resolvePending, transcriptAttachments, type QueueChange, type SendMode } from "../shared";
 import { useAttachments } from "../features/attachments/useAttachments";
+import { appendDictation } from "../features/dictation/model";
 import styles from "./ChatView.module.css";
 import type { ViewProps } from "./types";
 
@@ -74,6 +75,13 @@ export function ChatView({ connection }: ViewProps) {
     removeAttachments(uncertain.attachmentIds);
   }, [uncertain, view.entries, removeAttachments]);
 
+  const changeQueue = async (change: QueueChange): Promise<string | null> => {
+    if (!context || locked) return "Not connected.";
+    const outcome = await requestQueueChange(context, change);
+    if (outcome.kind === "stale") markStale();
+    return outcome.kind === "done" || outcome.kind === "gone" ? null : outcome.message;
+  };
+
   const pickPrompt = (text: string) => {
     setDraft(text);
     input.current?.focus();
@@ -82,8 +90,8 @@ export function ChatView({ connection }: ViewProps) {
   // Suggestions from elsewhere in the shell (for example the aside) land in this composer.
   useEffect(() => onSuggestedPrompt(pickPrompt), []);
 
-  const submit = async (mode: SendMode = "immediate") => {
-    const text = draft;
+  const submit = async (mode: SendMode = "immediate", override?: string) => {
+    const text = override ?? draft;
     if (
       inFlight.current ||
       attachments.reading ||
@@ -153,6 +161,8 @@ export function ChatView({ connection }: ViewProps) {
       <Transcript
         entries={view.entries}
         pending={visiblePending.filter((item) => item.mode !== "enqueue")}
+        activity={view.activity}
+        live={running}
         assistantName={assistantName}
         description={config?.description}
         onPickPrompt={pickPrompt}
@@ -168,14 +178,21 @@ export function ChatView({ connection }: ViewProps) {
               onStale={markStale}
             />
             <ActivityBar status={view.status} promptShown={view.prompts.length > 0} />
-            <QueuedMessages messages={visiblePending.filter((item) => item.mode === "enqueue")} />
+            <QueuedMessages
+              rows={queueRows(
+                view.queue?.items,
+                visiblePending.filter((item) => item.mode === "enqueue"),
+              )}
+              onChange={changeQueue}
+              disabled={locked}
+            />
           </div>
         </div>
         <Composer
           connection={connection}
           value={draft}
           onChange={setDraft}
-          onSubmit={(mode) => void submit(mode)}
+          onSubmit={(mode, text) => void submit(mode, text)}
           busy={busy}
           disabled={locked || context === null}
           notice={notice}
@@ -184,6 +201,10 @@ export function ChatView({ connection }: ViewProps) {
           onStop={onStop}
           stopping={stopping}
           attachments={attachments}
+          onDictation={(text) => {
+            setDraft((current) => appendDictation(current, text));
+            input.current?.focus();
+          }}
         />
       </div>
     </div>

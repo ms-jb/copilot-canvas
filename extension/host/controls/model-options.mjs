@@ -19,18 +19,37 @@ function stringList(value, pattern) {
     }
     return out;
 }
+function record(value) {
+    return isPlainObject(value) ? value : null;
+}
+function tokenCount(value) {
+    return typeof value === "number" && Number.isSafeInteger(value) && value > 0 ? value : undefined;
+}
 /**
  * Providers declare tiers or publish long-context pricing. The standard window is always paired
- * with long_context; no other tiers are invented.
+ * with long_context; no other tiers are invented. `session.model.list` returns raw catalog
+ * entries (snake_case `billing.token_prices.long_context`); the curated `models.list` shape is
+ * camelCase (`billing.tokenPrices.longContext`). Both are read.
  */
-function contextTiersOf(model) {
-    const declared = stringList(model.supportedContextTiers, /^[a-z_]{1,32}$/).filter(isTier);
-    const billing = isPlainObject(model.billing) ? model.billing : null;
-    const prices = billing && isPlainObject(billing.tokenPrices) ? billing.tokenPrices : null;
-    const priced = prices !== null && isPlainObject(prices.longContext);
-    if (!declared.includes("long_context") && !priced)
-        return [];
-    return ["default", "long_context"];
+function contextOf(model) {
+    const declared = stringList(model.supportedContextTiers ?? model.supported_context_tiers, /^[a-z_]{1,32}$/).filter(isTier);
+    const billing = record(model.billing);
+    const prices = record(billing?.tokenPrices ?? billing?.token_prices);
+    const standard = record(prices?.default) ?? prices;
+    const long = record(prices?.longContext ?? prices?.long_context);
+    if (!declared.includes("long_context") && !long)
+        return {};
+    const tokens = {};
+    const standardTokens = tokenCount(standard?.maxPromptTokens ?? standard?.max_prompt_tokens);
+    const longTokens = tokenCount(long?.maxPromptTokens ?? long?.max_prompt_tokens);
+    if (standardTokens)
+        tokens.default = standardTokens;
+    if (longTokens)
+        tokens.long_context = longTokens;
+    return {
+        contextTiers: ["default", "long_context"],
+        ...(Object.keys(tokens).length > 0 ? { contextTokens: tokens } : {}),
+    };
 }
 export function toModelOption(value) {
     if (!isPlainObject(value))
@@ -55,10 +74,7 @@ export function toModelOption(value) {
             option.defaultReasoningEffort = value.defaultReasoningEffort;
         }
     }
-    const tiers = contextTiersOf(value);
-    if (tiers.length > 0)
-        option.contextTiers = tiers;
-    return option;
+    return { ...option, ...contextOf(value) };
 }
 export function parseModelList(value) {
     const list = isPlainObject(value) && Array.isArray(value.list) ? value.list : [];

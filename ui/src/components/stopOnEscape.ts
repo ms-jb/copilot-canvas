@@ -17,6 +17,13 @@ export interface EscapeKey {
   overlayOpen: boolean;
 }
 
+// Mantine keeps a closed Combobox's listbox in the DOM, hidden; only a rendered overlay counts.
+function overlayShown(): boolean {
+  return Array.from(document.querySelectorAll(OVERLAY)).some(
+    (element) => element.getClientRects().length > 0,
+  );
+}
+
 /** One plain Escape press that nothing else has used. */
 export function escapeStops(key: EscapeKey): boolean {
   return (
@@ -51,7 +58,7 @@ export function useStopOnEscape(
         isComposing: event.isComposing || event.keyCode === 229,
         modified: event.ctrlKey || event.altKey || event.metaKey || event.shiftKey,
         fromChat: !target || target === document.body || chat.contains(target),
-        overlayOpen: Boolean(target?.closest(EXPANDED) || document.querySelector(OVERLAY)),
+        overlayOpen: Boolean(target?.closest(EXPANDED)) || overlayShown(),
       });
       if (!stops) return;
       event.preventDefault();

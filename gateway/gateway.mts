@@ -3,6 +3,7 @@
 import { rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { renderSVG, renderUnicodeCompact } from "uqr";
 import {
   gatewayStatePath,
   loadConfig,
@@ -13,6 +14,7 @@ import {
 import {
   buildGatewayState,
   readGatewayState,
+  writePrivateFile,
   writePrivateJson,
 } from "../src/shared/node/runtime-state.mts";
 import { createGateway } from "./server/gateway.mts";
@@ -44,7 +46,12 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   const share = config.gatewayAllowedOrigin ? buildGatewayState(config.gatewayAllowedOrigin) : null;
   if (share) {
     writePrivateJson(sharePath, share);
+    // The same QR is saved as an image so setup can post it in chat; it holds only the public link.
+    const qrPath = join(runtimeDir(config), "phone-qr.svg");
+    writePrivateFile(qrPath, renderSVG(share.publicUrl, { border: 2, pixelSize: 8 }));
     console.log(`Open on phone: ${share.publicUrl}`);
+    console.log(`\n${renderUnicodeCompact(share.publicUrl, { border: 2 })}\n`);
+    console.log(`QR image: ${qrPath}`);
     console.log("Use an owner-only tunnel and a browser signed in as the tunnel owner.");
   } else {
     console.log("Set GATEWAY_ALLOWED_ORIGIN to your tunnel origin to enable Open on phone.");
