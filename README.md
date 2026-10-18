@@ -14,6 +14,10 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
   installs software, publishes anything or turns on phone access.</sub>
 </p>
 
+<p align="center">
+  <sub>First time installing the Copilot app? It may still be installing or signing in when you click, which can lose the link. Come back to this README and click the buttons again.</sub>
+</p>
+
 <br>
 
 <table>
