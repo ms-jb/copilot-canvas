@@ -1,7 +1,7 @@
-import { ActionIcon, Text, VisuallyHidden } from "@mantine/core";
+import { Text, VisuallyHidden } from "@mantine/core";
 import { formatElapsed } from "./model";
 import type { Dictation } from "./useDictation";
-import { useTouchSize } from "../../components/touchSize";
+import { ComposerIconButton } from "../../components/ComposerIconButton";
 import styles from "./Dictation.module.css";
 
 const ANNOUNCE: Record<string, string> = {
@@ -16,23 +16,20 @@ export function MicButton({ dictation, disabled }: { dictation: Dictation; disab
   const { phase } = state;
   const active = phase === "starting" || phase === "recording";
   const label = active ? "Stop dictation" : "Dictate";
-  const size = useTouchSize();
   if (engine === null) return null;
   return (
     <>
-      <ActionIcon
-        variant={active ? "light" : "subtle"}
+      <ComposerIconButton
+        label={label}
+        tip={active ? "Stop dictation (Esc)" : label}
+        active={active}
         color={active ? "red" : "gray"}
-        size={size}
-        radius="md"
         className={styles.mic}
         data-state={phase}
         disabled={disabled && !active}
         loading={phase === "starting"}
         loaderProps={{ size: 16 }}
         aria-pressed={active}
-        aria-label={label}
-        title={active ? "Stop dictation (Esc)" : label}
         onClick={toggle}
       >
         {active ? (
@@ -60,7 +57,7 @@ export function MicButton({ dictation, disabled }: { dictation: Dictation; disab
             />
           </svg>
         )}
-      </ActionIcon>
+      </ComposerIconButton>
       {phase === "recording" && (
         <Text span size="xs" c="red" className={styles.elapsed} aria-hidden="true">
           <span className={styles.dot} />

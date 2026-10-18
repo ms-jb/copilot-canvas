@@ -52,6 +52,7 @@ const SOFT_SURFACES: Readonly<Record<string, string>> = {
   red: "var(--cc-danger-soft)",
   yellow: "var(--cc-warning-soft)",
   orange: "var(--cc-warning-soft)",
+  green: "var(--cc-success-soft)",
 };
 
 // Filled accent buttons use the accent's contrast ink (dark on the bright dark-theme accent).
@@ -61,7 +62,14 @@ const variantColorResolver: VariantColorsResolver = (input) => {
     return { ...result, color: "var(--cc-accent-contrast)" };
   }
   const soft = input.variant === "light" && input.color ? SOFT_SURFACES[input.color] : undefined;
-  if (soft) return { ...result, background: soft, hover: soft };
+  if (soft) {
+    // Green's ink is pulled toward the text color so it reads on its soft surface in both schemes.
+    const ink =
+      input.color === "green"
+        ? `color-mix(in srgb, ${result.color} 75%, var(--cc-text))`
+        : result.color;
+    return { ...result, background: soft, hover: soft, color: ink };
+  }
   return result;
 };
 

@@ -1,5 +1,6 @@
 import { CloseButton, Group, Image, Paper, Text } from "@mantine/core";
 import type { ReactNode } from "react";
+import { ComposerTooltip } from "../../components/ComposerIconButton";
 import type { TranscriptAttachment } from "../../shared";
 import type { DraftAttachment } from "./useAttachments";
 import styles from "./Attachments.module.css";
@@ -80,14 +81,15 @@ export function DraftAttachments({
               : undefined
           }
         >
-          <CloseButton
-            size={44}
-            iconSize={18}
-            aria-label={`Remove ${file.name}`}
-            title={`Remove ${file.name}`}
-            disabled={disabled}
-            onClick={() => onRemove(id)}
-          />
+          <ComposerTooltip label={`Remove ${file.name}`}>
+            <CloseButton
+              size={44}
+              iconSize={18}
+              aria-label={`Remove ${file.name}`}
+              disabled={disabled}
+              onClick={() => onRemove(id)}
+            />
+          </ComposerTooltip>
         </Item>
       ))}
     </Group>

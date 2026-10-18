@@ -33,6 +33,7 @@
   --cc-warning: var(--fgColor-attention, #9a6700);
   --cc-warning-soft: var(--bgColor-attention-muted, #fff8c5);
   --cc-success: var(--fgColor-success, #1a7f37);
+  --cc-success-soft: var(--bgColor-success-muted, #dafbe1);
   --cc-focus: var(--color-focus-outline, var(--cc-accent));
 
   /* Shape */
@@ -98,6 +99,7 @@
     --cc-warning: var(--fgColor-attention, #d29922);
     --cc-warning-soft: var(--bgColor-attention-muted, rgb(187 128 9 / 15%));
     --cc-success: var(--fgColor-success, #3fb950);
+    --cc-success-soft: var(--bgColor-success-muted, rgb(46 160 67 / 15%));
 
     --cc-shadow-sm: 0 1px 2px rgb(1 4 9 / 40%);
     --cc-shadow-md: 0 1px 3px rgb(1 4 9 / 40%), 0 8px 24px rgb(1 4 9 / 50%);

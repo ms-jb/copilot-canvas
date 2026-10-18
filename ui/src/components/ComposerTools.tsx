@@ -1,11 +1,11 @@
-import { ActionIcon, FileButton, Menu, Tooltip } from "@mantine/core";
-import { useRef, type ReactNode } from "react";
+import { FileButton, Menu } from "@mantine/core";
+import { useRef, useState, type ReactNode } from "react";
 import { ATTACHMENT_ACCEPT } from "../features/attachments/files";
 import type { useAttachments } from "../features/attachments/useAttachments";
 import { SkillButton } from "../features/skills/SkillPicker";
 import type { SkillPickerState } from "../features/skills/useSkillPicker";
 import type { ComposerFit } from "./composerFit";
-import { useTouchSize } from "./touchSize";
+import { ComposerIconButton } from "./ComposerIconButton";
 
 const PaperclipIcon = () => (
   <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -50,7 +50,7 @@ export function ComposerTools({
   skillsDisabled: boolean;
   mic: ReactNode;
 }) {
-  const size = useTouchSize();
+  const [menuOpened, setMenuOpened] = useState(false);
   const resetPicker = useRef<() => void>(null);
   const attachLabel = attachments.reading ? "Reading attachments" : "Attach files";
   const folded = fit === "narrow";
@@ -70,19 +70,24 @@ export function ComposerTools({
       >
         {(props) =>
           folded ? (
-            <Menu position="top-start" offset={8} returnFocus={false} withinPortal={false}>
+            <Menu
+              position="top-start"
+              offset={8}
+              returnFocus={false}
+              withinPortal={false}
+              opened={menuOpened}
+              onChange={setMenuOpened}
+            >
               <Menu.Target>
-                <ActionIcon
-                  size={size}
-                  radius="md"
-                  variant="subtle"
-                  color="gray"
+                <ComposerIconButton
+                  label="Add to message"
+                  active={menuOpened}
+                  hideTip={menuOpened}
                   loading={attachments.reading}
                   loaderProps={{ size: 16 }}
-                  aria-label="Add to message"
                 >
                   <PlusIcon />
-                </ActionIcon>
+                </ComposerIconButton>
               </Menu.Target>
               <Menu.Dropdown>
                 <Menu.Item
@@ -104,26 +109,21 @@ export function ComposerTools({
               </Menu.Dropdown>
             </Menu>
           ) : (
-            <Tooltip label="Attach images, PDF or text files">
-              <ActionIcon
-                {...props}
-                size={size}
-                radius="md"
-                variant="subtle"
-                color="gray"
-                disabled={attachmentsDisabled}
-                loading={attachments.reading}
-                loaderProps={{ size: 16 }}
-                aria-label={attachLabel}
-              >
-                <PaperclipIcon />
-              </ActionIcon>
-            </Tooltip>
+            <ComposerIconButton
+              {...props}
+              label={attachLabel}
+              tip="Attach images, PDF or text files"
+              disabled={attachmentsDisabled}
+              loading={attachments.reading}
+              loaderProps={{ size: 16 }}
+            >
+              <PaperclipIcon />
+            </ComposerIconButton>
           )
         }
       </FileButton>
       {mic}
-      {!folded && <SkillButton picker={skills} size={size} disabled={skillsDisabled} />}
+      {!folded && <SkillButton picker={skills} disabled={skillsDisabled} />}
     </>
   );
 }

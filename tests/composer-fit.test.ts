@@ -27,7 +27,7 @@ describe("settingsSummary", () => {
     reasoningEffort: "high",
     models: [{ id: "opus", name: "Claude Opus 5.5", defaultReasoningEffort: "medium" }],
   };
-  const all = { mode: true, model: true, effort: true };
+  const all = { model: true, effort: true };
 
   it("names the model and effort", () => {
     expect(settingsSummary(controls, all)).toBe("Claude Opus 5.5 · High");
@@ -39,12 +39,21 @@ describe("settingsSummary", () => {
     );
   });
 
-  it("leads with a mode that changes behavior, and stands alone with nothing else", () => {
-    expect(settingsSummary({ ...controls, mode: "plan" }, all)).toBe(
-      "Plan · Claude Opus 5.5 · High",
-    );
-    expect(settingsSummary(controls, { mode: true, model: false, effort: false })).toBe(
-      "Interactive",
-    );
+  it("leaves the mode to its own chip and adds the context window only on a wide composer", () => {
+    const tiered = {
+      ...controls,
+      mode: "plan" as const,
+      models: [
+        {
+          id: "opus",
+          name: "Claude Opus 5.5",
+          contextTiers: ["default" as const, "long_context" as const],
+          contextTokens: { default: 200_000 },
+        },
+      ],
+    };
+    const shown = { ...all, tier: true };
+    expect(settingsSummary(tiered, shown)).toBe("Claude Opus 5.5 · High");
+    expect(settingsSummary(tiered, shown, true)).toBe("Claude Opus 5.5 · High · 200k");
   });
 });

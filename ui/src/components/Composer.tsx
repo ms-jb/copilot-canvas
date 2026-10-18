@@ -8,7 +8,10 @@ import { SendButton } from "./SendButton";
 import { useTouchSize } from "./touchSize";
 import { composerFit } from "./composerFit";
 import { ComposerTools } from "./ComposerTools";
+import { ModeChip } from "./controls/ModeChip";
+import { cyclesMode } from "./controls/mode";
 import { SessionControls } from "./controls/SessionControls";
+import { useSessionSettings } from "./controls/useSessionSettings";
 import styles from "./Composer.module.css";
 import { clipboardFiles } from "../features/attachments/files";
 import { DraftAttachments } from "../features/attachments/AttachmentList";
@@ -68,6 +71,7 @@ export function Composer({
   const fieldRef = useMergedRef(field, inputRef);
   const mirror = useRef<HTMLDivElement>(null);
   const size = useTouchSize();
+  const settings = useSessionSettings(connection);
   const { ref: cardRef, width: cardWidth } = useElementSize<HTMLDivElement>();
   const fit = composerFit(cardWidth);
   const dictation = useDictation({
@@ -111,6 +115,11 @@ export function Composer({
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (skills.onKeyDown(event)) return;
+    // Shift+Tab steps through the modes; plain Tab and every other chord keep moving focus.
+    if (cyclesMode({ ...event, isComposing: event.nativeEvent.isComposing })) {
+      if (settings.cycleMode()) event.preventDefault();
+      return;
+    }
     // Enter sends, Ctrl/Cmd/Alt+Enter queues, Shift+Enter inserts a newline; never fire while an
     // IME is composing.
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -135,6 +144,7 @@ export function Composer({
           className={styles.card}
           data-composer-fit={fit}
           data-disabled={disabled || undefined}
+          data-mode={settings.mode}
         >
           {attachments.items.length > 0 && (
             <DraftAttachments
@@ -149,6 +159,7 @@ export function Composer({
               {dictation.state.problem}
             </Notice>
           )}
+          {settings.error && <Notice kind="error">{settings.error}</Notice>}
           {notice && <Notice kind={notice.kind}>{notice.message}</Notice>}
           <Textarea
             ref={fieldRef}
@@ -212,7 +223,8 @@ export function Composer({
               mic={<MicButton dictation={dictation} disabled={disabled || busy} />}
             />
             <Box className={styles.controls}>
-              <SessionControls connection={connection} fit={fit} />
+              <ModeChip settings={settings} compact={fit === "narrow"} />
+              <SessionControls settings={settings} fit={fit} />
             </Box>
             {shown.length >= COUNTER_FROM && (
               <Text
