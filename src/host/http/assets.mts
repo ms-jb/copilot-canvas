@@ -28,6 +28,7 @@ const MIME_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ".txt": "text/plain; charset=utf-8",
   ".wasm": "application/wasm",
 });
+const APPLE_TOUCH_ICONS = new Set(["apple-touch-icon.png", "apple-touch-icon-precomposed.png"]);
 function buildCsp(frameAncestors: string): string {
   const directives = [
     "default-src 'none'",
@@ -104,8 +105,12 @@ export function createAssetHandler({
       if (!realTarget.startsWith(realRoot + sep)) return notFound();
       const info = await stat(realTarget);
       if (!info.isFile()) return notFound();
+      const path = segments.join("/");
       res.writeHead(200, {
         ...baseHeaders(MIME_TYPES[extname(realTarget).toLowerCase()] ?? "application/octet-stream"),
+        ...(APPLE_TOUCH_ICONS.has(path)
+          ? { "cache-control": "public, max-age=31536000, immutable" }
+          : {}),
         "content-length": info.size,
       });
       if (req.method === "HEAD") {

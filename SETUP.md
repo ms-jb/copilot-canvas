@@ -73,6 +73,8 @@ platform's shell and paths (Windows or macOS).
      send a message from the phone. Confirm it arrives in this conversation.
    - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
      phone and browser, and it then opens like an app.
+   - After icon changes, tell the user to delete the existing home-screen app and add it again
+     (**Share → Add to Home Screen**): iOS snapshots the icon when the app is added.
    - Then offer notifications: in the installed app, tap the bell, **Turn on**, then **Send test**.
      Confirm the test arrives. Pushes carry no content. Later notifications stay quiet while the app
      is open in front; the bell has a switch to change that.

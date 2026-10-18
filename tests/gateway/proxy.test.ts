@@ -22,7 +22,12 @@ let upstreamPaths: string[];
 
 // Plain http request so tests can set Host and Origin freely (fetch forbids it).
 function call(path: string, headers: http.OutgoingHttpHeaders = {}, method = "GET", body?: string) {
-  return new Promise<{ status: number; json: () => any }>((resolve, reject) => {
+  return new Promise<{
+    status: number;
+    headers: http.IncomingHttpHeaders;
+    text: string;
+    json: () => any;
+  }>((resolve, reject) => {
     const request = http.request(
       {
         host: "127.0.0.1",
@@ -37,7 +42,12 @@ function call(path: string, headers: http.OutgoingHttpHeaders = {}, method = "GE
         response.on("data", (chunk: Buffer) => chunks.push(chunk));
         response.on("end", () => {
           const text = Buffer.concat(chunks).toString();
-          resolve({ status: response.statusCode ?? 0, json: () => JSON.parse(text) });
+          resolve({
+            status: response.statusCode ?? 0,
+            headers: response.headers,
+            text,
+            json: () => JSON.parse(text),
+          });
         });
       },
     );
@@ -88,7 +98,14 @@ beforeEach(async () => {
       );
     } else {
       upstreamPaths.push(path);
-      response.writeHead(200).end("ok");
+      response
+        .writeHead(
+          200,
+          path.includes("apple-touch-icon")
+            ? { "cache-control": "public, max-age=31536000, immutable" }
+            : {},
+        )
+        .end("ok");
     }
   });
   await new Promise<void>((resolve) => provider.listen(0, "127.0.0.1", resolve));
@@ -119,6 +136,20 @@ it("forwards allow-listed paths to the provider capability path", async () => {
   publish(GENERATION);
   expect((await call("/api/bootstrap")).status).toBe(200);
   expect(upstreamPaths).toEqual([`${CAPABILITY}api/bootstrap`]);
+});
+
+it("forwards root apple-touch fallback icons as static GET routes", async () => {
+  publish(GENERATION);
+  const icon = await call("/apple-touch-icon.png");
+  const precomposed = await call("/apple-touch-icon-precomposed.png");
+  expect(icon.status).toBe(200);
+  expect(precomposed.status).toBe(200);
+  expect(icon.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  expect(precomposed.headers["cache-control"]).toBe("public, max-age=31536000, immutable");
+  expect(upstreamPaths).toEqual([
+    `${CAPABILITY}apple-touch-icon.png`,
+    `${CAPABILITY}apple-touch-icon-precomposed.png`,
+  ]);
 });
 
 it("forwards only GET for the sessions list", async () => {

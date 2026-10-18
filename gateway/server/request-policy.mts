@@ -16,6 +16,8 @@ export const FORWARDED_HEADERS = [
 const ASSET_PATH = /^\/assets\/(?:[A-Za-z0-9._~@-]+\/)*[A-Za-z0-9._~@-]+$/;
 const ROUTES: Record<string, string> = {
   "/": "GET",
+  "/apple-touch-icon.png": "GET",
+  "/apple-touch-icon-precomposed.png": "GET",
   [`/${API.identity}`]: "GET",
   [`/${API.bootstrap}`]: "GET",
   [`/${API.events}`]: "GET",
