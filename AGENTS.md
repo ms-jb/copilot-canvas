@@ -21,6 +21,10 @@ in a session without this repository and the user has no copy yet, follow [SETUP
 Views and panels take `ViewProps` (`connection`: transcript, status, settings, config). Build them
 from native Mantine components (next section) and the existing `--cc-*` tokens.
 
+`template.config.json` ships with the extension, so keep secrets out of it. `ASSISTANT_NAME`,
+`EXTENSION_NAME`, `CANVAS_ID` (keep it stable), `GATEWAY_PORT` and `GATEWAY_ALLOWED_ORIGIN`
+environment variables override its values.
+
 ## UI: native Mantine first
 
 The renderer is Mantine 9. Compose its components; don't rebuild one from `div`s, raw elements and CSS.
@@ -64,9 +68,15 @@ them only through `ui/src/shared.ts`. The gateway may use `src/shared/node/`, bu
 A background builder does steps 1 and 2 and reports. The conversation the user talks to does the
 rest and keeps guiding them meanwhile (see `customization-workflow`).
 
-1. Preview without Copilot: `npx vp dev` (`?state=empty|waiting|busy|offline` for other states).
-2. Check: `npx vp check` and `npx vp test`. Add a test for new logic.
-3. Install: `npm run install-ext` (builds, then installs from this copy).
+1. Preview without Copilot: `npx vp dev` (`?state=empty|waiting|busy|nocontrols|offline` for other
+   states). `DEV_PUBLIC_URL=https://...` changes the preview's Open on phone origin;
+   `DEV_PUBLIC_URL=off` hides it.
+2. Check: `npx vp check` and `npx vp test`. Add a test for new logic. `npx vp build` builds the
+   canvas into `extension/` on its own, if you need that without a full install.
+3. Install: `npm run install-ext [name] [--force] [--dir <extensions-root>]` (builds, then installs
+   from this copy). It replaces only an earlier install of this canvas (its own or a link install
+   with the same canvas id) unless you pass `--force`, and records where it was installed from so
+   the canvas's suggestions point Copilot at this copy.
 4. Ask the user to tap **Reload extensions** (the circular arrow in the canvas's top bar) and to open
    the canvas again. Confirm the change is visible. Reloading never restarts the phone gateway:
    after changing `gateway/` or the shared contract it imports, restart `npm run phone` too, or the
@@ -86,6 +96,14 @@ testable.
 **Skills.** Follow `.github/skills/customization-workflow` for every change, plus
 `add-view-or-panel` for UI, `add-data-endpoint` for outside data and `theme-and-identity` for names,
 colors and the phone app's branding.
+
+## Phone tunnel
+
+`npm run phone` signs in to dev tunnels (`devtunnel user login -d`) if needed, then creates an
+owner-only tunnel once and remembers its id outside the repository; a tunnel that grants anyone
+else access is refused, never changed. It adds port 47600 with `--origin-header unchanged`, so the
+gateway can check the phone's exact address, then hosts the tunnel and starts the gateway with
+`GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address.
 
 ## Push a notice to the phone
 
