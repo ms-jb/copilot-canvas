@@ -6,6 +6,44 @@ import { syncExtension } from "./scripts/sync-extension.mts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
 const ignore = ["extension/**", "node_modules/**"];
+// Renderer UI uses native Mantine components (see AGENTS.md, "UI: native Mantine first").
+const mantine = (component: string) => `Use Mantine ${component}, not raw markup.`;
+const mantineInstead = [
+  { element: "button", message: mantine("Button, ActionIcon, UnstyledButton or CloseButton") },
+  { element: "input", message: mantine("TextInput, Checkbox, Switch, Radio or FileButton") },
+  { element: "select", message: mantine("NativeSelect, Select or SegmentedControl") },
+  { element: "textarea", message: mantine("Textarea") },
+  { element: "dialog", message: mantine("Modal, Drawer or Popover") },
+  { element: "progress", message: mantine("Progress, RingProgress or Loader") },
+  { element: "meter", message: mantine("Progress or RingProgress") },
+  { element: "table", message: mantine("Table") },
+  { element: "img", message: mantine("Image or Avatar") },
+  { element: "a", message: mantine("Anchor") },
+  { element: "header", message: mantine("AppShell.Header or Group") },
+  { element: "nav", message: mantine("AppShell.Navbar, NavLink or Tabs") },
+  { element: "main", message: mantine("AppShell.Main") },
+  { element: "aside", message: mantine("AppShell.Aside") },
+  { element: "footer", message: mantine("AppShell.Footer") },
+];
+// Renders Markdown syntax to its own HTML elements.
+const rawMarkupExempt = ["ui/src/MarkdownView.tsx"];
+// Template code predating the rule. Migrate a file to Mantine, then delete it here; never add one.
+const mantineDebt = [
+  "ui/src/components/Composer.tsx",
+  "ui/src/components/Message.tsx",
+  "ui/src/components/SendButton.tsx",
+  "ui/src/components/Transcript.tsx",
+  "ui/src/components/controls/ControlPicker.tsx",
+  "ui/src/components/controls/SessionControls.tsx",
+  "ui/src/features/attachments/AttachmentList.tsx",
+  "ui/src/features/prompts/FormBody.tsx",
+  "ui/src/features/prompts/PendingPrompts.tsx",
+  "ui/src/features/sessions/SessionsSection.tsx",
+  "ui/src/layout/Shell.tsx",
+  "ui/src/layout/Sidebar.tsx",
+  "ui/src/layout/TopBar.tsx",
+  "ui/src/views/panels/AddPanelCard.tsx",
+];
 const uiRestrictedImports = [
   "**/src/host/**",
   "**/src/shared/node/**",
@@ -40,6 +78,19 @@ export default defineConfig({
       "import/no-cycle": ["error", { ignoreTypes: true }],
     },
     overrides: [
+      {
+        files: ["ui/**/*.tsx"],
+        excludeFiles: [...rawMarkupExempt, ...mantineDebt],
+        plugins: ["react"],
+        rules: {
+          "react/forbid-elements": ["error", { forbid: mantineInstead }],
+          // The plugin is here for forbid-elements; its default rules are a separate cleanup.
+          "react/jsx-key": "off",
+          "react/purity": "off",
+          "react/refs": "off",
+          "react/set-state-in-effect": "off",
+        },
+      },
       {
         files: ["ui/**"],
         rules: {
