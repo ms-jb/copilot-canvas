@@ -32,9 +32,13 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 </details>
 
 > [!NOTE]
-> The one-click link needs the Copilot app signed in with a **github.com** account. Without one,
-> paste this into any Copilot chat instead: _"Set up Copilot Canvas by following
-> https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_.
+> The one-click link needs the Copilot app signed in with a **github.com** account. Its `repo`
+> setting has no host, so an app signed in to GitHub Enterprise Cloud (`*.ghe.com`) looks for
+> `ms-jb/copilot-canvas` there and fails. In that case, in the app click **+** next to **Projects**,
+> choose **Repository URL**, clone `https://github.com/ms-jb/copilot-canvas`, start a session in
+> that folder and paste: _"Set up Copilot Canvas by following
+> https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_. You can also paste that sentence
+> into any Copilot chat.
 
 ## What you need
 
