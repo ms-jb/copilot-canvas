@@ -22,6 +22,7 @@ export function sessionLink(row: SessionSummary, nativePanel: boolean): string |
     : undefined;
 }
 
-export function nativeSessionPanel(hostname: string, embedded: boolean, preview: boolean): boolean {
-  return !preview && embedded && ["127.0.0.1", "localhost", "[::1]"].includes(hostname);
+/** True in the desktop app (served on loopback); a phone opens the canvas through its tunnel. */
+export function nativeSessionPanel(hostname: string, preview: boolean): boolean {
+  return !preview && ["127.0.0.1", "localhost", "[::1]"].includes(hostname);
 }

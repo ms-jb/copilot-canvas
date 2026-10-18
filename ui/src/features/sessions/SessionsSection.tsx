@@ -6,11 +6,7 @@ import classes from "./SessionsSection.module.css";
 
 export function SessionsSection({ connection }: { connection: Connection }) {
   const { data, stale, retry } = useSessions(connection);
-  const nativePanel = nativeSessionPanel(
-    location.hostname,
-    window.parent !== window,
-    import.meta.env.DEV,
-  );
+  const nativePanel = nativeSessionPanel(location.hostname, import.meta.env.DEV);
   const now = Date.now();
   return (
     <section className={classes.section} aria-label="Sessions">
@@ -79,7 +75,7 @@ export function SessionsSection({ connection }: { connection: Connection }) {
                 events={{ hover: true, focus: true, touch: true }}
               >
                 {href ? (
-                  <a href={href} className={classes.row}>
+                  <a href={href} target="_blank" rel="noopener noreferrer" className={classes.row}>
                     {content}
                   </a>
                 ) : (

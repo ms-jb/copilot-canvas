@@ -22,10 +22,9 @@ it("only links exact app UUIDs from the native embedded panel", () => {
   expect(sessionLink(row, false)).toBeUndefined();
   expect(sessionLink({ ...row, canOpen: false }, true)).toBeUndefined();
   expect(sessionLink({ ...row, id: "javascript:alert(1)" }, true)).toBeUndefined();
-  expect(nativeSessionPanel("localhost", true, false)).toBe(true);
-  expect(nativeSessionPanel("localhost", true, true)).toBe(false);
-  expect(nativeSessionPanel("localhost", false, false)).toBe(false);
-  expect(nativeSessionPanel("phone.example", true, false)).toBe(false);
+  expect(nativeSessionPanel("localhost", false)).toBe(true);
+  expect(nativeSessionPanel("localhost", true)).toBe(false);
+  expect(nativeSessionPanel("phone.example", false)).toBe(false);
 });
 
 it("maps unknown states honestly and handles relative, future and missing times", () => {
