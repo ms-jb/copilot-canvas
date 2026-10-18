@@ -40,7 +40,9 @@ rest and keeps guiding them meanwhile (see `customization-workflow`).
 2. Check: `npx vp check` and `npx vp test`. Add a test for new logic.
 3. Install: `npm run install-ext` (builds, then installs from this copy).
 4. Ask the user to tap **Reload extensions** (the circular arrow in the canvas's top bar) and to open
-   the canvas again. Confirm the change is visible.
+   the canvas again. Confirm the change is visible. Reloading never restarts the phone gateway:
+   after changing `gateway/` or the shared contract it imports, restart `npm run phone` too, or the
+   phone keeps rejecting new routes with 404.
 5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. If
    `origin` is still `ms-jb/copilot-canvas` and they don't own it, remind them a push needs their own
    fork first (`gh repo fork --remote` makes the fork `origin`).
