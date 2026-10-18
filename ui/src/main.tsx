@@ -22,6 +22,10 @@ function Root() {
 
 const container = document.getElementById("root");
 if (!container) throw new Error("Missing #root element");
+// iOS Safari ignores user-scalable=no, so block its pinch gestures directly.
+for (const type of ["gesturestart", "gesturechange"]) {
+  document.addEventListener(type, (event) => event.preventDefault(), { passive: false });
+}
 createRoot(container).render(
   <StrictMode>
     <Root />

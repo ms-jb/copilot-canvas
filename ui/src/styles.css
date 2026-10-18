@@ -127,6 +127,11 @@ body,
   margin: 0;
 }
 
+/* No pinch or double-tap zoom: the canvas is an app, not a page. */
+html {
+  touch-action: pan-x pan-y;
+}
+
 @media (max-width: 768px) {
   html,
   body,
