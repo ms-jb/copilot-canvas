@@ -15,16 +15,18 @@ export interface QueueRpcLike {
 }
 
 export type QueueOutcome = "done" | "gone" | "unavailable" | "failed";
+type ImmediateSend = (text: string, requestId: string) => Promise<boolean>;
 
 /** Reconcile only sends we admitted, never infer queue removal from an idle status alone. */
 export function createQueueTracker(
   rpc: QueueRpcLike | undefined,
   notify: (state: QueueState) => void,
-  { timeoutMs = 5000 }: { timeoutMs?: number } = {},
+  { timeoutMs = 5000, sendImmediate }: { timeoutMs?: number; sendImmediate?: ImmediateSend } = {},
 ) {
   const pending = new Map<string, string>();
   const confirmed = new Set<string>();
   const removed = new Set<string>();
+  const sentNow = new Map<string, QueueOutcome>();
   let items: QueueItem[] = [];
   let shown = "[]";
   let disposed = false;
@@ -35,6 +37,11 @@ export function createQueueTracker(
   const remember = (set: Set<string>, value: string) => {
     set.add(value);
     if (set.size > 500) set.delete(set.values().next().value!);
+  };
+  const rememberSendNow = (requestId: string, outcome: QueueOutcome): QueueOutcome => {
+    sentNow.set(requestId, outcome);
+    if (sentNow.size > 500) sentNow.delete(sentNow.keys().next().value!);
+    return outcome;
   };
 
   function refresh(): Promise<boolean> {
@@ -137,7 +144,40 @@ export function createQueueTracker(
     await reading;
     if (!(await refresh())) throw new Error("Queue could not be refreshed.");
   }
+  /** Sends the item's text as a normal message, then drops it from the queue; a repeat request id replays the outcome. */
+  async function sendNow(change: Extract<QueueChange, { action: "send_now" }>) {
+    const replay = sentNow.get(change.requestId);
+    if (replay) return replay;
+    if (
+      disposed ||
+      typeof sendImmediate !== "function" ||
+      typeof rpc?.removeAt !== "function" ||
+      typeof rpc.pendingItems !== "function"
+    )
+      return "unavailable";
+    try {
+      await freshRead();
+      if (disposed) return "unavailable";
+      const item = items.find((candidate) => candidate.id === change.id);
+      if (!item) return rememberSendNow(change.requestId, "gone");
+      // A clipped copy would send a partial message.
+      if (item.kind !== "message" || item.truncated) return "unavailable";
+      if (!(await sendImmediate(item.text, change.requestId))) {
+        return rememberSendNow(change.requestId, "failed");
+      }
+      const result: unknown = await readWithTimeout(
+        () => rpc.removeAt!({ id: change.id }),
+        timeoutMs,
+      );
+      await freshRead();
+      const gone = isPlainObject(result) && result.removed === false;
+      return rememberSendNow(change.requestId, gone ? "gone" : "done");
+    } catch {
+      return rememberSendNow(change.requestId, "failed");
+    }
+  }
   async function apply(change: QueueChange): Promise<QueueOutcome> {
+    if (change.action === "send_now") return sendNow(change);
     const method =
       change.action === "remove"
         ? rpc?.removeAt

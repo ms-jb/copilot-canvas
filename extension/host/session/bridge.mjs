@@ -16,7 +16,9 @@ export function createSessionBridge(session, { store = createTranscriptStore(), 
     const queue = createQueueTracker(session.rpc?.queue, (state) => {
         if (!disposed)
             events.emitNow({ type: "queue", queue: state });
-    });
+    }, 
+    // `sends` is created below; the tracker only calls this once a client asks to send now.
+    { sendImmediate: async (text, requestId) => (await sends.send(text, requestId)).ok });
     const context = createContextTracker(session.rpc, (state) => {
         if (!disposed)
             events.emitNow({ type: "context", context: state });

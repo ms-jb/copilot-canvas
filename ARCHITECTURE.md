@@ -117,7 +117,9 @@ There are no host audio endpoints, API keys or paid speech integrations.
 `GET api/skills` reads the current session's bounded skill catalog. Skill expansion happens only
 after an explicit send, through that session's command RPC. `GET api/context` reads measured
 context usage; automatic compaction events are displayed, but the canvas cannot initiate compaction.
-Queue editing uses `POST api/queue` behind the existing CSRF, generation and session policy.
+Queue editing (edit, move, remove, and Send now) uses `POST api/queue` behind the existing CSRF,
+generation and session policy. Send now sends the item's text as a normal message, then removes it;
+a repeated `requestId` replays the first outcome instead of sending again.
 These new endpoints are not forwarded by the phone gateway's existing allowlist.
 
 Activity summaries are bounded and redacted on the host. Reasoning remains expandable; tools

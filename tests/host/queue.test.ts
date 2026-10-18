@@ -188,6 +188,19 @@ it("attaches the composer request id to the queue item it created", async () => 
   bridge.dispose();
 });
 
+it("sends a queued message now through the session, then drops it from the queue", async () => {
+  const rpc = fakeNativeQueue(["wait", "later"]);
+  const send = vi.fn(async (_options: { prompt: string; mode?: string }) => "m9");
+  const bridge = createSessionBridge({ ...fakeSession({ queue: rpc }), send });
+  await bridge.ready;
+  expect(
+    await bridge.changeQueue({ action: "send_now", id: "q1", requestId: "request-0009" }),
+  ).toBe("done");
+  expect(send).toHaveBeenCalledWith(expect.objectContaining({ prompt: "wait", mode: "immediate" }));
+  expect(bridge.getSnapshot().snapshot.queue?.items?.map((item) => item.text)).toEqual(["later"]);
+  bridge.dispose();
+});
+
 it("edits, reorders and removes queued messages; a missing item is reported gone", async () => {
   const rpc = fakeNativeQueue(["a", "b", "c"]);
   const notify = vi.fn();
@@ -216,6 +229,52 @@ it("serializes changes from two clients so a repeated remove acts once", async (
   ]);
   expect(outcomes.sort()).toEqual(["done", "gone"]);
   expect(rpc.removeAt).toHaveBeenCalledTimes(1);
+  queue.dispose();
+});
+
+it("sends one queued item now once, even when two clients click it together", async () => {
+  const rpc = fakeNativeQueue(["wait", "later"]);
+  const sendImmediate = vi.fn(async () => true);
+  const queue = createQueueTracker(rpc, vi.fn(), { sendImmediate });
+  await queue.refresh();
+  const outcomes = await Promise.all([
+    queue.change({ action: "send_now", id: "q1", requestId: "request-101" }),
+    queue.change({ action: "send_now", id: "q1", requestId: "request-102" }),
+  ]);
+  expect(outcomes.sort()).toEqual(["done", "gone"]);
+  expect(sendImmediate).toHaveBeenCalledOnce();
+  expect(sendImmediate).toHaveBeenCalledWith("wait", "request-101");
+  expect(queue.snapshot().items?.map((item) => item.id)).toEqual(["q2"]);
+  queue.dispose();
+});
+
+it("replays a send-now request id without sending again", async () => {
+  const rpc = fakeNativeQueue(["wait"]);
+  const sendImmediate = vi.fn(async () => true);
+  const queue = createQueueTracker(rpc, vi.fn(), { sendImmediate });
+  await queue.refresh();
+  const change = { action: "send_now", id: "q1", requestId: "request-555" } as const;
+  expect(await queue.change(change)).toBe("done");
+  expect(await queue.change(change)).toBe("done");
+  expect(sendImmediate).toHaveBeenCalledOnce();
+  expect(rpc.removeAt).toHaveBeenCalledOnce();
+  queue.dispose();
+});
+
+it("keeps an item queued when send-now cannot deliver it, and never sends a clipped one", async () => {
+  const rpc = fakeNativeQueue(["wait", "x".repeat(QUEUE_LIMITS.maxTextChars + 1)]);
+  const sendImmediate = vi.fn(async () => false);
+  const queue = createQueueTracker(rpc, vi.fn(), { sendImmediate });
+  await queue.refresh();
+  expect(await queue.change({ action: "send_now", id: "q1", requestId: "request-700" })).toBe(
+    "failed",
+  );
+  expect(await queue.change({ action: "send_now", id: "q2", requestId: "request-701" })).toBe(
+    "unavailable",
+  );
+  expect(sendImmediate).toHaveBeenCalledOnce();
+  expect(rpc.removeAt).not.toHaveBeenCalled();
+  expect(queue.snapshot().items?.map((item) => item.id)).toEqual(["q1", "q2"]);
   queue.dispose();
 });
 

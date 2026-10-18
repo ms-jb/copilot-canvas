@@ -19,7 +19,16 @@
   border-top: 1px solid var(--cc-border);
 }
 
+.message {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
 .text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
+}
+
+.sendNow {
+  white-space: nowrap;
 }

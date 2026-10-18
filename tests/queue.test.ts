@@ -60,7 +60,13 @@ it("validates queue items and change payloads", () => {
   expect(validateQueuePayload({ ...base, action: "move", toPosition: 2 })).toMatchObject({
     ok: true,
   });
+  expect(
+    validateQueuePayload({ ...base, action: "send_now", requestId: "request-3" }),
+  ).toMatchObject({ ok: true });
   for (const bad of [
+    { ...base, action: "send_now" },
+    { ...base, action: "send_now", requestId: "???" },
+    { ...base, action: "send_now", requestId: "request-3", text: "x" },
     { ...base, action: "edit", text: "  " },
     { ...base, action: "move", toPosition: -1 },
     { ...base, action: "remove", text: "x" },

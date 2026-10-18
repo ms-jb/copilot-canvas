@@ -58,22 +58,23 @@ export function validateQueueState(value: unknown): value is QueueState {
 export type QueueChange =
   | { action: "remove"; id: string }
   | { action: "edit"; id: string; text: string }
-  | { action: "move"; id: string; toPosition: number };
+  | { action: "move"; id: string; toPosition: number }
+  | { action: "send_now"; id: string; requestId: string };
 
 export interface QueuePayload {
   sessionId: string;
   change: QueueChange;
 }
 
-/** Validates POST api/queue: { sessionId, action, id, text? | toPosition? }. */
+/** Validates POST api/queue: { sessionId, action, id, text? | toPosition? | requestId? }. */
 export function validateQueuePayload(body: unknown): ValidationResult<QueuePayload> {
   if (
     !isPlainObject(body) ||
-    !onlyKeys(body, ["sessionId", "action", "id", "text", "toPosition"])
+    !onlyKeys(body, ["sessionId", "action", "id", "text", "toPosition", "requestId"])
   ) {
     return makeError(ERROR_CODES.badRequest, "Body must be { sessionId, action, id }.");
   }
-  const { sessionId, action, id, text, toPosition } = body;
+  const { sessionId, action, id, text, toPosition, requestId } = body;
   if (typeof sessionId !== "string" || !SESSION_ID_PATTERN.test(sessionId)) {
     return makeError(ERROR_CODES.badRequest, "sessionId is missing or malformed.");
   }
@@ -102,5 +103,11 @@ export function validateQueuePayload(body: unknown): ValidationResult<QueuePaylo
       value: { sessionId, change: { action, id, toPosition: toPosition as number } },
     };
   }
-  return makeError(ERROR_CODES.badRequest, "action must be remove, edit or move.");
+  if (action === "send_now" && text === undefined && toPosition === undefined) {
+    if (typeof requestId !== "string" || !REQUEST_ID.test(requestId)) {
+      return makeError(ERROR_CODES.badRequest, "requestId is missing or malformed.");
+    }
+    return { ok: true, value: { sessionId, change: { action, id, requestId } } };
+  }
+  return makeError(ERROR_CODES.badRequest, "action must be remove, edit, move or send_now.");
 }
