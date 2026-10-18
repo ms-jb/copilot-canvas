@@ -90,12 +90,23 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
   name: E,
   data: EventData<E>,
 ): ViewState {
+  const settleStreaming = (entries: TranscriptEntry[], phase: SessionStatus["phase"]) =>
+    phase === "working"
+      ? entries
+      : entries.map((entry) =>
+          entry.kind === "assistant" && entry.streaming === true
+            ? { ...entry, streaming: false }
+            : entry,
+        );
   if (name === "snapshot") {
     const event = data as EventData<"snapshot">;
     return {
       generation: event.generation,
       seq: event.seq,
-      entries: event.snapshot.entries.slice(-LIMITS.maxEntries),
+      entries: settleStreaming(
+        event.snapshot.entries.slice(-LIMITS.maxEntries),
+        event.snapshot.status.phase,
+      ),
       status: event.snapshot.status,
       controls: event.controls,
       prompts: event.snapshot.prompts ?? [],
@@ -119,7 +130,12 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
     }
     case "status": {
       const event = data as EventData<"status">;
-      return { ...state, seq: event.seq, status: event.status };
+      return {
+        ...state,
+        seq: event.seq,
+        status: event.status,
+        entries: settleStreaming(state.entries, event.status.phase),
+      };
     }
     case "controls": {
       const event = data as EventData<"controls">;

@@ -105,8 +105,8 @@ export function SessionControls({
   const requested = pending ?? deferred;
   const controls = displayed(live, requested);
   const { available } = live;
-  const disabled =
-    connection.phase !== "connected" || connection.context === null || pending !== null;
+  // Not disabled while a change is in flight: that would drop the focus from the control just used.
+  const disabled = connection.phase !== "connected" || connection.context === null;
   const tierOffered = available.contextTier && (activeModel(live)?.contextTiers?.length ?? 0) > 1;
   const effort = effectiveEffort(controls);
   const tier = controls.contextTier ?? "default";
