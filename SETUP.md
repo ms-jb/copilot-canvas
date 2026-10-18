@@ -124,11 +124,16 @@ and check on it.
      new tunnel is named after their computer's user name when that name is free (for example
      `https://jordan-canvas-47600.usw2.devtunnels.ms`), otherwise it gets a random name. Tell the
      user the link shows that name.
-   - **The moment that appears, post the link and the QR code in chat.** Attach the QR image: copy
-     `<path>` (`phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-canvas/`) into your session files
-     and attach it. If you cannot attach images, paste the printed QR exactly as printed in a plain
-     code block. Ask the user to scan it and sign in. The canvas is already open, so the phone
-     connects as soon as the gateway is up.
+   - **The moment that appears, open the QR code in the side panel so the user doesn't have to
+     click for it.** Call `open_canvas` with `canvasId: "browser"`, a new `instanceId`
+     (for example `phone-qr`), `input: { url: "file:///<path>", title: "Scan to open on phone",
+     placement: { surface: "side", focus: true } }` (`<path>` is the printed `QR image:` path,
+     `phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-canvas/`, with forward slashes). If it
+     does not open, retry without `placement`.
+   - **Also post the link and the QR code in chat.** Attach the QR image: copy `<path>` into your
+     session files and attach it. If you cannot attach images, paste the printed QR exactly as
+     printed in a plain code block. Ask the user to scan it and sign in. The canvas is already
+     open, so the phone connects as soon as the gateway is up.
    - The canvas's **Open on phone** button shows the same link and QR code. If the button is
      missing (the gateway started after the canvas opened), open the canvas again. Ask the user to
      send a message from the phone and confirm it arrives in this conversation.
