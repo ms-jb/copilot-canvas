@@ -9,7 +9,7 @@ import { useTouchSize } from "./touchSize";
 import { composerFit } from "./composerFit";
 import { ComposerTools } from "./ComposerTools";
 import { ModeChip } from "./controls/ModeChip";
-import { cyclesMode } from "./controls/mode";
+import { handleModeShortcut } from "./controls/mode";
 import { SessionControls } from "./controls/SessionControls";
 import { useSessionSettings } from "./controls/useSessionSettings";
 import styles from "./Composer.module.css";
@@ -115,11 +115,6 @@ export function Composer({
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (skills.onKeyDown(event)) return;
-    // Shift+Tab steps through the modes; plain Tab and every other chord keep moving focus.
-    if (cyclesMode({ ...event, isComposing: event.nativeEvent.isComposing })) {
-      if (settings.cycleMode()) event.preventDefault();
-      return;
-    }
     // Enter sends, Ctrl/Cmd/Alt+Enter queues, Shift+Enter inserts a newline; never fire while an
     // IME is composing.
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -127,9 +122,25 @@ export function Composer({
     if (!event.repeat && canSend) submit(queuesOnEnter(event) ? "enqueue" : "immediate");
   };
 
+  // Alt+M steps through the modes from anywhere in the composer; Tab and Shift+Tab stay native.
+  const onFormKeyDown = (event: KeyboardEvent<HTMLFormElement>) =>
+    handleModeShortcut(
+      {
+        code: event.code,
+        shiftKey: event.shiftKey,
+        ctrlKey: event.ctrlKey,
+        altKey: event.altKey,
+        metaKey: event.metaKey,
+        isComposing: event.nativeEvent.isComposing,
+        preventDefault: () => event.preventDefault(),
+      },
+      settings.cycleMode,
+    );
+
   return (
     <form
       className={styles.composer}
+      onKeyDown={onFormKeyDown}
       onSubmit={(event) => {
         event.preventDefault();
         if (canSend) submit("immediate");

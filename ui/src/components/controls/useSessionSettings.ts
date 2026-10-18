@@ -16,13 +16,13 @@ export interface SessionSettings {
   /** The mode to show, or undefined when the host can't report one. */
   mode: SessionMode | undefined;
   apply: ControlChangeState["apply"];
-  /** Moves to the next mode (Shift+Tab); false when there is no known mode to move from. */
+  /** Moves to the next mode (Alt+M); false when there is no known mode to move from. */
   cycleMode: () => boolean;
 }
 
 /**
  * The composer's session settings in one place, so the mode chip, the settings panel, the
- * mode-colored border and Shift+Tab all read and change the same state.
+ * mode-colored border and Alt+M all read and change the same state.
  */
 export function useSessionSettings(connection: Connection): SessionSettings {
   const { pending, deferred, error, apply } = useControlChange(connection);

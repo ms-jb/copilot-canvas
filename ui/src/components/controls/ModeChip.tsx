@@ -44,7 +44,7 @@ const MODE_ICONS: Record<SessionMode, ReactNode> = {
  * The session mode, in the composer at every width: a shape for each mode and, for Plan and
  * Autopilot, its name, tinted blue and green. Interactive, the usual mode, shows only its shape
  * (the name stays in the accessible name and the menu). Pressing it lists the three modes
- * (Shift+Tab in the box moves to the next one). Renders nothing when the host can't report a mode.
+ * (Alt+M in the composer moves to the next one). Renders nothing when the host can't report a mode.
  */
 export function ModeChip({
   settings,
@@ -82,7 +82,7 @@ export function ModeChip({
         disabled={disabled}
       >
         <Menu.Target>
-          <ComposerTooltip label="Switch mode (Shift+Tab)" hidden={opened}>
+          <ComposerTooltip label="Switch mode (Alt+M)" hidden={opened}>
             <Button
               variant={mode === "interactive" ? "subtle" : "light"}
               color={color}
@@ -104,6 +104,7 @@ export function ModeChip({
               }
               aria-label={`Mode: ${label}`}
               aria-haspopup="menu"
+              aria-keyshortcuts="Alt+M"
               disabled={disabled}
             >
               {iconOnly ? null : label}

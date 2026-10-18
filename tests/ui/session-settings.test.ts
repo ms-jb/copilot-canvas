@@ -5,7 +5,12 @@ import { expect, it } from "vite-plus/test";
 import { composerFit } from "../../ui/src/components/composerFit";
 import { ComposerIconButton } from "../../ui/src/components/ComposerIconButton";
 import { ModeChip } from "../../ui/src/components/controls/ModeChip";
-import { MODE_COLORS, cyclesMode, nextMode } from "../../ui/src/components/controls/mode";
+import {
+  MODE_COLORS,
+  cyclesMode,
+  handleModeShortcut,
+  nextMode,
+} from "../../ui/src/components/controls/mode";
 import {
   useSessionSettings,
   type SessionSettings,
@@ -167,26 +172,69 @@ it("cycles Interactive, Plan, Autopilot and back, and knows nothing about other 
   expect(nextMode("review")).toBeNull();
 });
 
-it("takes Shift+Tab alone: Tab, other chords and an open IME composition keep their meaning", () => {
+it("takes Alt+M alone: other chords, other keys and an open IME composition keep their meaning", () => {
   const key = {
-    key: "Tab",
-    shiftKey: true,
+    code: "KeyM",
+    shiftKey: false,
     ctrlKey: false,
-    altKey: false,
+    altKey: true,
     metaKey: false,
     isComposing: false,
   };
   expect(cyclesMode(key)).toBe(true);
-  expect(cyclesMode({ ...key, shiftKey: false })).toBe(false);
-  expect(cyclesMode({ ...key, key: "Enter" })).toBe(false);
+  expect(cyclesMode({ ...key, altKey: false })).toBe(false);
+  expect(cyclesMode({ ...key, code: "KeyN" })).toBe(false);
   for (const held of [
     { ctrlKey: true },
-    { altKey: true },
     { metaKey: true },
+    { shiftKey: true },
     { isComposing: true },
   ]) {
     expect(cyclesMode({ ...key, ...held })).toBe(false);
   }
+});
+
+it("leaves Tab and Shift+Tab to the browser and keeps the draft and caret on Alt+M", () => {
+  const field = { value: "draft text", selectionStart: 3, selectionEnd: 5 };
+  const press = (chord: { code: string; altKey?: boolean; shiftKey?: boolean }) => {
+    let cycled = 0;
+    let prevented = 0;
+    handleModeShortcut(
+      {
+        altKey: false,
+        shiftKey: false,
+        ctrlKey: false,
+        metaKey: false,
+        isComposing: false,
+        ...chord,
+        preventDefault: () => prevented++,
+      },
+      () => {
+        cycled++;
+        return true;
+      },
+    );
+    return { cycled, prevented };
+  };
+  expect(press({ code: "Tab", shiftKey: true })).toEqual({ cycled: 0, prevented: 0 });
+  expect(press({ code: "Tab" })).toEqual({ cycled: 0, prevented: 0 });
+  expect(press({ code: "KeyM", altKey: true })).toEqual({ cycled: 1, prevented: 1 });
+  expect(field).toEqual({ value: "draft text", selectionStart: 3, selectionEnd: 5 });
+  // Nothing to cycle (offline, unknown mode): the key keeps its usual meaning.
+  let prevented = false;
+  handleModeShortcut(
+    {
+      code: "KeyM",
+      altKey: true,
+      shiftKey: false,
+      ctrlKey: false,
+      metaKey: false,
+      isComposing: false,
+      preventDefault: () => (prevented = true),
+    },
+    () => false,
+  );
+  expect(prevented).toBe(false);
 });
 
 it("doesn't cycle offline or from a mode the host can't report", () => {
@@ -226,6 +274,7 @@ it("shows Plan and Autopilot in words and Interactive as its shape alone, at eve
         ),
       );
       expect(html).toContain(`aria-label="Mode: ${label}"`);
+      expect(html).toContain('aria-keyshortcuts="Alt+M"');
       // Interactive is the usual mode: no visible word, but the name, tooltip target and tint stay.
       if (mode === "interactive") expect(html).not.toContain(">Interactive<");
       else expect(html).toContain(`>${label}</span>`);
