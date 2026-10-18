@@ -129,7 +129,7 @@ export function Notifications({ assistantName }: { assistantName: string }) {
     } catch {
       setState("off");
       setMessage(
-        "Couldn't turn on notifications. Check that npm run phone is running, then try again.",
+        "Couldn't turn on notifications. Check that npm run devtunnel is running, then try again.",
       );
     }
   };

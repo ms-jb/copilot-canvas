@@ -57,7 +57,7 @@ every page) and in `ui/src`, and use what exists.
 `GET` endpoint: the path in `API` and its response shape in `src/shared/contract.mts`, the
 route in `src/host/http/routes.mts`, and the read in the host (for example `gh` through
 `execFile` with a timeout, never a shell string). Keep tokens in the host. Add it to the gateway's
-`ROUTES` only if it should work on the phone, and only for reads, then restart `npm run phone`.
+`ROUTES` only if it should work on the phone, and only for reads, then restart `npm run devtunnel`.
 
 Keep browser-safe shared modules independent of host, gateway and Node code. The renderer imports
 them only through `ui/src/shared.ts`. The gateway may use `src/shared/node/`, but never `src/host/`.
@@ -81,7 +81,7 @@ rest and keeps guiding them meanwhile (see `customization-workflow`).
    its install marker). Open the canvas again and confirm the change is visible; don't ask the user
    to tap **Reload extensions** unless the canvas runs a build from before self-reload. Reloading
    never restarts the phone gateway: after changing `gateway/` or the shared contract it imports,
-   restart `npm run phone` too, or the phone keeps rejecting new routes with 404.
+   restart `npm run devtunnel` too, or the phone keeps rejecting new routes with 404.
 5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. Their
    copy should be their own private repository made from the template (`SETUP.md` step 1). If
    `origin` still points at `ms-jb/copilot-canvas` and they don't own it, don't push there: offer
@@ -101,7 +101,7 @@ colors and the phone app's branding.
 
 ## Phone tunnel
 
-`npm run phone` signs in to dev tunnels with GitHub (`devtunnel user login -g -d`) if needed, then creates an
+`npm run devtunnel` signs in to dev tunnels with GitHub (`devtunnel user login -g -d`) if needed, then creates an
 owner-only tunnel once and remembers its id outside the repository; a tunnel that grants anyone
 else access is refused, never changed. It adds port 47600 with `--origin-header unchanged`, so the
 gateway can check the phone's exact address, then hosts the tunnel and starts the gateway with

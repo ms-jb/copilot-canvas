@@ -1,5 +1,5 @@
 // Open the canvas on your phone: sets up an owner-only dev tunnel once, then hosts it and runs the
-// gateway until you press Ctrl+C. Usage: npm run phone
+// gateway until you press Ctrl+C. Usage: npm run devtunnel
 //
 // The tunnel id is kept in the private runtime directory (never in the repo). Nothing here grants
 // anonymous, tenant or organization access, and an existing tunnel with extra access is refused.
@@ -38,7 +38,7 @@ function devtunnel(args: string[]): { ok: boolean; out: string } {
   if (result.error) {
     throw new Error(
       "The devtunnel CLI is not installed. Windows: winget install Microsoft.devtunnel; " +
-        "macOS: brew install --cask devtunnel. Then run npm run phone again.",
+        "macOS: brew install --cask devtunnel. Then run npm run devtunnel again.",
     );
   }
   return { ok: result.status === 0, out: `${result.stdout}${result.stderr}` };
@@ -53,7 +53,7 @@ function ensureSignedIn(): void {
   if (/Logged in as/i.test(devtunnel(["user", "show"]).out)) return;
   console.log("Sign in to dev tunnels with GitHub (the account you will also use on your phone):");
   const login = spawnSync("devtunnel", ["user", "login", "-g", "-d"], { stdio: "inherit" });
-  if (login.status !== 0) fail("Sign-in did not finish. Run npm run phone again.");
+  if (login.status !== 0) fail("Sign-in did not finish. Run npm run devtunnel again.");
 }
 
 /** A readable tunnel id from the computer's user name, like `jordan-canvas`; null if none fits. */
@@ -117,7 +117,7 @@ function ensureOwnerOnly(tunnelId: string, port: number): void {
     if (!isOwnerOnly(devtunnel(["access", "list", tunnelId, ...scope, "--json"]).out)) {
       fail(
         `Tunnel ${tunnelId} grants access beyond you. Remove those entries with ` +
-          "`devtunnel access reset`, or delete the tunnel, then run npm run phone again.",
+          "`devtunnel access reset`, or delete the tunnel, then run npm run devtunnel again.",
       );
     }
   }

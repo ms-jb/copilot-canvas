@@ -14,7 +14,7 @@
     "sync-ext": "node scripts/sync-extension.mts",
     "install-ext": "node scripts/install-ext.mts",
     "gateway": "node gateway/gateway.mts",
-    "phone": "node scripts/phone.mts",
+    "devtunnel": "node scripts/devtunnel.mts",
     "notify": "node scripts/notify.mts"
   },
   "dependencies": {

@@ -79,7 +79,7 @@ Respect explicit task limits if the user requested source-only work.
 5. Verify the requested behavior in the installed canvas. For phone features,
    have the user check the phone too. If it says **Not connected**, follow
    `SETUP.md`: the desktop canvas must be open and phone hosting must be running.
-   If the change touched `gateway/`, restart `npm run phone` first; the running
+   If the change touched `gateway/`, restart `npm run devtunnel` first; the running
    gateway keeps the code it started with.
 6. Report what was observed. If a phone check is still pending, say so; do not
    mark it verified on the strength of a screenshot from dev mode.

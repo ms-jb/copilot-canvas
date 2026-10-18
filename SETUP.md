@@ -6,11 +6,23 @@ into any Copilot chat). You don't need to run any of it yourself.
 
 ---
 
-**For Copilot.** Get the user from this page to a canvas they own, on desktop and on their phone.
-Then help them change it (Part 2) and help them build the rest of their Copilot setup (Part 3),
-while a builder writes the code in the background. Use the platform's shell and paths (Windows or
-macOS). The user needs a GitHub account with any Copilot plan (Copilot Free works, within its
-monthly limits) and the GitHub Copilot app; README.md lists the rest.
+**For Copilot.** Get the user to a canvas they own, on desktop and on their phone, as fast as you
+can. Then help them change it (Part 2) and help them build the rest of their Copilot setup
+(Part 3), while builders write the code in the background. Use the platform's shell and paths
+(Windows or macOS). The user needs a GitHub account with any Copilot plan (Copilot Free works,
+within its monthly limits) and the GitHub Copilot app; README.md lists the rest.
+
+**Read the latest version first.** If you are reading a local checkout, it may be older than the
+template: run `git fetch` and read `SETUP.md` from `origin/main` (or from
+`https://raw.githubusercontent.com/ms-jb/copilot-canvas/main/SETUP.md`), and follow that one.
+
+**The point is a fast wow, and what it teaches.** Within minutes the user should (1) see the canvas
+open beside this conversation, (2) send a message from their phone and watch it arrive here, and
+(3) watch several sessions work at once while this conversation stays free. That last one is the
+lesson: this conversation conducts, sessions do the work, the canvas is the remote control. Every
+step below runs the slow things (installs, builds, sign-ins, the tunnel) in the background and
+never blocks the user on them. Put each long command in its own background shell, keep talking,
+and check on it.
 
 ## Ground rules
 
@@ -20,7 +32,9 @@ monthly limits) and the GitHub Copilot app; README.md lists the rest.
   gateway binds to `127.0.0.1` only. Never answer permission prompts, questions or plan approvals
   for the user. No secrets in files, logs or chat.
 - **Clicks only the user can make.** When a session needs a click (shell permission, trust prompt),
-  take the user there and say exactly what to click. Don't switch its mode to get around it.
+  take the user there and say exactly what to click. Don't switch its mode to get around it. When
+  the user must enter a code or sign in somewhere, put the link and the code in a blocking question
+  so it cannot be missed.
 - **Plain language.** Many users are not developers. Say what is happening and what they will see; keep
   commands out of chat unless asked.
 - **Verification.** Report a step as done only after you see the result: the canvas is connected, a
@@ -36,7 +50,31 @@ monthly limits) and the GitHub Copilot app; README.md lists the rest.
    local folder only. Either way their copy never points back at this template. The one manual step
    is signing in on their phone. Choices: "Go (Recommended)", "Go, local folder only",
    "Go, but skip the phone", "Change folder", "Not now".
-1. **Get the source** into `<FOLDER>`, never inside the checkout this session started in:
+
+   **Right after "Go", start three lanes at once** and never wait for one before starting another:
+   - **Canvas now** (step 1): the template ships a ready build, so the canvas opens in seconds,
+     before anything is cloned or built.
+   - **Phone** (step 4): the CLI install and sign-in need nothing from the source. Start the
+     sign-in first, so the user does their part while the rest runs.
+   - **Their copy** (steps 2 and 3): clone, `npm install`, build, then swap their own build in.
+
+1. **Instant canvas** (the wow starts here). Open the template's prebuilt canvas immediately:
+   - Look in `~/.copilot/extensions/` for other folders whose `template.config.json` has
+     `"canvasId": "chat-panel"` and that are not named `copilot-canvas` (for example `extension`, from
+     an earlier link install). Two copies show two canvases; offer to remove them.
+   - `install_extension` with URL `https://github.com/ms-jb/copilot-canvas/tree/main/extension`,
+     `name: copilot-canvas`, scope `user`. It installs the committed, already-built `extension/`
+     and reloads extensions for you, so the user never taps a reload button. Never copy a folder in
+     by hand first: a new extension folder only registers on a reload.
+   - Wait about five seconds, then `open_canvas` with canvas id `chat-panel` and a stable
+     `instanceId`; if it is not registered yet, retry twice, five seconds apart. Confirm it shows
+     this conversation, and tell the user in one line that this is the starting version and their
+     own copy replaces it in a minute.
+   - If `install_extension` says the folder exists, try `open_canvas` first. If it is not
+     registered (a folder copied earlier without a reload), rename
+     `~/.copilot/extensions/copilot-canvas` to `~/.copilot/extensions/.copilot-canvas.unregistered`
+     and run `install_extension` again; remove the renamed folder after step 3.
+2. **Get their copy** into `<FOLDER>`, never inside the checkout this session started in:
    - If `<FOLDER>` exists, use it only if it is a git checkout of `copilot-canvas`; otherwise ask.
    - **Private copy** (default, needs `gh auth status` signed in to github.com):
      `gh repo create <login>/copilot-canvas --private --template ms-jb/copilot-canvas`, then
@@ -50,41 +88,38 @@ monthly limits) and the GitHub Copilot app; README.md lists the rest.
    - Check: `git -C <FOLDER> remote -v` lists nothing that points at `ms-jb/copilot-canvas` (unless
      they are its owner and chose to), and for a private copy
      `gh repo view <login>/copilot-canvas --json visibility` says `PRIVATE`.
-   - Run `npm install` in `<FOLDER>`. It needs Node.js 22.18+ (24 recommended). If Node is missing or
+   - Run `npm install` in `<FOLDER>` in a background shell and keep going. It needs Node.js 22.18+ (24 recommended). If Node is missing or
      older, check where `node` resolves first: when a version manager provides it (`pnpm env`, nvm, fnm,
      Volta, mise), upgrade through that manager, since a second install would compete on `PATH`.
      Otherwise install it with the platform's package manager (`winget install OpenJS.NodeJS.LTS`,
      `brew install node`). Ask first either way. If the registry fails, use `npm config get registry`;
      never edit `.npmrc` or install anything globally.
-2. **Build, install, then open the canvas.** The user never taps a reload button; open the canvas
-   only once their own build is running.
-   - Look in `~/.copilot/extensions/` for other folders whose `template.config.json` has
-     `"canvasId": "chat-panel"` and that are not named `copilot-canvas` (for example `extension`, from
-     an earlier link install). Two copies show two canvases; offer to remove them.
-   - Run `npm run install-ext` in `<FOLDER>`. It builds their copy, swaps it into
+3. **Swap in their own build.** Once `npm install` has finished, `npm run install-ext` builds their
+   copy first and installs only a build that passed, so nothing half-built is ever registered.
+   - Run `npm run install-ext` in `<FOLDER>`. It swaps their build into
      `~/.copilot/extensions/copilot-canvas` in one step and records where the copy is, so later tweaks
-     rebuild from it. A running canvas sees the new build and reloads itself.
-   - Wait about five seconds, then `open_canvas` with canvas id `chat-panel` and a stable
-     `instanceId`. Confirm it shows this conversation.
-   - **If it reports the canvas is not registered** (a first install, or a folder copied earlier
-     without a reload), register it once: a new extension folder only registers on an extensions
-     reload, and `install_extension` does that reload. It refuses an existing folder, so first rename
-     `~/.copilot/extensions/copilot-canvas` to `~/.copilot/extensions/.copilot-canvas.unregistered`.
-     Then `install_extension` with URL `https://github.com/ms-jb/copilot-canvas/tree/main/extension`,
-     `name: copilot-canvas`, scope `user`. Run `npm run install-ext` again to put their own build
-     back (the canvas reloads itself onto it), remove the renamed folder, wait about five seconds
-     and `open_canvas` again.
-   - Only if the canvas still runs an older build that predates self-reload (no change after
-     `install-ext`), ask the user once to tap **Reload extensions** (the circular arrow in the
-     canvas's top bar), then open it again.
-3. **Phone** (skip if they chose to). Start this as soon as `npm install` finishes, alongside step 2,
-   so the user can move to their phone early:
+     rebuild from it. The open canvas sees the new build and reloads itself.
+   - Wait about five seconds, then `open_canvas` again (same `instanceId`) and confirm it shows this
+     conversation. On the phone, a page refresh picks it up.
+   - Only if the canvas does not switch (a build that predates self-reload), ask the user once to
+     tap **Reload extensions** (the circular arrow in the canvas's top bar) or restart the Copilot
+     app, then open it again.
+4. **Phone** (skip if they chose to). Start the first two bullets right after consent, in the
+   background, before the source is even cloned:
    - Install the dev tunnel CLI if missing (`winget install Microsoft.devtunnel`,
-     `brew install --cask devtunnel`).
-   - If `devtunnel user show` is not signed in, run `devtunnel user login -g -d` (GitHub, device code) and show the device code and
-     link. The user finishes it in a browser with the account they will use on their phone.
-   - In `<FOLDER>`, start `npm run phone` with `NO_COLOR=1` as a long-lived, detached background
-     process. It creates or reuses their owner-only tunnel, refuses one with extra access, hosts it and
+     `brew install --cask devtunnel`). On Windows a fresh install may not be on `PATH` in shells
+     you already started; refresh `PATH` from the machine and user settings, or start a new shell.
+   - **Sign-in needs the user, so make it impossible to miss.** If `devtunnel user show` is not
+     signed in, start `devtunnel user login -g -d` (GitHub, device code) in its own background shell
+     and read its output until the device code and link appear. Then ask a question (`ask_user`,
+     choices "I've signed in", "Skip the phone") that contains the link and the code in its text;
+     a blocking question cannot scroll past, and the other lanes keep running meanwhile. Say it is
+     the account they will use on their phone. Do not bury the code in progress text. When they
+     answer, check `devtunnel user show`.
+   - Once `npm install` has finished, in `<FOLDER>` start `npm run devtunnel` with `NO_COLOR=1`
+     as a long-lived, detached background process, with its output going to a file you can read. If
+     the sign-in is still pending it prints the same device code, so relay it the same way. It
+     creates or reuses their owner-only tunnel, refuses one with extra access, hosts it and
      starts the gateway, then prints `Open on phone: <link>`, a QR code and `QR image: <path>`. A
      new tunnel is named after their computer's user name when that name is free (for example
      `https://jordan-canvas-47600.usw2.devtunnels.ms`), otherwise it gets a random name. Tell the
@@ -92,11 +127,11 @@ monthly limits) and the GitHub Copilot app; README.md lists the rest.
    - **The moment that appears, post the link and the QR code in chat.** Attach the QR image: copy
      `<path>` (`phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-canvas/`) into your session files
      and attach it. If you cannot attach images, paste the printed QR exactly as printed in a plain
-     code block. Ask the user to scan it and sign in. Don't wait for the rest of setup: the phone
-     shows "Not connected" and reconnects on its own once the canvas is open.
-   - Once the canvas is open, its **Open on phone** button shows the same link and QR code. If the
-     button is missing (the gateway started after the canvas opened), open the canvas again. Ask the
-     user to send a message from the phone and confirm it arrives in this conversation.
+     code block. Ask the user to scan it and sign in. The canvas is already open, so the phone
+     connects as soon as the gateway is up.
+   - The canvas's **Open on phone** button shows the same link and QR code. If the button is
+     missing (the gateway started after the canvas opened), open the canvas again. Ask the user to
+     send a message from the phone and confirm it arrives in this conversation.
    - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
      phone and browser, and it then opens like an app.
    - After icon changes, tell the user to delete the existing home-screen app and add it again
@@ -104,6 +139,16 @@ monthly limits) and the GitHub Copilot app; README.md lists the rest.
    - Then offer notifications: in the installed app, tap the bell, **Turn on**, then **Send test**.
      Confirm the test arrives. Pushes carry no content. Later notifications stay quiet while the app
      is open in front; the bell has a switch to change that.
+5. **Show the wow: sessions working in parallel.** When the first phone message has arrived, say
+   in one line what just happened (their phone is steering this conversation). Then show why it
+   matters without a lecture: while you keep asking them questions, start two or three small,
+   independent sessions so they appear in the canvas's recent sessions list, for example one that
+   reads their recent GitHub activity (aggregates only, read-only) and proposes panels, and the
+   first builder from Part 2. Use `create_session` with a `kickoff` prompt and
+   `notify_on_idle: "once"` (see Part 2 for when a background `task` agent fits better). Tell them
+   to open the sessions list, on the phone too, to watch each one work, and name the idea in a
+   sentence: this conversation conducts, sessions do the work, the canvas is the remote control.
+   Don't claim more than you see: report only what appears in the list.
 
 ## Part 2: Change the canvas
 
@@ -215,17 +260,17 @@ ask for the next one without this guide.
 ## Troubleshooting
 
 - **The canvas is missing:** run `npm run install-ext`, wait a few seconds and open it again. If it
-  is not registered, follow the registration bullet in Part 1 step 2, or tap the canvas's reload
+  is not registered, follow the fallback in Part 1 step 1, or tap the canvas's reload
   button (restarting the Copilot app also works).
 - **The canvas shows another copy's changes:** another folder in `~/.copilot/extensions` has the same
   canvas id; remove it.
-- **The phone link stopped working:** the computer slept or `npm run phone` stopped. Start it again.
+- **The phone link stopped working:** the computer slept or `npm run devtunnel` stopped. Start it again.
 - **A new panel works on desktop but is "Not found" on the phone:** the gateway reads its route list
-  when `npm run phone` starts. Restart it after a change to `gateway/`, and make sure the canvas
+  when `npm run devtunnel` starts. Restart it after a change to `gateway/`, and make sure the canvas
   picked up the new build so the provider serves the new route too.
 - **"Not connected" on the phone:** the canvas was closed. Open it again in Copilot, then refresh the
   phone.
-- **Undo:** stop `npm run phone`; `devtunnel delete <tunnel-id>` (the id is in
+- **Undo:** stop `npm run devtunnel`; `devtunnel delete <tunnel-id>` (the id is in
   `~/.copilot/canvas-runtime/copilot-canvas/phone.json`); remove `~/.copilot/extensions/copilot-canvas`
   and `~/.copilot/canvas-runtime/copilot-canvas` (tunnel id, notification keys, subscriptions and
   setup progress); delete `<FOLDER>` and, if they want, their private repository

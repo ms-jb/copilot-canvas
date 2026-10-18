@@ -17,7 +17,7 @@ import type { SessionLike } from "../src/host/bridge.mts";
 import { markerTime, watchInstall } from "../src/host/install-watch.mts";
 import { INSTALL_MARKER, readSourceDir } from "../src/shared/node/config.mts";
 import { validateReloadPayload } from "../src/shared/contract.mts";
-import { isOwnerOnly, parseForwardingUrl, tunnelName } from "../scripts/phone.mts";
+import { isOwnerOnly, parseForwardingUrl, tunnelName } from "../scripts/devtunnel.mts";
 import { copyExtension, isOwnInstall, promote } from "../scripts/install-ext.mts";
 import { escapeStops } from "../ui/src/components/stopOnEscape.ts";
 

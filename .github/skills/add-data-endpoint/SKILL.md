@@ -66,7 +66,7 @@ Reads do not authorize sending, editing, scheduling or other external writes.
   connection becomes stale. Keep loading, empty, stale and error states explicit.
 - If phone access is part of the request, add exactly the new path with `"GET"`
   to `ROUTES` in `gateway/gateway.mts`. Otherwise leave it inaccessible there.
-  A running `npm run phone` keeps the routes it started with, so restart it after
+  A running `npm run devtunnel` keeps the routes it started with, so restart it after
   installing (it reuses the same tunnel and link). Until the canvas has reloaded
   onto the new build, the gateway forwards to the old provider, which answers 404.
 - The gateway drops query strings. Prefer host-configured scope and client-side

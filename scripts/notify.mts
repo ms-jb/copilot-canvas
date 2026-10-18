@@ -56,7 +56,7 @@ const [title, body, url] = args;
 const config = loadConfig(repoRoot);
 const token = readNotifyToken(notifyTokenPath(config));
 if (!token) {
-  fail("no private notify token. Start the gateway with notifications on (npm run phone).");
+  fail("no private notify token. Start the gateway with notifications on (npm run devtunnel).");
 }
 
 let reply: { status: number; text: string };
