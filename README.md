@@ -1,8 +1,8 @@
 # Copilot Canvas
 
 Your Copilot conversation in a calm, three-column window, on your computer and on your phone.
-Answer Copilot's questions and approvals from anywhere, and shape the whole thing into your own just
-by asking.
+Answer Copilot's questions and approvals from anywhere, and shape the whole thing into your own
+just by asking.
 
 <br>
 
@@ -32,240 +32,42 @@ by asking.
 
 </details>
 
-## What happens when you click Install
-
-1. The GitHub Copilot app opens a new chat that is ready to set up the canvas. Confirm it.
-2. Copilot asks you one question: go ahead, skip the phone, or pick another folder.
-3. It makes your own copy of Copilot Canvas (a fork on your GitHub account, so your changes are
-   yours; sharing them is up to you), installs it and opens it next to your chat.
-4. For your phone, it shows the link and a QR code of it. Scan it, sign in with the same account,
-   and say hello. The canvas then walks you through adding it to your home screen like an app.
-5. Then, in the same chat, it asks what you'd like to see and starts building your first panels in
-   the background. You can approve each step from your phone.
-6. While that builds, it walks you through the rest of your Copilot setup, one choice at a time:
-   your profile and working style, a first skill, your own agent, a first automation and a
-   dashboard. You decide what goes in each; Copilot drafts it and shows you before saving.
-
-The full playbook Copilot follows is in [SETUP.md](SETUP.md).
-
 > [!NOTE]
 > The one-click link needs the Copilot app signed in with a **github.com** account. Without one,
 > paste this into any Copilot chat instead: _"Set up Copilot Canvas by following
 > https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_.
 
-## What you see
+## What you get
 
-- **Your conversation** in the center, with timestamps, formatting and code.
-- **Send now or queue.** Tap Send or press Enter to steer the current turn. Hold Send for half
-  a second (mouse or touch), or press Alt+Enter, to queue the message for after the turn.
-  Queued messages appear above the composer until the transcript confirms them. Normal sends
-  show **Steering** while awaiting that confirmation. With an empty draft during a running turn,
-  the same button offers **Stop**. If Stop drops queued messages, they leave the list after
-  Copilot's queue confirms their removal. On older hosts without queue read-back, or when that
-  read fails, the list stays unchanged rather than guessing. Reloading the page clears the
-  local pending display, not Copilot's native queue.
-- **What Copilot is doing** (thinking, responding, running a tool, waiting on you) above the box you
-  type in.
-- **Decisions** (permission requests, questions and plan approvals) answered right in the canvas, so
-  you never have to switch windows.
-- **Session settings** (mode, model, reasoning effort, context) as buttons by the box you type in.
-  On phones, one **Session settings** button opens the same controls.
-- **Attachments** from the attach button or clipboard paste, including screenshots. Add up to four
-  PNG, JPEG, GIF, WebP, PDF or UTF-8 text files (TXT, LOG, MD, CSV, JSON), up to 5 MiB each and
-  12 MiB in total. Remove any item before sending. Drafts stay in this page's memory, not browser
-  storage, and are uploaded only when you press Send. The host checks their type and keeps them
-  in private session memory until delivery, failure, timeout or shutdown (at most ten minutes),
-  then releases its copy. Copilot may retain sent attachments in session history.
-  Small inline images from session events appear as thumbnails; other attachments show their
-  filename. After an uncertain send, check the transcript before sending again. Nothing retries
-  automatically. Reloading the page discards unsent attachments.
-- **Your own panels** on the right, starting with a few ideas you can tap.
-- **Sessions** below the views in the left rail, also in the phone navigation drawer.
-  The canvas reads the app's session status through the joined SDK and shows up to 30 sessions,
-  newest first when update times are available. An app-reported session opens in Copilot from
-  the desktop canvas without changing the canvas binding. Phone rows are read-only.
-  If app status is unavailable, the list uses local `~/.copilot/session-state/*/workspace.yaml`
-  names, project names and update times. Other sessions' activity stays **unknown**, and links
-  are disabled rather than guessed. No conversation journals, messages or credentials are read.
-  Reads refresh on open/focus and every 30 seconds while visible. Errors mark old data as not live.
+- Your Copilot conversation in the center, with timestamps and formatting.
+- A status line above the box you type in, showing what Copilot is doing.
+- Permission requests, questions and plan approvals answered right in the canvas.
+- Your own panels on the right, starting with a few ideas you can tap.
+- Your recent sessions in the left rail, so you can jump back into one.
 
 ## Make it yours
 
-Ask Copilot in any chat, or tap one of the ideas in the canvas's empty right-hand side. Copilot
-changes your copy of the canvas, rebuilds it, and asks you to tap **Reload extensions** (the
-circular arrow at the top) to see it. Then ask for the next thing. Some ideas:
+Ask Copilot in any chat, or tap one of the ideas in the canvas's empty right-hand side. Some ideas:
 
 - _"Add a panel to my canvas that shows my open pull requests."_
 - _"Add a Notes view to my canvas's sidebar where I can keep a scratchpad."_
 - _"Rename my canvas assistant to Atlas and use a teal accent."_
 - _"Add a checklist for today to my canvas that I can tick off."_
 
-Copilot follows [AGENTS.md](AGENTS.md) when it works on your copy, so it edits the canvas itself
-instead of opening something else.
-
-To build the rest of your Copilot setup (a profile, skills, your own agents, automations), say
-_"Walk me through Part 3 of SETUP.md in my Copilot Canvas copy."_ You can stop and pick it up later.
+Copilot changes your copy of the canvas, rebuilds it, and asks you to tap **Reload extensions**
+(the circular arrow at the top) to see it. Then ask for the next thing.
 
 ## Open on phone
 
-Setup does this for you. To start it again later (for example after a restart), run this in your copy:
-
-```bash
-npm run phone
-```
-
-It creates (once) a private dev tunnel that only you can sign in to, starts the gateway, and prints
-the link; the canvas's **Open on phone** button shows the same link. For a QR code, ask Copilot:
-_"Make a QR code of my phone link."_ Keep it running, and your computer awake, while you use your
-phone.
-
-**The phone follows the chat that last opened the canvas.** Open the canvas from any chat in the
-Copilot app and your phone switches to that conversation; there is nothing to configure. Open it
-from another chat later and the phone moves with you.
-
-On the phone, the canvas walks you through
-adding it to your home screen so it opens like an app. In the installed app, tap the bell to get a
-notification when Copilot needs you or finishes (on iPhone this needs iOS 16.4 or later). While the
-app is open in front of you it stays quiet; turn on **Also notify while this app is open** under the
-bell to change that.
-
-<details>
-<summary>What it does, step by step</summary>
-
-1. Signs in to dev tunnels (`devtunnel user login -d`) if needed.
-2. Creates an owner-only tunnel once and remembers its id outside the repository. A tunnel that
-   grants anyone else access is refused, never changed.
-3. Adds port 47600 with `--origin-header unchanged`, so the gateway can check the phone's exact
-   address.
-4. Hosts the tunnel and starts the gateway with `GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address.
-
-</details>
-
-## How it works
-
-```mermaid
-flowchart LR
-  S[Copilot chat session] <--> H[Extension host<br/>loopback provider]
-  H <--> C[Canvas renderer]
-  H -. optional .-> G[Gateway]
-  G -.-> T[Owner-only dev tunnel]
-  T -.-> P[Phone browser]
-```
-
-| Component       | Role                                                                   |
-| --------------- | ---------------------------------------------------------------------- |
-| Extension host  | Binds to the session, serves the canvas and its API on loopback only   |
-| Canvas renderer | The React UI: conversation, composer, decisions, your views and panels |
-| Gateway         | Optional; follows the newest open canvas and forwards it to a tunnel   |
-| Dev preview     | A scripted stand-in for the host, used by `npx vp dev`                 |
-
-Each chat that opens the canvas gets its own extension host, bound to that chat. Opening the canvas
-marks that host as the newest, and the gateway always serves the newest one. So the phone shows
-whichever chat you last opened the canvas from, with no settings or session ids to manage.
+Setup gives you a link and a QR code for your phone. Scan it, sign in with the same account, and
+say hello. The canvas then walks you through adding it to your home screen so it opens like an app.
+If you change the app's icon later, remove the home-screen app and add it again to see the new one.
 
 ## Safety
 
-- **Nothing is approved automatically.** Every permission, answer and plan approval is an explicit
-  tap.
-- **Only the owner can answer:** loopback-only server, a random path, per-run CSRF and generation
-  checks, and an owner-only tunnel for the phone.
-- **One session per canvas.** A canvas reads and writes only the session that opened it.
-- **No silent resends.** If a send cannot be confirmed, your draft is kept.
-- **Safe rendering.** Messages render without raw HTML; only web and email links open.
-- **Quiet gateway.** It never logs messages or tokens. Anyone who can reach your tunnel can act as
-  you, so keep it owner-only.
-- **Notifications carry no content.** Phone pushes are sent empty through your browser's push
-  service; the phone then asks your own gateway for a one-line status ("Waiting for your
-  permission"). Keys and subscriptions stay in the runtime folder on your computer, and the gateway
-  only contacts known push services.
-- **Reloads are pinned too.** Reloading extensions from the phone goes through the same generation,
-  CSRF and session checks as a message. The phone reconnects once the canvas is open again on your
-  computer.
-
-## Troubleshooting
-
-| Symptom                           | Fix                                                                    |
-| --------------------------------- | ---------------------------------------------------------------------- |
-| Canvas missing                    | Ask Copilot to follow SETUP.md, or restart the Copilot app             |
-| A change doesn't show             | Tap **Reload extensions** (circular arrow), then open the canvas again |
-| Two canvases, or an old one       | Another copy is installed; ask Copilot to remove the extra one         |
-| No **Open on phone** button       | Run `npm run phone` in your copy, then open the canvas again           |
-| Phone says it is not connected    | Open the canvas from your chat, then refresh the phone                 |
-| Phone link stopped working        | Your computer slept or `npm run phone` stopped; start it again         |
-| A setting is missing from the bar | Your Copilot version does not offer it yet                             |
-
-Still stuck? [Open an issue](https://github.com/ms-jb/copilot-canvas/issues/new/choose).
-
-## Developing the template
-
-[![CI](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml/badge.svg)](https://github.com/ms-jb/copilot-canvas/actions/workflows/ci.yml)
-
-For people working on the template itself; [AGENTS.md](AGENTS.md) covers customizing a copy and
-[ARCHITECTURE.md](ARCHITECTURE.md) covers the structure and its rules. Requires
-Node.js 22.18+ (24 recommended). The examples use npm; other package managers can run the same
-package scripts. Shared code uses source layers, not package-manager-specific workspaces.
-Scripts and the gateway run as TypeScript through Node's type stripping, so code must be erasable
-TypeScript (no enums or namespaces).
-
-```bash
-npx vp dev           # canvas with a built-in preview of the extension, no Copilot needed
-npx vp check         # format, lint and type-check
-npx vp test          # unit tests
-npx vp build         # build the canvas into extension/
-npm run install-ext  # build, then install this copy for your user
-npm run phone        # owner-only dev tunnel plus gateway for the phone
-```
-
-Append a query to the `npx vp dev` page to preview other states:
-
-| Query               | Shows                                     |
-| ------------------- | ----------------------------------------- |
-| (none)              | sample conversation and a scripted loop   |
-| `?state=empty`      | a new session with no messages            |
-| `?state=waiting`    | the session waiting on you                |
-| `?state=busy`       | a reply mid-stream                        |
-| `?state=nocontrols` | a Copilot version without native settings |
-| `?state=offline`    | the device offline: banner, input locked  |
-
-`DEV_PUBLIC_URL=https://...` changes the preview's Open on phone origin; `DEV_PUBLIC_URL=off` hides
-it.
-
-| Folder             | Contents                                                          |
-| ------------------ | ----------------------------------------------------------------- |
-| `src/`             | compiler root; `extension.mts` emits `extension/extension.mjs`    |
-| `src/host/`        | session, controls, prompts and HTTP services behind small facades |
-| `src/shared/`      | browser-safe contract, validators and transcript state            |
-| `src/shared/node/` | Node-only configuration, runtime files and security helpers       |
-| `src/types/`       | platform SDK declarations                                         |
-| `ui/`              | React + Mantine canvas; views and panels in `ui/src/views/`       |
-| `gateway/`         | optional phone gateway and notifications                          |
-| `scripts/`         | install, phone, sync and the development preview                  |
-| `tests/`           | unit and service tests, including host and gateway subfolders     |
-| `extension/`       | generated, committed, installable output (do not hand-edit)       |
-
-The renderer imports shared code only through `ui/src/shared.ts`. Host and gateway code never
-import the UI; the gateway consumes the shared contract and Node helpers, not host internals.
-Browser-safe shared modules have no dependency on application or Node code. `vp check` keeps
-Vite+'s default lint rules and adds runtime import-cycle detection and these layer boundaries.
-Tests may cross boundaries. Generated `extension/` output is excluded from lint and formatting.
-
-- Settings live in `template.config.json`, which ships with the extension, so keep secrets out of
-  it. `ASSISTANT_NAME`, `EXTENSION_NAME`, `CANVAS_ID` (keep it stable), `GATEWAY_PORT` and
-  `GATEWAY_ALLOWED_ORIGIN` override it.
-- `npm run install-ext [name] [--force] [--dir <extensions-root>]` replaces only an earlier install
-  of this canvas (its own or a link install with the same canvas id) unless you pass `--force`, and
-  records where it was installed from so the canvas's suggestions point Copilot at this copy.
-- Rebuild and commit `extension/` after any change; link installs use it.
-
-## Stack
-
-![Node.js](https://img.shields.io/badge/Node.js-24-339933?logo=node.js&logoColor=white)
-![TypeScript](https://img.shields.io/badge/TypeScript-7-3178c6?logo=typescript&logoColor=white)
-![React](https://img.shields.io/badge/React-19-61dafb?logo=react&logoColor=white)
-![Mantine](https://img.shields.io/badge/Mantine-9-339af0?logo=mantine&logoColor=white)
-![Vite+](https://img.shields.io/badge/Vite%2B-1-646cff?logo=vite&logoColor=white)
-![Vitest](https://img.shields.io/badge/Vitest-5-6e9f18?logo=vitest&logoColor=white)
-![npm](https://img.shields.io/badge/npm-11-cb3837?logo=npm&logoColor=white)
+Nothing is approved automatically: every permission, answer and plan approval is an explicit tap
+from you. Only you can answer, both on your computer and on your phone: your copy runs on your own
+computer, and the phone link is signed in to you alone.
 
 ## License
 
