@@ -8,6 +8,8 @@ export interface PushOptions {
   statePath: string;
   assistantName: string;
   sender?: PushSender;
+  /** Private token file for `POST /api/push/notify`; created at start. Omit to turn the route off. */
+  notifyTokenPath?: string;
 }
 
 export function createPushState(options: PushOptions) {

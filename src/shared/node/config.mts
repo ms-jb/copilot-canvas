@@ -145,3 +145,8 @@ export function providerStatePathFor(
 export function gatewayStatePath(config: TemplateConfig, env: Env = process.env): string {
   return join(runtimeDir(config, env), "gateway.json");
 }
+
+/** Secret that lets local tools push a notice through the gateway (`npm run notify`). */
+export function notifyTokenPath(config: TemplateConfig, env: Env = process.env): string {
+  return join(runtimeDir(config, env), "notify-token");
+}

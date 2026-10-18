@@ -6,6 +6,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   gatewayStatePath,
   loadConfig,
+  notifyTokenPath,
   runtimeDir,
   sessionsDir,
 } from "../src/shared/node/config.mts";
@@ -28,7 +29,11 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
     sessionsDir: sessionsDir(config),
     // Notifications need the phone's https origin; keys and subscriptions stay in the runtime folder.
     push: config.gatewayAllowedOrigin
-      ? { statePath: join(runtimeDir(config), "push.json"), assistantName: config.assistantName }
+      ? {
+          statePath: join(runtimeDir(config), "push.json"),
+          assistantName: config.assistantName,
+          notifyTokenPath: notifyTokenPath(config),
+        }
       : undefined,
   });
   const { port } = await gateway.listen();

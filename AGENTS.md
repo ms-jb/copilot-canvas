@@ -87,6 +87,23 @@ testable.
 `add-view-or-panel` for UI, `add-data-endpoint` for outside data and `theme-and-identity` for names,
 colors and the phone app's branding.
 
+## Push a notice to the phone
+
+`npm run notify -- "<title>" "<body>" [url]` pushes a notice to every subscribed phone, even one
+with the canvas open, and prints `{"sent":N,"failed":M}`. It exits 1 when nothing was delivered,
+the gateway is down or the token is refused, and 2 on wrong usage. The `url` (opened on tap) is a
+path starting with `/` or an `http(s)` URL; limits are title 80, body 300 and url 500 characters,
+with no control characters.
+
+It calls the gateway's `POST /api/push/notify` (`gateway/server/notify-route.mts`), which only
+accepts loopback connections with no `Origin`, `Referer`, cookies, `Sec-Fetch-*`, `Forwarded`,
+`Via`, `X-Forwarded-*` or `X-MS-*` headers, and requires `Authorization: Bearer <token>`. The token
+is the real gate, since tunnel traffic also arrives on loopback: 32 random bytes in the owner-only
+`notify-token` file in the runtime folder. The gateway creates it at start when notifications are
+on, keeps a valid private one across restarts, and replaces one that is malformed or readable by
+others. Delete the file and restart the gateway to rotate it. Never print, log or serve the token,
+and never add this route to `ROUTES`.
+
 ## Keep it safe
 
 - Loopback only: never bind the provider or gateway to anything but `127.0.0.1`.
