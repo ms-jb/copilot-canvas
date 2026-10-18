@@ -18,8 +18,36 @@ in a session without this repository and the user has no copy yet, follow [SETUP
 | Shared wire types and validators | `src/shared/contract.mts` and `src/shared/contract/`               |
 | Node configuration and runtime   | `src/shared/node/` (never imported by the renderer)                |
 
-Views and panels take `ViewProps` (`connection`: transcript, status, settings, config). Use Mantine
-components and the existing `--cc-*` tokens so additions match the rest of the canvas.
+Views and panels take `ViewProps` (`connection`: transcript, status, settings, config). Build them
+from native Mantine components (next section) and the existing `--cc-*` tokens.
+
+## UI: native Mantine first
+
+The renderer is Mantine 9. Compose its components; don't rebuild one from `div`s, raw elements and CSS.
+Before writing any UI, look up the component in the Mantine docs (<https://mantine.dev/llms.txt> lists
+every page) and in `ui/src`, and use what exists.
+
+| Need                    | Use                                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| App frame               | `AppShell` (`Header`, `Navbar`, `Aside`, `Footer`, `Main`)                                                          |
+| Layout                  | `Group`, `Stack`, `Flex`, `Grid`, `SimpleGrid`, `ScrollArea`, `Divider`                                             |
+| Actions                 | `Button`, `ActionIcon`, `CloseButton`, `CopyButton`, `FileButton`                                                   |
+| Menus and overlays      | `Menu`, `Popover`, `Modal`, `Drawer`, `Tooltip`, `HoverCard`                                                        |
+| Forms                   | `TextInput`, `Textarea`, `Select`, `Checkbox`, `Switch`, `SegmentedControl`                                         |
+| Content and status      | `Card`, `Paper`, `Badge`, `Table`, `Progress`, `RingProgress`, `Skeleton`, `Loader`, `Indicator`, `Avatar`, `Image` |
+| Navigation and feedback | `NavLink`, `Tabs`, `Anchor`, `Alert`, `Notification`                                                                |
+| Behavior                | `@mantine/hooks`: `useDisclosure`, `useMediaQuery`, `useClipboard`, `useReducedMotion`                              |
+
+- Style with props first (`variant`, `color`, `size`, `radius`), then app-wide defaults in
+  `ui/src/theme.ts`. Add a colocated `.module.css` only for what props and the theme can't express,
+  using `--cc-*` tokens and the Styles API (`classNames`, `vars`), never Mantine's internal class names.
+- `UnstyledButton` is for a clickable with a genuinely custom look; `Box component="header"` only for
+  a semantic wrapper no layout component fits. `<svg>`, `<video>` and Markdown output stay raw.
+- Lint enforces this: `react/forbid-elements` in `vite.config.ts` rejects raw `button`, `input`,
+  `select`, `textarea`, `dialog`, `progress`, `table`, `img`, `a` and the landmark elements in
+  `ui/**/*.tsx`. Markdown output (`ui/src/MarkdownView.tsx`) is exempt, and files that predate the
+  rule are listed in `mantineDebt`. Migrate a debt file to Mantine and remove it from the list;
+  never add a file to either list or disable the rule.
 
 **Data.** The page can only call its own provider. For outside data (pull requests, calendar), add a
 `GET` endpoint: the path in `API` and its response shape in `src/shared/contract.mts`, the

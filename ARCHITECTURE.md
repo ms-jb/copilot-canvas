@@ -101,6 +101,9 @@ of the defaults, `vite.config.ts` adds two architecture rules:
 - `import/no-cycle` (type-only imports excepted) keeps the module graph acyclic.
 - `no-restricted-imports` enforces the layering rules above. Tests are exempt.
 
+It also adds `react/forbid-elements` for `ui/**/*.tsx`, which rejects raw controls and landmarks in
+favor of native Mantine components (see "UI: native Mantine first" in AGENTS.md).
+
 Keep the defaults; add a rule only when it guards a real boundary or a bug class this repository has
 hit.
 

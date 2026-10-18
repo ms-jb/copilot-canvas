@@ -46,8 +46,10 @@ Finish this step with one chosen placement and a small list of files to change.
 
 ## 3. Fit the shell
 
-- Use existing Mantine components and a colocated `.module.css`. Consume
-  `--cc-*` tokens from `ui/src/styles.css`; let `ui/src/theme.ts` style Mantine.
+- Follow "UI: native Mantine first" in `AGENTS.md`: compose Mantine components
+  (`Card`, `Stack`, `Table`, `Button`...) instead of raw elements and custom CSS;
+  lint rejects raw controls. Use a colocated `.module.css` only for what props
+  and `ui/src/theme.ts` can't express, consuming `--cc-*` tokens.
 - Give lists stable keys, readable wrapping, labelled controls and keyboard
   focus. Use loading, empty, error and retry states rather than a blank panel.
   Keep last-known data visibly stale when refresh fails; do not present it as live.
@@ -79,7 +81,7 @@ Finish this step with one chosen placement and a small list of files to change.
 ## Don't
 
 - Do not substitute a native app panel, My work tab or separate canvas for this edit.
-- Do not add a heavy UI dependency for components Mantine already supplies.
+- Do not add a heavy UI dependency, or hand-build a component, that Mantine already supplies.
 - Do not hand-edit `extension/`; rebuild it from the source.
 - Do not bypass explicit user taps or weaken the provider's request checks to
   make a new control work.
