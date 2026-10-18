@@ -19,7 +19,9 @@ export function validateQueueState(value) {
                     (item.kind === "message" || item.kind === "command") &&
                     typeof item.text === "string" &&
                     (item.truncated === undefined || typeof item.truncated === "boolean") &&
-                    item.text.length <= QUEUE_LIMITS.maxTextChars))));
+                    item.text.length <= QUEUE_LIMITS.maxTextChars &&
+                    (item.queuedAt === undefined ||
+                        (typeof item.queuedAt === "string" && Number.isFinite(Date.parse(item.queuedAt))))))));
 }
 /** Validates POST api/queue: { sessionId, action, id, text? | toPosition? | requestId? }. */
 export function validateQueuePayload(body) {

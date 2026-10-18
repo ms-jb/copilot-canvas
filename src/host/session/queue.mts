@@ -38,6 +38,8 @@ export function createQueueTracker(
     set.add(value);
     if (set.size > 500) set.delete(set.values().next().value!);
   };
+  const isoTime = (value: unknown): string | undefined =>
+    typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : undefined;
   const rememberSendNow = (requestId: string, outcome: QueueOutcome): QueueOutcome => {
     sentNow.set(requestId, outcome);
     if (sentNow.size > 500) sentNow.delete(sentNow.keys().next().value!);
@@ -79,6 +81,9 @@ export function createQueueTracker(
       )
         return false;
       const held = new Set(queue.items.map((item) => item.messageId));
+      // The session may not report when an item was queued, so keep the first time this host saw it.
+      const queuedAtById = new Map(items.map((item) => [item.id, item.queuedAt]));
+      const seenAt = new Date().toISOString();
       // The page's request ids stay attached to items so every client can tell its own sends.
       const ids = new Set<string>();
       const next: QueueItem[] = queue.items
@@ -88,6 +93,11 @@ export function createQueueTracker(
           ids.add(item.id);
           const requestId =
             typeof item.messageId === "string" ? requestFor(item.messageId) : undefined;
+          const queuedAt =
+            isoTime(item.queuedAt) ??
+            isoTime(item.createdAt) ??
+            queuedAtById.get(item.id) ??
+            seenAt;
           return [
             {
               id: item.id,
@@ -101,6 +111,7 @@ export function createQueueTracker(
               item.displayText.length > QUEUE_LIMITS.maxTextChars
                 ? { truncated: true }
                 : {}),
+              queuedAt,
             },
           ];
         })

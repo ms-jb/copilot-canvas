@@ -119,7 +119,9 @@ after an explicit send, through that session's command RPC. `GET api/context` re
 context usage; automatic compaction events are displayed, but the canvas cannot initiate compaction.
 Queue editing (edit, move, remove, and Send now) uses `POST api/queue` behind the existing CSRF,
 generation and session policy. Send now sends the item's text as a normal message, then removes it;
-a repeated `requestId` replays the first outcome instead of sending again.
+a repeated `requestId` replays the first outcome instead of sending again. Each queue item carries
+`queuedAt` (the session's time, else when the host first saw it); the page shows "Queued 2m ago"
+and highlights Send now after five minutes.
 These new endpoints are not forwarded by the phone gateway's existing allowlist.
 
 Activity summaries are bounded and redacted on the host. Reasoning remains expandable; tools

@@ -22,6 +22,8 @@ export interface QueueItem {
   text: string;
   /** Clipped display text must not be saved back as if it were the complete message. */
   truncated?: boolean;
+  /** When the message entered the queue, as far as the session or this host can tell. */
+  queuedAt?: string;
 }
 
 export interface QueueState {
@@ -50,7 +52,9 @@ export function validateQueueState(value: unknown): value is QueueState {
             (item.kind === "message" || item.kind === "command") &&
             typeof item.text === "string" &&
             (item.truncated === undefined || typeof item.truncated === "boolean") &&
-            item.text.length <= QUEUE_LIMITS.maxTextChars,
+            item.text.length <= QUEUE_LIMITS.maxTextChars &&
+            (item.queuedAt === undefined ||
+              (typeof item.queuedAt === "string" && Number.isFinite(Date.parse(item.queuedAt)))),
         )))
   );
 }

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ActionIcon, Button, Group, Paper, Text, Textarea } from "@mantine/core";
 import { QUEUE_LIMITS, type QueueChange, type QueueItem } from "../shared";
 import { makeRequestId } from "../api";
@@ -22,14 +22,40 @@ export function queueRows(items: QueueItem[] = [], local: PendingMessage[]): Que
   ];
 }
 
+/** A message waiting this long is probably stuck, so its Send now action stands out. */
+export const STUCK_QUEUE_MS = 5 * 60_000;
+const AGE_REFRESH_MS = 30_000;
+
+/** How long a message has been queued: "queued just now", "queued 2m ago", "queued 3h ago". */
+export function queueAgeLabel(queuedAt: string | undefined, nowMs: number): string {
+  const queuedMs = queuedAt ? Date.parse(queuedAt) : Number.NaN;
+  if (!Number.isFinite(queuedMs)) return "Queued";
+  const minutes = Math.max(0, Math.floor((nowMs - queuedMs) / 60_000));
+  if (minutes < 1) return "Queued just now";
+  if (minutes < 60) return `Queued ${minutes}m ago`;
+  if (minutes < 1440) return `Queued ${Math.floor(minutes / 60)}h ago`;
+  return `Queued ${Math.floor(minutes / 1440)}d ago`;
+}
+
 interface QueuedMessagesProps {
   rows: QueueRow[];
   /** Resolves with an error message when the change did not apply. */
   onChange: (change: QueueChange) => Promise<string | null>;
   disabled?: boolean;
+  /** Fixed clock for tests; the list otherwise re-reads the time every 30 seconds. */
+  nowMs?: number;
 }
 
-export function QueuedMessages({ rows, onChange, disabled }: QueuedMessagesProps) {
+export function QueuedMessages({ rows, onChange, disabled, nowMs }: QueuedMessagesProps) {
+  const [clock, setClock] = useState(() => Date.now());
+  const ticking = nowMs === undefined && rows.length > 0;
+  useEffect(() => {
+    if (!ticking) return;
+    setClock(Date.now());
+    const timer = setInterval(() => setClock(Date.now()), AGE_REFRESH_MS);
+    return () => clearInterval(timer);
+  }, [ticking]);
+  const now = nowMs ?? clock;
   const [editing, setEditing] = useState<{ id: string; text: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [working, setWorking] = useState(false);
@@ -88,6 +114,8 @@ export function QueuedMessages({ rows, onChange, disabled }: QueuedMessagesProps
           const { item } = row;
           const isEditing = editing?.id === item.id;
           const locked = disabled || working;
+          const queuedMs = item.queuedAt ? Date.parse(item.queuedAt) : Number.NaN;
+          const stuck = Number.isFinite(queuedMs) && now - queuedMs >= STUCK_QUEUE_MS;
           return (
             <li className={styles.item} key={item.id}>
               {isEditing ? (
@@ -120,6 +148,15 @@ export function QueuedMessages({ rows, onChange, disabled }: QueuedMessagesProps
               ) : (
                 <Group gap="xs" wrap="wrap" align="flex-start">
                   <div className={styles.message}>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      component="time"
+                      display="block"
+                      dateTime={item.queuedAt}
+                    >
+                      {queueAgeLabel(item.queuedAt, now)}
+                    </Text>
                     <Text size="sm" className={styles.text}>
                       {item.text}
                     </Text>
@@ -128,7 +165,7 @@ export function QueuedMessages({ rows, onChange, disabled }: QueuedMessagesProps
                     {item.kind === "message" && !item.truncated && (
                       <Button
                         size="compact-xs"
-                        variant="default"
+                        variant={stuck ? "light" : "default"}
                         className={styles.sendNow}
                         aria-label="Send queued message now"
                         disabled={locked}
