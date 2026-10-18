@@ -23,7 +23,7 @@
   opacity: 0.65;
 }
 
-/* Assistant turn: full-width prose under a small author row. */
+/* Assistant turn: full-width prose under the avatar and name. */
 .assistant {
   display: flex;
   flex-direction: column;
@@ -31,9 +31,7 @@
   min-width: 0;
 }
 
-/* Aligned with the name, past the 28px avatar and its gap. */
 .body {
-  padding-inline-start: 36px;
   min-width: 0;
 }
 
@@ -75,9 +73,5 @@
 @media (max-width: 768px) {
   .user {
     padding-inline-start: 8%;
-  }
-
-  .body {
-    padding-inline-start: 0;
   }
 }
