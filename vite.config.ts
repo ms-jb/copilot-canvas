@@ -2,6 +2,7 @@ import { fileURLToPath } from "node:url";
 import react from "@vitejs/plugin-react";
 import { defineConfig } from "vite-plus";
 import { devMock } from "./scripts/dev-mock.mts";
+import { inlineAppleTouchIcon } from "./scripts/inline-apple-touch-icon.mts";
 import { syncExtension } from "./scripts/sync-extension.mts";
 
 const root = fileURLToPath(new URL(".", import.meta.url));
@@ -59,6 +60,11 @@ export default defineConfig({
     react(),
     // `vp dev` only: a scripted stand-in for the extension's API (see scripts/dev-mock.mts).
     devMock(root),
+    {
+      name: "inline-apple-touch-icon",
+      apply: "build",
+      transformIndexHtml: async (html) => inlineAppleTouchIcon(html, root),
+    },
     {
       // After the renderer is written, compile the host so `vp build` yields a complete extension/.
       name: "sync-extension",

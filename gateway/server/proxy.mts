@@ -57,7 +57,11 @@ export function createProxy(selectProvider: SelectProvider) {
         out["x-content-type-options"] = "nosniff";
         // Static assets may keep the provider's caching headers; everything else is never cached.
         const keepCaching =
-          path.startsWith("assets/") && reply.statusCode === 200 && out["cache-control"];
+          (path.startsWith("assets/") ||
+            path === "apple-touch-icon.png" ||
+            path === "apple-touch-icon-precomposed.png") &&
+          reply.statusCode === 200 &&
+          out["cache-control"];
         if (!keepCaching) Object.assign(out, SENSITIVE_RESPONSE_HEADERS);
 
         const isSse =
