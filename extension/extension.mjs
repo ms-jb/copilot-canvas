@@ -5,13 +5,17 @@
 import { CanvasError, createCanvas, joinSession } from "@github/copilot-sdk/extension";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { DEFAULT_CONFIG, loadConfig, resolveConfig } from "./shared/node/config.mjs";
+import { DEFAULT_CONFIG, INSTALL_MARKER, loadConfig, resolveConfig, } from "./shared/node/config.mjs";
 import { createSessionBridge } from "./host/bridge.mjs";
 import { createChatCanvas } from "./host/canvas.mjs";
+import { markerTime, watchInstall } from "./host/install-watch.mjs";
 import { startProvider } from "./host/provider.mjs";
 import { createSessionsReader } from "./host/sessions/reader.mjs";
 const extensionDir = dirname(fileURLToPath(import.meta.url));
 const uiDir = join(extensionDir, "ui");
+// Read before any await, so a build installed while this one starts up is still noticed.
+const installMarker = join(extensionDir, INSTALL_MARKER);
+const loadedMarkerTime = markerTime(installMarker);
 let session = null;
 const earlyLogs = [];
 // stdout is the JSON-RPC channel, so everything goes through the session logger.
@@ -83,9 +87,15 @@ await Promise.race([
     new Promise((resolve) => setTimeout(resolve, 10000).unref()),
 ]);
 resolveBridge(bridge);
+// A rebuilt canvas takes over by itself: `npm run install-ext` rewrites the marker last.
+const stopInstallWatch = watchInstall(installMarker, () => {
+    log(`${config.assistantName} canvas: new build installed, reloading.`);
+    bridge?.reloadExtensions();
+}, { baseline: loadedMarkerTime });
 let shutdownPromise = null;
 function shutdown(reason) {
     shutdownPromise ??= (async () => {
+        stopInstallWatch();
         bridge?.dispose();
         await chat.shutdown().catch(() => { });
         log(`${config.assistantName} canvas stopped (${reason}).`);

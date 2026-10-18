@@ -1,11 +1,13 @@
 import { type PendingPrompt, validatePrompts } from "./prompts.mts";
 import { isPlainObject } from "./validation.mts";
+import { type ContextState, validateContextState } from "./context.mts";
 import { type QueueState, validateQueueState } from "./queue.mts";
 import {
   ATTACHMENT_LIMITS,
   type TranscriptAttachment,
   validateTranscriptAttachment,
 } from "./attachments.mts";
+import { ACTIVITY_LIMITS, type ActivityItem, validateActivity } from "./activity.mts";
 
 export type EntryKind = "user" | "assistant" | "error";
 export type Phase = "idle" | "working" | "waiting";
@@ -32,6 +34,8 @@ export interface SessionStatus {
   /** Tool name while activity is "tool" (display only, never arguments). */
   toolName?: string;
   waitingFor?: WaitingFor;
+  /** The agent's latest reported intent while "working" (display only). */
+  intent?: string;
 }
 
 export interface Snapshot {
@@ -40,6 +44,10 @@ export interface Snapshot {
   /** Requests the session is waiting on that can be answered from the canvas, oldest first. */
   prompts?: PendingPrompt[];
   queue?: QueueState;
+  /** Context window usage; absent from providers that don't track it. */
+  context?: ContextState;
+  /** Thinking blocks and the current turn's tool calls, oldest first; absent from older hosts. */
+  activity?: ActivityItem[];
 }
 
 export const PHASES: readonly Phase[] = Object.freeze(["idle", "working", "waiting"] as const);
@@ -88,6 +96,12 @@ export function validateStatus(status: unknown): status is SessionStatus {
   if (status.waitingFor !== undefined && !WAITING_FOR.includes(status.waitingFor as WaitingFor)) {
     return false;
   }
+  if (
+    status.intent !== undefined &&
+    (typeof status.intent !== "string" || status.intent.length > ACTIVITY_LIMITS.maxDetailChars)
+  ) {
+    return false;
+  }
   return true;
 }
 
@@ -98,6 +112,8 @@ export function validateSnapshot(snapshot: unknown): snapshot is Snapshot {
     snapshot.entries.every(validateEntry) &&
     validateStatus(snapshot.status) &&
     (snapshot.prompts === undefined || validatePrompts(snapshot.prompts)) &&
-    (snapshot.queue === undefined || validateQueueState(snapshot.queue))
+    (snapshot.queue === undefined || validateQueueState(snapshot.queue)) &&
+    (snapshot.context === undefined || validateContextState(snapshot.context)) &&
+    (snapshot.activity === undefined || validateActivity(snapshot.activity))
   );
 }

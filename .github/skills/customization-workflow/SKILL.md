@@ -1,6 +1,6 @@
 ---
 name: customization-workflow
-description: "Use for 'make this canvas mine', choosing the next customization, or delivering a canvas change. Scope one step and carry it through checks, installation, user reload and verification."
+description: "Use for 'make this canvas mine', choosing the next customization, or delivering a canvas change. Scope one step and carry it through checks, installation and verification."
 ---
 
 # Customize the user's canvas
@@ -26,7 +26,7 @@ replacement for the implementation skills:
   and approving, so the user never waits on a build. It hands sections 3 and
   4.2 to a background `task` agent in the same conversation, whose permission
   requests then still reach the phone. The conversation keeps the rest: user
-  questions, `npm run install-ext`, the reload request, the installed check and
+  questions, `npm run install-ext`, reopening the canvas, the installed check and
   the commit. One builder at a time per copy. Small configuration edits (a name
   in `template.config.json`) need no builder. `SETUP.md` Part 2 has the brief.
 - **If you are the builder,** do only sections 3 and 4.2, then report the changed
@@ -60,7 +60,7 @@ replacement for the implementation skills:
 - Add a test for new logic under `tests/`; update directly affected user-facing
   documentation when behavior changes. Use synthetic data in the dev preview.
 
-## 4. Check, install, reload, verify
+## 4. Check, install, verify
 
 Run commands from the user's copy with Node.js 22.18+ and the platform's shell.
 Respect explicit task limits if the user requested source-only work.
@@ -71,16 +71,18 @@ Respect explicit task limits if the user requested source-only work.
    caused by the change and report unrelated failures accurately.
 3. Run `npm run install-ext`. It builds and installs this copy; a successful
    build alone does not prove installation or that a running canvas changed.
-4. Ask the user to tap **Reload extensions**, the circular arrow in the canvas's
-   top bar, then open the canvas again. The reload button also works on the phone.
-   Do not answer a permission prompt or change session mode to bypass that tap.
+4. The open canvas reloads itself onto the new build a few seconds after
+   `install-ext`. Wait about five seconds, then `open_canvas` again (same
+   `instanceId`); on the phone, a page refresh picks it up. Ask the user to tap
+   **Reload extensions** only when the canvas still shows an older build that
+   predates self-reload. Never answer a permission prompt or change session mode.
 5. Verify the requested behavior in the installed canvas. For phone features,
    have the user check the phone too. If it says **Not connected**, follow
    `SETUP.md`: the desktop canvas must be open and phone hosting must be running.
    If the change touched `gateway/`, restart `npm run phone` first; the running
    gateway keeps the code it started with.
-6. Report what was observed. If a human reload or phone check is still pending,
-   say so; do not mark it verified on the strength of a screenshot from dev mode.
+6. Report what was observed. If a phone check is still pending, say so; do not
+   mark it verified on the strength of a screenshot from dev mode.
 
 `extension/` is generated and committed for link installs. `npx vp build` builds
 the UI and invokes `syncExtension` through `vite.config.ts`.
@@ -92,10 +94,11 @@ it is not a substitute for a UI build. Never hand-edit generated output.
 - Unless the user restricted git writes, commit the intended source changes
   together with the rebuilt `extension/` after verification. Inspect the diff
   first; do not include unrelated files or private data.
-- Ask before pushing. Check the remote again: if `origin` is
-  `ms-jb/copilot-canvas` and the user does not own it, explain that they need
-  their own fork before pushing. With their approval, use `gh repo fork --remote`
-  and verify the resulting remotes before publishing. A public fork is public.
+- Ask before pushing. Check the remote again: the user's copy should be their
+  own private repository made from the template (`SETUP.md` step 1). If `origin`
+  is `ms-jb/copilot-canvas` and the user does not own it, never push there. With
+  their approval, run `git remote remove origin` and
+  `gh repo create --private --source . --push`, then verify the remotes.
 - Finish with the change, verification result and any remaining human step.
   Suggest one or two small next tweaks based on what the user chose. During
   setup, return to the `SETUP.md` Part 3 stage where the user stopped.

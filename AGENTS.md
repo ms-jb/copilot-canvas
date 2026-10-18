@@ -77,14 +77,16 @@ rest and keeps guiding them meanwhile (see `customization-workflow`).
    from this copy). It replaces only an earlier install of this canvas (its own or a link install
    with the same canvas id) unless you pass `--force`, and records where it was installed from so
    the canvas's suggestions point Copilot at this copy.
-4. Ask the user to tap **Reload extensions** (the circular arrow in the canvas's top bar) and to open
-   the canvas again. Confirm the change is visible. Reloading never restarts the phone gateway:
-   after changing `gateway/` or the shared contract it imports, restart `npm run phone` too, or the
-   phone keeps rejecting new routes with 404.
-5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. If
-   `origin` is still `ms-jb/copilot-canvas` and they don't own it, remind them a push needs their own
-   fork first (`gh repo fork --remote` makes the fork `origin`).
-6. Suggest one or two next tweaks that build on what they just asked for. Customizing never ends.
+4. The open canvas reloads itself onto the new build a few seconds after `install-ext` (it watches
+   its install marker). Open the canvas again and confirm the change is visible; don't ask the user
+   to tap **Reload extensions** unless the canvas runs a build from before self-reload. Reloading
+   never restarts the phone gateway: after changing `gateway/` or the shared contract it imports,
+   restart `npm run phone` too, or the phone keeps rejecting new routes with 404.
+5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. Their
+   copy should be their own private repository made from the template (`SETUP.md` step 1). If
+   `origin` still points at `ms-jb/copilot-canvas` and they don't own it, don't push there: offer
+   `git remote remove origin` and `gh repo create --private --source . --push` instead.
+6. Suggest one or two next tweaks that build on what they just asked for.
    During setup, go back to the `SETUP.md` Part 3 stage where the user stopped.
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).
@@ -99,7 +101,7 @@ colors and the phone app's branding.
 
 ## Phone tunnel
 
-`npm run phone` signs in to dev tunnels (`devtunnel user login -d`) if needed, then creates an
+`npm run phone` signs in to dev tunnels with GitHub (`devtunnel user login -g -d`) if needed, then creates an
 owner-only tunnel once and remembers its id outside the repository; a tunnel that grants anyone
 else access is refused, never changed. It adds port 47600 with `--origin-header unchanged`, so the
 gateway can check the phone's exact address, then hosts the tunnel and starts the gateway with

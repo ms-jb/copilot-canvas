@@ -12,3 +12,5 @@ export {
 export type { SendOutcome, ReloadOutcome, StopOutcome } from "./connection/session-actions";
 export { respondToPrompt } from "./connection/prompt-actions";
 export type { RespondOutcome } from "./connection/prompt-actions";
+export { requestQueueChange } from "./connection/queue-actions";
+export { fetchContextUsage, fetchSkills } from "./connection/composer-actions";

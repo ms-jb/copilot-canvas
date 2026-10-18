@@ -1,8 +1,7 @@
 # Copilot Canvas
 
-Your Copilot conversation in a calm, three-column window, on your computer and on your phone.
-Answer Copilot's questions and approvals from anywhere, and shape the whole thing into your own
-just by asking.
+Your Copilot conversation in three columns, on your computer and on your phone. Answer Copilot's
+questions and approvals from anywhere, and ask Copilot to add panels or change how the canvas looks.
 
 <br>
 
@@ -11,9 +10,9 @@ just by asking.
 </p>
 
 <p align="center">
-  <b>One click. About five minutes. No coding.</b><br>
-  <sub>Opens the GitHub Copilot app (or offers to install it first). Copilot does the setup and asks
-  before anything important.</sub>
+  <b>Copilot does the setup. You don't write code.</b><br>
+  <sub>Opens the GitHub Copilot app (or offers to install it first). Copilot asks before it
+  installs software, publishes anything or turns on phone access.</sub>
 </p>
 
 <br>
@@ -37,6 +36,16 @@ just by asking.
 > paste this into any Copilot chat instead: _"Set up Copilot Canvas by following
 > https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md"_.
 
+## What you need
+
+- A GitHub account with any Copilot plan. [Copilot Free](https://github.com/features/copilot/plans)
+  works, but its monthly limits can run out during setup. On Copilot Business or Enterprise, your
+  organization must leave the GitHub Copilot app policy on (it is on by default).
+- The [GitHub Copilot app](https://docs.github.com/copilot/concepts/copilot-surfaces/github-copilot-app)
+  on Windows, macOS or Linux.
+- For the phone: nothing extra. You sign in to the private link with your GitHub account. Setup
+  installs the other tools it needs (Node.js, the dev tunnel CLI) after it asks you.
+
 ## What you get
 
 - Your Copilot conversation in the center, with timestamps and formatting.
@@ -45,7 +54,7 @@ just by asking.
 - Your own panels on the right, starting with a few ideas you can tap.
 - Your recent sessions in the left rail, so you can jump back into one.
 
-## Make it yours
+## Change it
 
 Ask Copilot in any chat, or tap one of the ideas in the canvas's empty right-hand side. Some ideas:
 
@@ -54,20 +63,26 @@ Ask Copilot in any chat, or tap one of the ideas in the canvas's empty right-han
 - _"Rename my canvas assistant to Atlas and use a teal accent."_
 - _"Add a checklist for today to my canvas that I can tick off."_
 
-Copilot changes your copy of the canvas, rebuilds it, and asks you to tap **Reload extensions**
-(the circular arrow at the top) to see it. Then ask for the next thing.
+Copilot changes your copy of the canvas, rebuilds it, and the canvas switches to the new build by
+itself. Then ask for the next thing.
+
+## Your copy
+
+Setup makes your own **private** repository from this template on your GitHub account (or, if you
+prefer, a local folder only). It starts with fresh history and has no link back to this
+repository. Your changes stay in your repository.
 
 ## Open on phone
 
-Setup gives you a link and a QR code for your phone. Scan it, sign in with the same account, and
-say hello. The canvas then walks you through adding it to your home screen so it opens like an app.
+Setup gives you a link and a QR code for your phone. Scan it, sign in with your GitHub account, and
+send a message. The canvas then shows you how to add it to your home screen so it opens like an app.
 If you change the app's icon later, remove the home-screen app and add it again to see the new one.
 
 ## Safety
 
 Nothing is approved automatically: every permission, answer and plan approval is an explicit tap
 from you. Only you can answer, both on your computer and on your phone: your copy runs on your own
-computer, and the phone link is signed in to you alone.
+computer, and only your account can open the phone link.
 
 ## License
 

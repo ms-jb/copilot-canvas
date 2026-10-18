@@ -4,8 +4,8 @@
 
 import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
-import { cp, mkdir, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { cp, mkdir, rename, rm, writeFile } from "node:fs/promises";
+import { basename, dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 import { copilotHome, INSTALL_MARKER, loadConfig } from "../src/shared/node/config.mts";
@@ -27,6 +27,8 @@ export function isOwnInstall(target: string, canvasId: string): boolean {
 
 /**
  * Copies `source` to `target` and records `sourceDir`, the clone it came from, in the install marker.
+ * The build is staged beside `target` and swapped in whole, marker included, so a running canvas
+ * (which watches the marker and reloads itself) never sees a half-copied install.
  * Refuses to replace a folder that is not this canvas unless `force` is set.
  */
 export async function copyExtension(options: {
@@ -42,10 +44,52 @@ export async function copyExtension(options: {
       `${target} exists and is not this canvas. Remove it or pass --force to replace it.`,
     );
   }
-  await rm(target, { recursive: true, force: true });
+  const staging = join(dirname(target), `.${basename(target)}.installing`);
+  await rm(staging, { recursive: true, force: true });
   await mkdir(dirname(target), { recursive: true });
-  await cp(source, target, { recursive: true });
-  await writeFile(join(target, INSTALL_MARKER), JSON.stringify({ sourceDir }) + "\n");
+  await cp(source, staging, { recursive: true });
+  await writeFile(
+    join(staging, INSTALL_MARKER),
+    JSON.stringify({ sourceDir, installedAt: new Date().toISOString() }) + "\n",
+  );
+  await promote(staging, target);
+}
+
+type Move = (from: string, to: string) => Promise<void>;
+const TRANSIENT = new Set(["EBUSY", "EPERM", "EACCES", "ENOTEMPTY"]);
+
+async function retry(action: () => Promise<void>, delayMs: number, attempts = 5): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await action();
+    } catch (error) {
+      const code = (error as NodeJS.ErrnoException | undefined)?.code ?? "";
+      if (attempt >= attempts || !TRANSIENT.has(code)) throw error;
+      await new Promise((resolve) => setTimeout(resolve, delayMs * attempt));
+    }
+  }
+}
+
+/**
+ * Swaps `staging` in as `target`. The previous install is kept aside until the swap succeeds and
+ * put back if it fails, retrying the short-lived sharing errors Windows reports.
+ */
+export async function promote(
+  staging: string,
+  target: string,
+  { move = rename as Move, delayMs = 200 }: { move?: Move; delayMs?: number } = {},
+): Promise<void> {
+  const previous = join(dirname(target), `.${basename(target)}.previous`);
+  await rm(previous, { recursive: true, force: true });
+  const replacing = existsSync(target);
+  if (replacing) await retry(() => move(target, previous), delayMs);
+  try {
+    await retry(() => move(staging, target), delayMs);
+  } catch (error) {
+    if (replacing) await retry(() => move(previous, target), delayMs).catch(() => {});
+    throw error;
+  }
+  await rm(previous, { recursive: true, force: true });
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
@@ -75,7 +119,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     force: values.force,
   });
   console.log(
-    `Installed to ${target}\nReload extensions (the canvas's reload button, or the Copilot app), ` +
-      "then open the canvas.",
+    `Installed to ${target}\nAn open canvas reloads itself onto this build in a few seconds; ` +
+      "then open it again. A first install needs one extensions reload to register it.",
   );
 }

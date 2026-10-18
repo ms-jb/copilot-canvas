@@ -35,18 +35,21 @@ export function describeActivity(
     };
   }
   if (status.phase !== "working") return null;
+  // The latest intent says what the turn is for; a running tool says what is happening right now.
+  const { intent } = status;
   switch (status.activity) {
-    case "thinking":
-      return { tone: "working", title: "Thinking…" };
-    case "responding":
-      return { tone: "working", title: "Responding…" };
     case "tool":
       return {
         tone: "working",
         title: status.toolName ? `Running ${status.toolName}…` : "Running a tool…",
+        ...(intent ? { detail: intent } : {}),
       };
+    case "responding":
+      return { tone: "working", title: intent ?? "Writing…" };
+    case "thinking":
+      return { tone: "working", title: intent ?? "Thinking…" };
     default:
-      return { tone: "working", title: "Working…" };
+      return { tone: "working", title: intent ?? "Working…" };
   }
 }
 
@@ -54,7 +57,7 @@ const sameContent = (a: ActivityContent | null, b: ActivityContent | null) =>
   a?.tone === b?.tone && a?.title === b?.title && a?.detail === b?.detail;
 
 /**
- * Live activity row directly above the composer: thinking, responding or running a tool. It
+ * Live activity row directly above the composer: the turn's intent or the tool it is running. It
  * collapses when idle. Requests the canvas can answer are shown as prompt cards instead; the
  * waiting line here is only the fallback for requests that must be answered in the Copilot app.
  */

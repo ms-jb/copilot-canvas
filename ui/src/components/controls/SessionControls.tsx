@@ -1,12 +1,38 @@
-import { Popover } from "@mantine/core";
+import {
+  ActionIcon,
+  Alert,
+  Button,
+  Flex,
+  Loader,
+  Popover,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
 import { useState, type JSX } from "react";
-import { SESSION_MODES, type ControlChange, type SessionControls as Controls } from "../../shared";
+import {
+  SESSION_MODES,
+  type ContextTier,
+  type ControlChange,
+  type SessionControls as Controls,
+} from "../../shared";
 import type { Connection } from "../../useConnection";
-import { ControlPicker, type PickerOption } from "./ControlPicker";
-import { MODE_LABELS, activeModel, effectiveEffort, effortLabel, modelLabel } from "./labels";
+import { ChevronIcon, ControlPicker, type PickerOption } from "./ControlPicker";
+import {
+  MODE_LABELS,
+  TIER_LABELS,
+  activeModel,
+  effectiveEffort,
+  effortLabel,
+  modelLabel,
+  settingsSummary,
+  tierLabel,
+} from "./labels";
 import styles from "./SessionControls.module.css";
 import { useControlChange } from "./useControlChange";
-import { useLayoutMode } from "../../layout/useLayoutMode";
+import { useTouchSize } from "../touchSize";
+import type { ComposerFit } from "../composerFit";
+import { formatTokens } from "../../features/context/usage";
 
 /** Shows a requested value while it is in flight or waiting for the turn to end. */
 function displayed(controls: Controls, change: ControlChange | null): Controls {
@@ -14,10 +40,16 @@ function displayed(controls: Controls, change: ControlChange | null): Controls {
 }
 
 function modelOptions(controls: Controls): PickerOption[] {
-  const options: PickerOption[] = controls.models.map((model) => ({
-    value: model.id,
-    label: model.name,
-  }));
+  const options: PickerOption[] = controls.models.map((model) => {
+    const long = model.contextTokens?.long_context;
+    return {
+      value: model.id,
+      label: model.name,
+      hint: model.contextTiers?.includes("long_context")
+        ? `Long context${long ? ` up to ${formatTokens(long)}` : ""}`
+        : undefined,
+    };
+  });
   // The session may report a current model it does not list; show it, but it can't be re-picked.
   if (controls.modelId && !controls.models.some((model) => model.id === controls.modelId)) {
     options.unshift({ value: controls.modelId, label: controls.modelId, disabled: true });
@@ -34,6 +66,18 @@ function effortOptions(controls: Controls): PickerOption[] {
   }));
 }
 
+function tierOptions(controls: Controls): PickerOption[] {
+  const model = activeModel(controls);
+  return (model?.contextTiers ?? []).map((tier) => {
+    const tokens = model?.contextTokens?.[tier];
+    return {
+      value: tier,
+      label: TIER_LABELS[tier],
+      hint: tokens ? `${formatTokens(tokens)} token window` : undefined,
+    };
+  });
+}
+
 const MODE_OPTIONS: PickerOption[] = SESSION_MODES.map((mode) => ({
   value: mode,
   label: MODE_LABELS[mode].label,
@@ -42,12 +86,19 @@ const MODE_OPTIONS: PickerOption[] = SESSION_MODES.map((mode) => ({
 
 /**
  * Native session settings as a compact row of pills in the composer: mode, model, reasoning
- * effort and long context. Only controls the host verified are rendered, and options come only
+ * effort and context window. Only controls the host verified are rendered, and options come only
  * from the session. A change the session applies after the current turn keeps a small spinner on
  * its pill until it lands; only a failed change is announced, as an alert.
  */
-export function SessionControls({ connection }: { connection: Connection }): JSX.Element | null {
-  const phone = useLayoutMode() === "phone";
+export function SessionControls({
+  connection,
+  fit,
+}: {
+  connection: Connection;
+  fit: ComposerFit;
+}): JSX.Element | null {
+  const compact = fit !== "wide";
+  const size = useTouchSize();
   const [opened, setOpened] = useState(false);
   const { pending, deferred, error, apply } = useControlChange(connection);
   const live = connection.view.controls;
@@ -65,16 +116,28 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
   if (!showMode && !available.model && !available.reasoningEffort && !tierOffered) return null;
 
   const settings = (
-    <div className={styles.composer}>
+    <Stack gap={4} miw={0}>
       {error && (
-        <p className={styles.error} role="alert">
-          {error}
-        </p>
+        <Alert variant="light" color="red" radius="sm" py={4} px="xs">
+          <Text size="xs" c="red" lh={1.4}>
+            {error}
+          </Text>
+        </Alert>
       )}
-      <div className={styles.row} role="group" aria-label="Session settings">
+      <Flex
+        gap={4}
+        wrap="nowrap"
+        // A compact popover stacks the pills; the composer keeps them in one row.
+        direction={compact ? "column" : "row"}
+        align={compact ? "stretch" : "center"}
+        className={compact ? undefined : styles.row}
+        role="group"
+        aria-label="Session settings"
+      >
         {showMode && controls.mode && (
           <ControlPicker
-            withinPortal={!phone}
+            withinPortal={!compact}
+            block={compact}
             label="Mode"
             value={controls.mode}
             display={MODE_LABELS[controls.mode].label}
@@ -86,7 +149,8 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
         )}
         {available.model && (
           <ControlPicker
-            withinPortal={!phone}
+            withinPortal={!compact}
+            block={compact}
             label="Model"
             value={controls.modelId}
             display={modelLabel(controls) ?? "Choose model"}
@@ -99,12 +163,15 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
         )}
         {available.reasoningEffort && (
           <ControlPicker
-            withinPortal={!phone}
+            withinPortal={!compact}
+            block={compact}
             label="Reasoning effort"
             value={effort}
             display={
               <>
-                <span className={styles.prefix}>Effort</span>{" "}
+                <Text span inherit c="var(--cc-text-faint)" mr={4}>
+                  Effort
+                </Text>
                 {effort ? effortLabel(effort) : "Default"}
               </>
             }
@@ -115,24 +182,35 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
           />
         )}
         {tierOffered && (
-          <button
-            type="button"
-            className={styles.pill}
-            aria-pressed={tier === "long_context"}
-            disabled={disabled}
-            data-busy={busy("contextTier") || undefined}
-            title="Use the model's long-context window"
-            onClick={() =>
-              apply({ contextTier: tier === "long_context" ? "default" : "long_context" })
+          <ControlPicker
+            withinPortal={!compact}
+            block={compact}
+            label="Context window"
+            value={tier}
+            display={
+              <>
+                <Text span inherit c="var(--cc-text-faint)" mr={4}>
+                  Context
+                </Text>
+                {tierLabel(activeModel(controls), tier)}
+              </>
             }
-          >
-            <span className={styles.triggerText}>Long context</span>
-          </button>
+            options={tierOptions(live)}
+            disabled={disabled}
+            busy={busy("contextTier")}
+            onChange={(value) => apply({ contextTier: value as ContextTier })}
+          />
         )}
-      </div>
-    </div>
+      </Flex>
+    </Stack>
   );
-  if (!phone) return settings;
+  if (!compact) return settings;
+  const label = error ? "Session settings: change failed" : "Session settings";
+  const summary = settingsSummary(controls, {
+    mode: showMode,
+    model: available.model,
+    effort: available.reasoningEffort,
+  });
   return (
     <Popover
       opened={opened}
@@ -144,28 +222,48 @@ export function SessionControls({ connection }: { connection: Connection }): JSX
       returnFocus
     >
       <Popover.Target>
-        <button
-          type="button"
-          className={styles.tune}
-          aria-label={error ? "Session settings: change failed" : "Session settings"}
-          title="Session settings"
-          aria-expanded={opened}
-          onClick={() => setOpened((current) => !current)}
-        >
-          <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-            <path
-              d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-7 0v6"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.7"
-              strokeLinecap="round"
-            />
-          </svg>
-        </button>
+        {fit === "medium" ? (
+          <Button
+            variant={opened ? "light" : "subtle"}
+            color="gray"
+            radius="xl"
+            size="compact-sm"
+            fw={400}
+            maw="100%"
+            miw={0}
+            aria-label={`${label}: ${summary}`}
+            aria-expanded={opened}
+            title={summary}
+            rightSection={requested ? <Loader size={10} color="currentColor" /> : <ChevronIcon />}
+            onClick={() => setOpened((current) => !current)}
+          >
+            {summary}
+          </Button>
+        ) : (
+          <Tooltip label={label} disabled={opened}>
+            <ActionIcon
+              size={size}
+              radius="md"
+              variant={opened ? "light" : "subtle"}
+              color="gray"
+              aria-label={label}
+              aria-expanded={opened}
+              onClick={() => setOpened((current) => !current)}
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+                <path
+                  d="M4 6h16M4 12h16M4 18h16M8 3v6m8 0v6m-7 0v6"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.7"
+                  strokeLinecap="round"
+                />
+              </svg>
+            </ActionIcon>
+          </Tooltip>
+        )}
       </Popover.Target>
-      <Popover.Dropdown className={`${styles.dropdown} ${styles.phoneSettings}`}>
-        {settings}
-      </Popover.Dropdown>
+      <Popover.Dropdown p={4}>{settings}</Popover.Dropdown>
     </Popover>
   );
 }

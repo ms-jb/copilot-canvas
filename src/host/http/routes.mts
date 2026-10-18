@@ -6,6 +6,8 @@ import {
   IDENTITY_APP,
   toPublicOrigin,
   validateSessions,
+  validateSkills,
+  validateContextState,
 } from "../../shared/contract.mts";
 import type { Bootstrap, Identity, ShareInfo } from "../../shared/contract.mts";
 import type { SessionsInfo } from "../../shared/contract.mts";
@@ -122,6 +124,23 @@ export function createRoutes({
       case API.stop:
         if (method !== "POST") return notAllowed(res, "POST");
         return posts.handleStop(req, res);
+      case API.queue:
+        if (method !== "POST") return notAllowed(res, "POST");
+        return posts.handleQueue(req, res);
+      case API.skills: {
+        if (method !== "GET") return notAllowed(res, "GET");
+        const body = await bridge.listSkills().catch(() => null);
+        if (!validateSkills(body))
+          return sendError(res, ERROR_CODES.internal, "Skills are unavailable.");
+        return sendJson(res, 200, body);
+      }
+      case API.context: {
+        if (method !== "GET") return notAllowed(res, "GET");
+        const body = await bridge.readContext().catch(() => null);
+        if (!validateContextState(body))
+          return sendError(res, ERROR_CODES.internal, "Context usage is unavailable.");
+        return sendJson(res, 200, body);
+      }
       case API.share:
         if (method !== "GET") return notAllowed(res, "GET");
         return handleShare(res);

@@ -16,6 +16,8 @@ export interface ModelOption {
   reasoningEfforts?: string[];
   defaultReasoningEffort?: string;
   contextTiers?: ContextTier[];
+  /** Prompt token budget per context tier, when the catalog publishes it. */
+  contextTokens?: Partial<Record<ContextTier, number>>;
 }
 
 /**

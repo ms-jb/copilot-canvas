@@ -1,8 +1,10 @@
 // Pure helpers for keeping an ordered, de-duplicated list of transcript entries.
 // Used by the host (authoritative store) and by the renderer (client view state).
 
-import { LIMITS } from "./contract.mts";
+import { LIMITS, pruneActivity } from "./contract.mts";
 import type {
+  ActivityItem,
+  ContextState,
   PendingPrompt,
   ServerEvent,
   SessionControls,
@@ -20,6 +22,10 @@ export interface ViewState {
   /** Pending requests the user can answer from the canvas, oldest first. */
   prompts: PendingPrompt[];
   queue?: QueueState;
+  /** Context window usage and the actions the host supports; absent when it isn't tracked. */
+  context?: ContextState;
+  /** Thinking blocks and the current turn's tool calls, oldest first. */
+  activity: ActivityItem[];
 }
 
 export interface PendingRef {
@@ -33,11 +39,11 @@ export const NO_CONTROLS: SessionControls = Object.freeze({
 }) as SessionControls;
 
 /** Inserts or replaces an entry by id. New entries are placed by timestamp (stable for ties). */
-export function upsertEntry(
-  entries: TranscriptEntry[],
-  entry: TranscriptEntry,
+export function upsertEntry<T extends { id: string; timestamp: string } = TranscriptEntry>(
+  entries: T[],
+  entry: T,
   maxEntries: number = LIMITS.maxEntries,
-): TranscriptEntry[] {
+): T[] {
   const index = entries.findIndex((existing) => existing.id === entry.id);
   const next = entries.slice();
   if (index >= 0) {
@@ -60,7 +66,16 @@ export function createViewState(): ViewState {
     status: { phase: "idle" },
     controls: NO_CONTROLS,
     prompts: [],
+    activity: [],
   };
+}
+
+/** Tool calls belong to the turn the latest user message started; earlier ones are dropped. */
+function latestUserTimestamp(entries: readonly TranscriptEntry[]): string | undefined {
+  for (let index = entries.length - 1; index >= 0; index -= 1) {
+    if (entries[index]!.kind === "user") return entries[index]!.timestamp;
+  }
+  return undefined;
 }
 
 type EventData<E extends ServerEvent["name"]> = Extract<ServerEvent, { name: E }>["data"];
@@ -84,7 +99,9 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
       status: event.snapshot.status,
       controls: event.controls,
       prompts: event.snapshot.prompts ?? [],
+      activity: event.snapshot.activity ?? [],
       ...(event.snapshot.queue ? { queue: event.snapshot.queue } : {}),
+      ...(event.snapshot.context ? { context: event.snapshot.context } : {}),
     };
   }
   if (data.seq <= state.seq) {
@@ -93,7 +110,12 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
   switch (name) {
     case "entry": {
       const event = data as EventData<"entry">;
-      return { ...state, seq: event.seq, entries: upsertEntry(state.entries, event.entry) };
+      const entries = upsertEntry(state.entries, event.entry);
+      const activity =
+        event.entry.kind === "user"
+          ? pruneActivity(state.activity, latestUserTimestamp(entries))
+          : state.activity;
+      return { ...state, seq: event.seq, entries, activity };
     }
     case "status": {
       const event = data as EventData<"status">;
@@ -110,6 +132,33 @@ export function applyServerEvent<E extends ServerEvent["name"]>(
     case "queue": {
       const event = data as EventData<"queue">;
       return { ...state, seq: event.seq, queue: event.queue };
+    }
+    case "context": {
+      const event = data as EventData<"context">;
+      return { ...state, seq: event.seq, context: event.context };
+    }
+    case "activity": {
+      const event = data as EventData<"activity">;
+      const activity = pruneActivity(
+        upsertEntry(state.activity, event.item, Number.POSITIVE_INFINITY),
+        latestUserTimestamp(state.entries),
+      );
+      return { ...state, seq: event.seq, activity };
+    }
+    case "append": {
+      const { seq, target, id, text } = data as EventData<"append">;
+      // The host only appends to a text item this connection has; anything else is ignored.
+      const grow = <T extends { id: string }>(list: T[]) => {
+        const index = list.findIndex((item) => item.id === id);
+        const item = list[index];
+        if (!item || !("text" in item) || typeof item.text !== "string") return list;
+        const next = list.slice();
+        next[index] = { ...item, text: item.text + text };
+        return next;
+      };
+      return target === "entry"
+        ? { ...state, seq, entries: grow(state.entries) }
+        : { ...state, seq, activity: grow(state.activity) };
     }
     default:
       return state;

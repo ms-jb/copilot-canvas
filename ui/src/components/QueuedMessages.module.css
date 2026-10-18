@@ -1,19 +1,5 @@
 .queue {
-  margin-block: var(--cc-space-2);
-  padding: var(--cc-space-2) var(--cc-space-3);
-  border: 1px solid var(--cc-border);
-  border-radius: var(--cc-radius-md);
   background: var(--cc-surface-raised);
-}
-
-.heading,
-.label {
-  font-size: var(--cc-text-xs);
-  color: var(--cc-text-muted);
-}
-
-.heading {
-  font-weight: 600;
 }
 
 .list {
@@ -36,5 +22,4 @@
 .text {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  font-size: var(--cc-text-sm);
 }

@@ -20,6 +20,7 @@ const posts = [
   [API.respond, { requestId: "p", response: { kind: "permission", decision: "deny" } }],
   [API.reload, {}],
   [API.stop, {}],
+  [API.queue, { action: "remove", id: "queued-1" }],
 ] as const;
 
 beforeEach(async () => {
@@ -33,6 +34,7 @@ beforeEach(async () => {
     reloadExtensions: vi.fn<Bridge["reloadExtensions"]>(() => true),
     stop: vi.fn<Bridge["stop"]>(async () => "stopped"),
     respond: vi.fn<Bridge["respond"]>(async () => ({ ok: true, status: "accepted" })),
+    changeQueue: vi.fn<Bridge["changeQueue"]>(async () => "done"),
   };
   effects = Object.values(actions);
   getSessions = vi.fn<() => Promise<SessionsInfo>>(async () => ({
@@ -47,6 +49,8 @@ beforeEach(async () => {
     getSnapshot: () => ({ seq: 0, snapshot: { entries: [], status: { phase: "idle" } }, controls }),
     subscribe: () => () => {},
     refreshPrompts: () => {},
+    listSkills: async () => ({ available: true, skills: [] }),
+    readContext: async () => ({ usage: null, compacting: false, actions: { refresh: false } }),
   };
   server = await createProviderServer({
     config: { canvasId: "test", assistantName: "Test", description: "Test", defaultView: "chat" },
@@ -114,6 +118,44 @@ it.each(posts)("guards every %s POST before dispatch", async (path, fields) => {
   expect((await post(path, body)).body).toMatchObject({ ok: true });
 });
 
+it.each([API.skills, API.context])(
+  "guards read-only %s by method, Host, Origin and capability",
+  async (path) => {
+    for (const [url, options] of [
+      [server.url + path, { method: "POST" }],
+      [server.url + path, { method: "HEAD" }],
+      [server.url + path, { headers: { host: "evil.test" } }],
+      [server.url + path, { headers: { origin: "https://evil.test" } }],
+      [server.origin + "/wrong/" + path, {}],
+    ] as const) {
+      const status = await new Promise<number>((resolve, reject) => {
+        const req = request(url, options, (res) => {
+          res.resume();
+          res.on("end", () => resolve(res.statusCode ?? 0));
+        });
+        req.on("error", reject);
+        req.end();
+      });
+      expect(status).toBeGreaterThanOrEqual(400);
+    }
+    const response = await fetch(server.url + path);
+    expect(response.status).toBe(200);
+    expect(response.headers.get("cache-control")).toContain("no-store");
+    for (const effect of effects) expect(effect).not.toHaveBeenCalled();
+  },
+);
+
+it("does not expose private failures or malformed composer resource reads", async () => {
+  bridge.listSkills = async () => {
+    throw new Error("PRIVATE detail");
+  };
+  bridge.readContext = async () => null;
+  for (const path of [API.skills, API.context]) {
+    const response = await fetch(server.url + path);
+    expect(response.status).toBe(500);
+    expect(await response.text()).not.toContain("PRIVATE");
+  }
+});
 it("guards session reads by method, Host, Origin and capability prefix", async () => {
   for (const [url, options] of [
     [server.url + API.sessions, { method: "POST" }],

@@ -1,6 +1,6 @@
 import type { PendingPrompt } from "../../src/shared/contract.mts";
 import { SCRIPT, samplePermission } from "./fixtures.mts";
-import { setPrompts, setStatus, upsert } from "./session.mts";
+import { setPrompts, setStatus, upsert, showActivity } from "./session.mts";
 import type { MockSession, MockSessions } from "./session.mts";
 
 export const sleep = (ms: number) => new Promise<void>((done) => setTimeout(done, ms));
@@ -33,7 +33,21 @@ export function createScenarios(sessions: MockSessions) {
     await sleep(1400);
     if (wait) await ask(session, samplePermission(), 20000);
     setStatus(session, { phase: "working", activity: "tool", toolName: tool });
+    const toolItem = {
+      id: `tool:mock-${sessions.nextId()}`,
+      kind: "tool" as const,
+      name: tool,
+      timestamp: new Date().toISOString(),
+      detail: "Preview tool activity",
+    };
+    showActivity(session, { ...toolItem, state: "running" });
     await sleep(1600);
+    showActivity(session, {
+      ...toolItem,
+      state: "succeeded",
+      durationMs: 1600,
+      result: "Preview completed.",
+    });
     setStatus(session, { phase: "working", activity: "thinking" });
     await sleep(800);
     setStatus(session, { phase: "working", activity: "responding" });

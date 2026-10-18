@@ -1,4 +1,4 @@
-import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, validateSessions, } from "../../shared/contract.mjs";
+import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, validateSessions, validateSkills, validateContextState, } from "../../shared/contract.mjs";
 import { createPostRoutes } from "./post-routes.mjs";
 import { isRead } from "./request-policy.mjs";
 import { errorMessage, notAllowed, sendError, sendJson } from "./responses.mjs";
@@ -94,6 +94,26 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 if (method !== "POST")
                     return notAllowed(res, "POST");
                 return posts.handleStop(req, res);
+            case API.queue:
+                if (method !== "POST")
+                    return notAllowed(res, "POST");
+                return posts.handleQueue(req, res);
+            case API.skills: {
+                if (method !== "GET")
+                    return notAllowed(res, "GET");
+                const body = await bridge.listSkills().catch(() => null);
+                if (!validateSkills(body))
+                    return sendError(res, ERROR_CODES.internal, "Skills are unavailable.");
+                return sendJson(res, 200, body);
+            }
+            case API.context: {
+                if (method !== "GET")
+                    return notAllowed(res, "GET");
+                const body = await bridge.readContext().catch(() => null);
+                if (!validateContextState(body))
+                    return sendError(res, ERROR_CODES.internal, "Context usage is unavailable.");
+                return sendJson(res, 200, body);
+            }
             case API.share:
                 if (method !== "GET")
                     return notAllowed(res, "GET");

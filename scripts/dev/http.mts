@@ -14,11 +14,21 @@ import {
   validateReloadPayload,
   validateRespondPayload,
   validateSendPayload,
+  validateQueuePayload,
 } from "../../src/shared/contract.mts";
 import type { loadConfig } from "../../src/shared/node/config.mts";
-import { COOKIE, CSRF_TOKEN, SCENARIOS, SESSION_ID } from "./fixtures.mts";
+import { COOKIE, CSRF_TOKEN, SCENARIOS, SESSION_ID, SAMPLE_SKILLS } from "./fixtures.mts";
 import type { Scenario } from "./fixtures.mts";
-import { applyChange, broadcast, fits, setPrompts, setStatus, upsert } from "./session.mts";
+import {
+  applyChange,
+  broadcast,
+  fits,
+  setPrompts,
+  setStatus,
+  upsert,
+  queueState,
+  publishQueue,
+} from "./session.mts";
 import type { MockSessions } from "./session.mts";
 import { sleep } from "./scenarios.mts";
 import type { MockScenarios } from "./scenarios.mts";
@@ -91,6 +101,7 @@ export function createMockHandler(options: {
       route === API.controls ||
       route === API.respond ||
       route === API.reload ||
+      route === API.queue ||
       route === API.stop
         ? "POST"
         : "GET";
@@ -115,7 +126,9 @@ export function createMockHandler(options: {
             entries: session.entries,
             status: session.status,
             prompts: session.prompts,
-            queue: { removedRequestIds: session.removedRequestIds },
+            queue: queueState(session),
+            activity: session.activity,
+            context: session.context,
           },
           controls: session.controls,
         });
@@ -127,6 +140,11 @@ export function createMockHandler(options: {
       }
       case API.sessions:
         return json(res, 200, mockSessionList(scenarioOf(req), session.status.phase));
+      case API.skills:
+        return json(res, 200, SAMPLE_SKILLS);
+      case API.context:
+        broadcast(session, "context", { context: session.context });
+        return json(res, 200, session.context);
       case API.events: {
         res.writeHead(200, {
           "content-type": "text/event-stream; charset=utf-8",
@@ -141,7 +159,9 @@ export function createMockHandler(options: {
               entries: session.entries,
               status: session.status,
               prompts: session.prompts,
-              queue: { removedRequestIds: session.removedRequestIds },
+              queue: queueState(session),
+              activity: session.activity,
+              context: session.context,
             },
             controls: session.controls,
           })}\n\n`,
@@ -168,7 +188,7 @@ export function createMockHandler(options: {
         });
         const { text, requestId } = parsed.value;
         const attachments = transcriptAttachments(parsed.value.attachments);
-        const deliver = () => {
+        const deliver = (text: string) => {
           upsert(session, {
             id: `user:${messageId}`,
             kind: "user",
@@ -183,9 +203,30 @@ export function createMockHandler(options: {
           });
         };
         if (parsed.value.mode === "enqueue" && session.status.phase !== "idle") {
-          session.queued.push({ requestId, deliver });
-        } else deliver();
+          session.queued.push({ id: messageId, requestId, text, deliver });
+          publishQueue(session);
+        } else deliver(text);
         return;
+      }
+      case API.queue: {
+        if (!checkWrite(req, res)) return;
+        const parsed = validateQueuePayload(await readJson(req));
+        if (!parsed.ok) return error(res, parsed.code, parsed.message);
+        if (parsed.value.sessionId !== SESSION_ID)
+          return error(res, ERROR_CODES.sessionMismatch, "Wrong session.");
+        const change = parsed.value.change;
+        const index = session.queued.findIndex((item) => item.id === change.id);
+        if (index < 0) return error(res, ERROR_CODES.queueItemGone, "That message left the queue.");
+        const item = session.queued[index]!;
+        if (change.action === "edit") item.text = change.text;
+        else {
+          session.queued.splice(index, 1);
+          if (change.action === "move") session.queued.splice(change.toPosition, 0, item);
+          else
+            session.removedRequestIds = [...session.removedRequestIds, item.requestId].slice(-500);
+        }
+        publishQueue(session);
+        return json(res, 200, { ok: true, status: "done" });
       }
       case API.controls: {
         if (!checkWrite(req, res)) return;
@@ -241,7 +282,7 @@ export function createMockHandler(options: {
           ...session.removedRequestIds,
           ...session.queued.splice(0).map((item) => item.requestId),
         ].slice(-500);
-        broadcast(session, "queue", { queue: { removedRequestIds: session.removedRequestIds } });
+        publishQueue(session);
         setPrompts(session, []);
         setStatus(session, { phase: "idle" });
         return json(res, 200, { ok: true, status: "stopped" });

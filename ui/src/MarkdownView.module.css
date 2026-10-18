@@ -6,6 +6,11 @@
   min-width: 0;
 }
 
+.md[data-size="sm"] {
+  font-size: var(--cc-text-sm);
+  line-height: 1.5;
+}
+
 .md > :first-child {
   margin-top: 0;
 }
@@ -16,6 +21,11 @@
 
 .md p {
   margin: 0 0 0.75em;
+}
+
+/* Line breaks typed inside a paragraph stay. */
+.md :is(p, li) {
+  white-space: pre-wrap;
 }
 
 .md ul,
@@ -38,6 +48,45 @@
 
 .md strong {
   font-weight: 600;
+}
+
+.md del {
+  color: var(--cc-text-muted);
+}
+
+.md li:has(> .task) {
+  list-style: none;
+}
+
+.task {
+  display: inline-flex;
+  margin-inline-end: var(--cc-space-1);
+  vertical-align: -3px;
+  color: var(--cc-text-muted);
+}
+
+.task[data-done] {
+  color: var(--cc-accent);
+}
+
+.image {
+  font-style: italic;
+  color: var(--cc-text-muted);
+}
+
+/* A wide table scrolls inside its own box, never the page. */
+.table {
+  margin: 0 0 0.75em;
+  max-width: 100%;
+}
+
+/* Cells keep whole words; a narrow column makes the table scroll instead of splitting them. */
+.table :is(th, td) {
+  overflow-wrap: normal;
+}
+
+.table thead {
+  background: var(--cc-surface-sunken);
 }
 
 .md blockquote {
@@ -119,32 +168,17 @@
   text-transform: lowercase;
 }
 
-.copy {
+.copyWrap {
   display: inline-flex;
   align-items: center;
-  gap: var(--cc-space-1);
-  min-height: 28px;
-  padding: 0 var(--cc-space-2);
-  border: 0;
-  border-radius: var(--cc-radius-sm);
-  background: transparent;
+  gap: var(--cc-space-2);
+}
+
+.copyText {
   color: var(--cc-text-muted);
-  font: inherit;
   font-size: var(--cc-text-xs);
-  cursor: pointer;
-  transition:
-    background-color var(--cc-duration) var(--cc-ease),
-    color var(--cc-duration) var(--cc-ease);
-}
-
-.copy:hover {
-  background: var(--cc-surface-raised);
-  color: var(--cc-text);
-}
-
-.copy:focus-visible {
-  outline: 2px solid var(--cc-focus);
-  outline-offset: 1px;
+  min-width: 48px;
+  text-align: left;
 }
 
 .code pre:focus-visible {
@@ -164,6 +198,42 @@
 
 .code pre code {
   white-space: pre;
+}
+
+.codeHighlighted {
+  color: var(--cc-text);
+}
+
+.codeHighlighted :global(.hljs-keyword),
+.codeHighlighted :global(.hljs-meta),
+.codeHighlighted :global(.hljs-selector-tag) {
+  color: var(--cc-accent);
+}
+
+.codeHighlighted :global(.hljs-title),
+.codeHighlighted :global(.hljs-title.class_),
+.codeHighlighted :global(.hljs-type),
+.codeHighlighted :global(.hljs-built_in) {
+  color: color-mix(in srgb, var(--cc-accent) 75%, var(--cc-text));
+}
+
+.codeHighlighted :global(.hljs-string),
+.codeHighlighted :global(.hljs-attr),
+.codeHighlighted :global(.hljs-attribute),
+.codeHighlighted :global(.hljs-template-variable) {
+  color: color-mix(in srgb, var(--cc-success) 82%, var(--cc-text));
+}
+
+.codeHighlighted :global(.hljs-number),
+.codeHighlighted :global(.hljs-literal),
+.codeHighlighted :global(.hljs-symbol),
+.codeHighlighted :global(.hljs-variable.constant_) {
+  color: color-mix(in srgb, var(--cc-warning) 85%, var(--cc-text));
+}
+
+.codeHighlighted :global(.hljs-comment),
+.codeHighlighted :global(.hljs-quote) {
+  color: var(--cc-text-muted);
 }
 
 /* Streaming caret, appended after the last rendered text. */

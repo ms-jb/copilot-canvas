@@ -1,9 +1,9 @@
-import { Button, CopyButton, Modal, Stack, Text } from "@mantine/core";
+import { Button, CopyButton, Image, Modal, Stack, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
 import { useEffect, useState, type JSX } from "react";
+import { renderSVG } from "uqr";
 import { API, toPublicOrigin, type ShareInfo } from "../../shared";
 import { getJson } from "../../api";
-import { suggestPrompt } from "../../composerDraft";
 import { isRemote } from "../../remote";
 import type { Connection } from "../../useConnection";
 import styles from "./OpenOnPhone.module.css";
@@ -46,6 +46,8 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
   }, [generation]);
 
   if (!publicUrl || isRemote()) return null;
+  // The SVG has its own white quiet zone, so it scans in dark mode too.
+  const qr = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(renderSVG(publicUrl, { border: 2 }))}`;
 
   return (
     <>
@@ -62,6 +64,8 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
       </Button>
       <Modal opened={opened} onClose={close} title="Open on phone" centered size="sm">
         <Stack gap="md" align="center">
+          <Image src={qr} w={200} h={200} radius="sm" alt={`QR code for ${publicUrl}`} />
+          <Text className={styles.note}>Scan with your phone's camera, then sign in.</Text>
           <Text className={styles.url}>{publicUrl}</Text>
           <CopyButton value={publicUrl}>
             {({ copied, copy }) => (
@@ -70,17 +74,6 @@ export function OpenOnPhone({ connection }: { connection: Connection }): JSX.Ele
               </Button>
             )}
           </CopyButton>
-          <Button
-            variant="default"
-            onClick={() => {
-              suggestPrompt(
-                `Make a QR code image for ${publicUrl} and post it here so I can scan it with my phone.`,
-              );
-              close();
-            }}
-          >
-            Ask Copilot for a QR code
-          </Button>
           <Text className={styles.note}>
             Use an owner-only tunnel and open it in a browser signed in as the tunnel owner.
           </Text>

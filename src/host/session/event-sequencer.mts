@@ -1,4 +1,6 @@
 import type {
+  ActivityItem,
+  ContextState,
   PendingPrompt,
   SessionControls,
   SessionStatus,
@@ -14,17 +16,35 @@ export type BridgeEvent =
   | { seq: number; type: "status"; status: SessionStatus }
   | { seq: number; type: "controls"; controls: SessionControls }
   | { seq: number; type: "queue"; queue: QueueState }
-  | { seq: number; type: "prompts"; prompts: PendingPrompt[] };
+  | { seq: number; type: "prompts"; prompts: PendingPrompt[] }
+  | { seq: number; type: "context"; context: ContextState }
+  | { seq: number; type: "activity"; item: ActivityItem };
 type Change =
   | TranscriptChange
   | { type: "controls"; controls: SessionControls }
   | { type: "queue"; queue: QueueState }
-  | { type: "prompts"; prompts: PendingPrompt[] };
+  | { type: "prompts"; prompts: PendingPrompt[] }
+  | { type: "context"; context: ContextState };
 
-/** One sequence for transcript, controls and prompts; streaming entries alone are coalesced. */
+/** Streaming text (a reply or thinking) is coalesced; everything else is sent at once. */
+type StreamingChange =
+  | { type: "entry"; entry: TranscriptEntry }
+  | { type: "activity"; item: ActivityItem };
+function streamingKey(change: TranscriptChange): string | null {
+  if (change.type === "entry") return `entry:${change.entry.id}`;
+  if (change.type === "activity") return `activity:${change.item.id}`;
+  return null;
+}
+const isStreaming = (change: TranscriptChange): change is StreamingChange =>
+  (change.type === "entry" && change.entry.streaming === true) ||
+  (change.type === "activity" &&
+    change.item.kind === "reasoning" &&
+    change.item.streaming === true);
+
+/** One sequence for transcript, controls and prompts; streaming text alone is coalesced. */
 export function createEventSequencer({ log, coalesceMs }: { log: Logger; coalesceMs: number }) {
   const listeners = new Set<(event: BridgeEvent) => void>();
-  const pendingStreaming = new Map<string, TranscriptEntry>();
+  const pendingStreaming = new Map<string, StreamingChange>();
   let seq = 0;
   let flushTimer: ReturnType<typeof setTimeout> | null = null;
   let disposed = false;
@@ -36,7 +56,9 @@ export function createEventSequencer({ log, coalesceMs }: { log: Logger; coalesc
         ? { seq, type: "entry", entry: { ...change.entry } }
         : change.type === "status"
           ? { seq, type: "status", status: { ...change.status } }
-          : { seq, ...change };
+          : change.type === "activity"
+            ? { seq, type: "activity", item: { ...change.item } }
+            : { seq, ...change };
     for (const listener of Array.from(listeners)) {
       try {
         listener(event);
@@ -52,17 +74,18 @@ export function createEventSequencer({ log, coalesceMs }: { log: Logger; coalesc
     }
     const batch = [...pendingStreaming.values()];
     pendingStreaming.clear();
-    for (const entry of batch) emitNow({ type: "entry", entry });
+    for (const change of batch) emitNow(change);
   }
   function emit(changes: readonly TranscriptChange[]): void {
     if (disposed) return;
     for (const change of changes) {
-      if (change.type === "entry" && change.entry.streaming === true) {
-        pendingStreaming.set(change.entry.id, change.entry);
+      const key = streamingKey(change);
+      if (key !== null && isStreaming(change)) {
+        pendingStreaming.set(key, change);
         if (flushTimer === null) flushTimer = setTimeout(flushStreaming, coalesceMs);
         continue;
       }
-      if (change.type === "entry") pendingStreaming.delete(change.entry.id);
+      if (key !== null) pendingStreaming.delete(key);
       emitNow(change);
     }
   }

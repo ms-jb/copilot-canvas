@@ -1,0 +1,44 @@
+/* ActionIcon draws the button; this adds the recording pulse. */
+.mic {
+  position: relative;
+}
+
+.mic[data-state="recording"]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  box-shadow: 0 0 0 0 var(--cc-danger);
+  animation: pulse 1.6s var(--cc-ease) infinite;
+  pointer-events: none;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--cc-danger) 45%, transparent);
+  }
+  100% {
+    box-shadow: 0 0 0 8px transparent;
+  }
+}
+
+.elapsed {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mic[data-state="recording"]::before {
+    animation: none;
+  }
+}
