@@ -6,6 +6,10 @@ const WAITING_DEDUPE_MS = 3000;
 export interface Notice {
   title: string;
   body: string;
+  /** Opened on tap: a same-origin path or an http(s) URL. Defaults to the canvas. */
+  url?: string;
+  /** Notification tag; a notice with its own tag isn't replaced by the next status notice. */
+  tag?: string;
 }
 
 export interface Presence {

@@ -140,17 +140,22 @@ export function readGatewayState(path: string): GatewayState | null {
   }
 }
 
-/** Atomically writes a private state file with owner-only permissions where supported. */
-export function writePrivateJson(path: string, value: unknown): void {
+/** Atomically writes a private file with owner-only permissions where supported. */
+export function writePrivateFile(path: string, text: string): void {
   mkdirSync(dirname(path), { recursive: true, mode: 0o700 });
   const temporary = `${path}.${process.pid}.tmp`;
-  writeFileSync(temporary, JSON.stringify(value), { mode: 0o600 });
+  writeFileSync(temporary, text, { mode: 0o600 });
   try {
     chmodSync(temporary, 0o600);
   } catch {
     // Not supported on every platform/filesystem.
   }
   renameSync(temporary, path);
+}
+
+/** Atomically writes a private state file with owner-only permissions where supported. */
+export function writePrivateJson(path: string, value: unknown): void {
+  writePrivateFile(path, JSON.stringify(value));
 }
 
 /** Atomically writes the state file with owner-only permissions where supported. */

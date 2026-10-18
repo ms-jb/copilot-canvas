@@ -2,7 +2,9 @@ import http from "node:http";
 import type { IncomingMessage, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { API, ATTACHMENT_LIMITS, ERROR_CODES, LIMITS } from "../../src/shared/contract.mts";
+import { ensureNotifyToken } from "../../src/shared/node/notify-token.mts";
 import { createProviderSelector } from "./provider-discovery.mts";
+import { NOTIFY_PATH, createNotifyRoute } from "./notify-route.mts";
 import { createProxy } from "./proxy.mts";
 import { createPushRoutes } from "./push-routes.mts";
 import { createPushState } from "./push-state.mts";
@@ -44,15 +46,23 @@ export function createGateway(options: GatewayOptions): Gateway {
   const push = options.push && createPushState(options.push);
   const handlePush = push && createPushRoutes(push);
   const stopPush = push && watchPush(push, selectProvider);
+  const tokenPath = options.push?.notifyTokenPath;
+  const handleNotify =
+    push && tokenPath && createNotifyRoute(push, ensureNotifyToken(tokenPath), port);
 
   async function handle(request: IncomingMessage, response: ServerResponse) {
     const method = request.method ?? "GET";
+    // Query strings are dropped; encoded or relative path tricks never match the allow-list.
+    const pathname = (request.url ?? "").split("?")[0] ?? "";
+    // Local tools only, with their own gate (no Origin, a bearer token); see notify-route.mts.
+    if (pathname === NOTIFY_PATH) {
+      if (handleNotify) return handleNotify(request, response);
+      return sendError(request, response, ERROR_CODES.notFound, "Phone notifications are off.");
+    }
     if (!acceptsRequest(request, port(), options.allowedOrigin ?? "")) {
       return sendError(request, response, ERROR_CODES.forbidden, "Forbidden.");
     }
 
-    // Query strings are dropped; encoded or relative path tricks never match the allow-list.
-    const pathname = (request.url ?? "").split("?")[0] ?? "";
     if (handlePush && (await handlePush(request, response, pathname, method))) return;
     const expected = allowedMethod(pathname);
     if (!expected) return sendError(request, response, ERROR_CODES.notFound, "Not found.");
