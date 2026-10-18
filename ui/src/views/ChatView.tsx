@@ -163,6 +163,7 @@ export function ChatView({ connection }: ViewProps) {
         pending={visiblePending.filter((item) => item.mode !== "enqueue")}
         activity={view.activity}
         live={running}
+        streaming={view.status.phase === "working"}
         assistantName={assistantName}
         description={config?.description}
         onPickPrompt={pickPrompt}

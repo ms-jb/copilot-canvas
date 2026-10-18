@@ -29,6 +29,8 @@ interface TranscriptProps {
   activity?: ActivityItem[];
   /** A turn is running: its tool calls are shown too. */
   live?: boolean;
+  /** Assistant text is still arriving now; stale streaming markers should not blink. */
+  streaming?: boolean;
   assistantName: string;
   description?: string;
   /** Fills the composer with an example prompt; never sends it. */
@@ -80,10 +82,12 @@ function EntryView({
   entry,
   assistantName,
   run,
+  streaming,
 }: {
   entry: TranscriptEntry;
   assistantName: string;
   run: RunPosition;
+  streaming: boolean;
 }) {
   switch (entry.kind) {
     case "user":
@@ -102,7 +106,7 @@ function EntryView({
         <AssistantMessage
           text={entry.text}
           timestamp={entry.timestamp}
-          streaming={entry.streaming}
+          streaming={streaming && entry.streaming}
           assistantName={assistantName}
           {...run}
         />
@@ -110,7 +114,15 @@ function EntryView({
   }
 }
 
-function RowContent({ row, assistantName }: { row: TranscriptRow; assistantName: string }) {
+function RowContent({
+  row,
+  assistantName,
+  streaming,
+}: {
+  row: TranscriptRow;
+  assistantName: string;
+  streaming: boolean;
+}) {
   switch (row.kind) {
     case "entry":
       return (
@@ -118,6 +130,7 @@ function RowContent({ row, assistantName }: { row: TranscriptRow; assistantName:
           entry={row.entry}
           assistantName={assistantName}
           run={{ continued: row.continued, endsRun: row.endsRun }}
+          streaming={streaming}
         />
       );
     case "pending": {
@@ -146,16 +159,25 @@ function RowContent({ row, assistantName }: { row: TranscriptRow; assistantName:
 
 /** One row and the day separator above it. Only rows whose content changed render again. */
 const RowView = memo(
-  function RowView({ row, assistantName }: { row: TranscriptRow; assistantName: string }) {
+  function RowView({
+    row,
+    assistantName,
+    streaming,
+  }: {
+    row: TranscriptRow;
+    assistantName: string;
+    streaming: boolean;
+  }) {
     const date = row.separator ? toDate(row.separator) : null;
     return (
       <>
         {date && <DaySeparator date={date} />}
-        <RowContent row={row} assistantName={assistantName} />
+        <RowContent row={row} assistantName={assistantName} streaming={streaming} />
       </>
     );
   },
-  (a, b) => a.assistantName === b.assistantName && sameRow(a.row, b.row),
+  (a, b) =>
+    a.assistantName === b.assistantName && a.streaming === b.streaming && sameRow(a.row, b.row),
 );
 
 // Longer conversations render only the rows near the viewport (plus overscan). Shorter ones stay
@@ -167,10 +189,12 @@ function VirtualRows({
   rows,
   scroller,
   assistantName,
+  streaming,
 }: {
   rows: TranscriptRow[];
   scroller: RefObject<HTMLDivElement | null>;
   assistantName: string;
+  streaming: boolean;
 }) {
   // The renderer doesn't use the React Compiler, so its memoization caveat doesn't apply.
   // oxlint-disable-next-line react-hooks/incompatible-library
@@ -191,7 +215,7 @@ function VirtualRows({
           className={styles.virtualRow}
           style={{ transform: `translateY(${item.start}px)` }}
         >
-          <RowView row={rows[item.index]!} assistantName={assistantName} />
+          <RowView row={rows[item.index]!} assistantName={assistantName} streaming={streaming} />
         </div>
       ))}
     </div>
@@ -203,6 +227,7 @@ export function Transcript({
   pending,
   activity = NO_ACTIVITY,
   live = false,
+  streaming = false,
   assistantName,
   description,
   onPickPrompt,
@@ -303,9 +328,21 @@ export function Transcript({
               onPickPrompt={onPickPrompt}
             />
           ) : rows.length > VIRTUALIZE_AFTER ? (
-            <VirtualRows rows={rows} scroller={scroller} assistantName={assistantName} />
+            <VirtualRows
+              rows={rows}
+              scroller={scroller}
+              assistantName={assistantName}
+              streaming={streaming}
+            />
           ) : (
-            rows.map((row) => <RowView key={row.key} row={row} assistantName={assistantName} />)
+            rows.map((row) => (
+              <RowView
+                key={row.key}
+                row={row}
+                assistantName={assistantName}
+                streaming={streaming}
+              />
+            ))
           )}
         </div>
       </div>

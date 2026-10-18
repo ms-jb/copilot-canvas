@@ -37,6 +37,17 @@ export function createTranscriptStore({ maxEntries = LIMITS.maxEntries, } = {}) 
     const requestByMessage = new Map();
     const activity = createActivityTracker();
     let intent;
+    function settleStreaming() {
+        const changes = [];
+        entries = entries.map((entry) => {
+            if (entry.kind !== "assistant" || entry.streaming !== true)
+                return entry;
+            const settled = { ...entry, streaming: false };
+            changes.push({ type: "entry", entry: settled });
+            return settled;
+        });
+        return changes;
+    }
     function markSeen(eventId) {
         if (typeof eventId !== "string")
             return false;
@@ -96,6 +107,8 @@ export function createTranscriptStore({ maxEntries = LIMITS.maxEntries, } = {}) 
         pushActivity(activity.apply(event));
         switch (event.type) {
             case "user.message": {
+                for (const change of settleStreaming())
+                    push(change);
                 if (!isVisibleUserMessage(event))
                     break;
                 const messageId = typeof data.messageId === "string" ? data.messageId : undefined;
@@ -179,6 +192,8 @@ export function createTranscriptStore({ maxEntries = LIMITS.maxEntries, } = {}) 
             case "assistant.idle":
             case "session.idle":
             case "abort":
+                for (const change of settleStreaming())
+                    push(change);
                 intent = undefined;
                 pushActivity(activity.endTurn());
                 push(setStatus({ phase: "idle" }, history));
@@ -186,15 +201,23 @@ export function createTranscriptStore({ maxEntries = LIMITS.maxEntries, } = {}) 
             case "permission.requested":
                 if (data.resolvedByHook === true)
                     break;
+                for (const change of settleStreaming())
+                    push(change);
                 push(setStatus({ phase: "waiting", waitingFor: "permission" }, history));
                 break;
             case "user_input.requested":
+                for (const change of settleStreaming())
+                    push(change);
                 push(setStatus({ phase: "waiting", waitingFor: "input" }, history));
                 break;
             case "elicitation.requested":
+                for (const change of settleStreaming())
+                    push(change);
                 push(setStatus({ phase: "waiting", waitingFor: "elicitation" }, history));
                 break;
             case "exit_plan_mode.requested":
+                for (const change of settleStreaming())
+                    push(change);
                 push(setStatus({ phase: "waiting", waitingFor: "plan" }, history));
                 break;
             case "permission.completed":

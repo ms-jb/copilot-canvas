@@ -81,6 +81,23 @@ it("derives activity and waiting status without answering", () => {
   expect(store.snapshot().status).toEqual({ phase: "idle" });
 });
 
+it("settles a streaming assistant entry on idle, interruption and waiting", () => {
+  const store = createTranscriptStore();
+  store.applyEvent(event("assistant.message_delta", { messageId: "a1", deltaContent: "half" }));
+  store.applyEvent(event("assistant.idle"));
+  expect(store.snapshot().entries[0]).toMatchObject({ streaming: false });
+  store.applyEvent(event("assistant.message_delta", { messageId: "a2", deltaContent: "half" }));
+  store.applyEvent(event("abort"));
+  expect(store.snapshot().entries.find((entry) => entry.id === "assistant:a2")).toMatchObject({
+    streaming: false,
+  });
+  store.applyEvent(event("assistant.message_delta", { messageId: "a3", deltaContent: "half" }));
+  store.applyEvent(event("permission.requested"));
+  expect(store.snapshot().entries.find((entry) => entry.id === "assistant:a3")).toMatchObject({
+    streaming: false,
+  });
+});
+
 it("resyncs the client view from a snapshot and ignores stale events", () => {
   const entry = (id: string): TranscriptEntry => ({
     id,
@@ -100,4 +117,27 @@ it("resyncs the client view from a snapshot and ignores stale events", () => {
   state = applyServerEvent(state, "snapshot", snap(0, "g2", ["z"]));
   expect(state).toMatchObject({ generation: "g2", seq: 0 });
   expect(state.entries.map((e) => e.id)).toEqual(["z"]);
+});
+
+it("removes stale streaming markers when a turn has already ended", () => {
+  const state = applyServerEvent(createViewState(), "snapshot", {
+    seq: 1,
+    generation: "g",
+    snapshot: {
+      entries: [
+        {
+          id: "assistant:a1",
+          kind: "assistant",
+          text: "done",
+          timestamp: "2026-01-01",
+          streaming: true,
+        },
+      ],
+      status: { phase: "idle" },
+    },
+    controls: NO_CONTROLS,
+  });
+  expect(state.entries[0]).toMatchObject({ streaming: false });
+  const next = applyServerEvent(state, "status", { seq: 2, status: { phase: "waiting" } });
+  expect(next.entries[0]).toMatchObject({ streaming: false });
 });

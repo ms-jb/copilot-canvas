@@ -46,12 +46,17 @@ function latestUserTimestamp(entries) {
  * sequence number at or below the last applied one are ignored.
  */
 export function applyServerEvent(state, name, data) {
+    const settleStreaming = (entries, phase) => phase === "working"
+        ? entries
+        : entries.map((entry) => entry.kind === "assistant" && entry.streaming === true
+            ? { ...entry, streaming: false }
+            : entry);
     if (name === "snapshot") {
         const event = data;
         return {
             generation: event.generation,
             seq: event.seq,
-            entries: event.snapshot.entries.slice(-LIMITS.maxEntries),
+            entries: settleStreaming(event.snapshot.entries.slice(-LIMITS.maxEntries), event.snapshot.status.phase),
             status: event.snapshot.status,
             controls: event.controls,
             prompts: event.snapshot.prompts ?? [],
@@ -74,7 +79,12 @@ export function applyServerEvent(state, name, data) {
         }
         case "status": {
             const event = data;
-            return { ...state, seq: event.seq, status: event.status };
+            return {
+                ...state,
+                seq: event.seq,
+                status: event.status,
+                entries: settleStreaming(state.entries, event.status.phase),
+            };
         }
         case "controls": {
             const event = data;
