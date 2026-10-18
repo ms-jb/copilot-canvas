@@ -1,17 +1,11 @@
 {
+  "extends": ["@tsconfig/recommended/tsconfig.json", "@tsconfig/vite-react/tsconfig.json"],
   "compilerOptions": {
-    "target": "ES2023",
     "lib": ["ES2023", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "bundler",
-    "jsx": "react-jsx",
+    "types": ["node"],
     "strict": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "verbatimModuleSyntax": true,
-    "erasableSyntaxOnly": true,
-    "allowImportingTsExtensions": true,
-    "types": ["node"]
+    "noUnusedLocals": false,
+    "noUnusedParameters": false
   },
   "include": ["ui/src", "tests", "scripts", "gateway", "src", "vite.config.ts"]
 }
