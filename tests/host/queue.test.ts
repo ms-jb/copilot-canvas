@@ -182,7 +182,13 @@ it("attaches the composer request id to the queue item it created", async () => 
   await bridge.send("later", "request-0001", [], "enqueue");
   await vi.waitFor(() =>
     expect(bridge.getSnapshot().snapshot.queue?.items).toEqual([
-      { id: "q1", requestId: "request-0001", kind: "message", text: "later" },
+      {
+        id: "q1",
+        requestId: "request-0001",
+        kind: "message",
+        text: "later",
+        queuedAt: expect.any(String),
+      },
     ]),
   );
   bridge.dispose();
@@ -199,6 +205,30 @@ it("sends a queued message now through the session, then drops it from the queue
   expect(send).toHaveBeenCalledWith(expect.objectContaining({ prompt: "wait", mode: "immediate" }));
   expect(bridge.getSnapshot().snapshot.queue?.items?.map((item) => item.text)).toEqual(["later"]);
   bridge.dispose();
+});
+
+it("keeps the session's queued time, or the first time this host saw the item", async () => {
+  const rpc = fakeNativeQueue(["reported", "unreported"]);
+  const reported = "2026-10-18T12:00:00.000Z";
+  const timedRpc = {
+    ...rpc,
+    pendingItems: async () => {
+      const queue = await rpc.pendingItems();
+      return {
+        ...queue,
+        items: queue.items.map((item, i) => (i ? item : { ...item, queuedAt: reported })),
+      };
+    },
+  };
+  const queue = createQueueTracker(timedRpc, vi.fn());
+  await queue.refresh();
+  const [first, second] = queue.snapshot().items!;
+  expect(first?.queuedAt).toBe(reported);
+  expect(Number.isFinite(Date.parse(second!.queuedAt!))).toBe(true);
+  await new Promise((resolve) => setTimeout(resolve, 5));
+  await queue.refresh();
+  expect(queue.snapshot().items?.[1]?.queuedAt).toBe(second!.queuedAt);
+  queue.dispose();
 });
 
 it("edits, reorders and removes queued messages; a missing item is reported gone", async () => {

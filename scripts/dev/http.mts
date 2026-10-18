@@ -203,7 +203,13 @@ export function createMockHandler(options: {
           });
         };
         if (parsed.value.mode === "enqueue" && session.status.phase !== "idle") {
-          session.queued.push({ id: messageId, requestId, text, deliver });
+          session.queued.push({
+            id: messageId,
+            requestId,
+            text,
+            queuedAt: new Date().toISOString(),
+            deliver,
+          });
           publishQueue(session);
         } else deliver(text);
         return;

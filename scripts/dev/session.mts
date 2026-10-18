@@ -32,7 +32,13 @@ export interface MockSession {
   context: ContextState;
   seq: number;
   clients: Set<ServerResponse>;
-  queued: { id: string; requestId: string; text: string; deliver: (text: string) => void }[];
+  queued: {
+    id: string;
+    requestId: string;
+    text: string;
+    queuedAt: string;
+    deliver: (text: string) => void;
+  }[];
   removedRequestIds: string[];
 }
 
@@ -122,13 +128,16 @@ export function setStatus(session: MockSession, status: SessionStatus) {
 
 export const queueState = (session: MockSession) => ({
   removedRequestIds: session.removedRequestIds,
-  items: session.queued.slice(0, QUEUE_LIMITS.maxItems).map(({ id, requestId, text }) => ({
-    id,
-    requestId,
-    text: text.slice(0, QUEUE_LIMITS.maxTextChars),
-    kind: "message" as const,
-    ...(text.length > QUEUE_LIMITS.maxTextChars ? { truncated: true } : {}),
-  })),
+  items: session.queued
+    .slice(0, QUEUE_LIMITS.maxItems)
+    .map(({ id, requestId, text, queuedAt }) => ({
+      id,
+      requestId,
+      text: text.slice(0, QUEUE_LIMITS.maxTextChars),
+      kind: "message" as const,
+      ...(text.length > QUEUE_LIMITS.maxTextChars ? { truncated: true } : {}),
+      queuedAt,
+    })),
 });
 export const publishQueue = (session: MockSession) =>
   broadcast(session, "queue", { queue: queueState(session) });

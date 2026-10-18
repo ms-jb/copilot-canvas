@@ -52,6 +52,16 @@ it("validates queue items and change payloads", () => {
       queue: { removedRequestIds: [], items: [{ ...item, id: "" }] },
     }),
   ).toBe(false);
+  const timed = { ...item, queuedAt: "2026-10-18T12:00:00.000Z" };
+  expect(
+    validateServerEvent("queue", { seq: 1, queue: { removedRequestIds: [], items: [timed] } }),
+  ).toBe(true);
+  expect(
+    validateServerEvent("queue", {
+      seq: 1,
+      queue: { removedRequestIds: [], items: [{ ...item, queuedAt: "nope" }] },
+    }),
+  ).toBe(false);
   const base = { sessionId: "session-1", id: "q1" };
   expect(validateQueuePayload({ ...base, action: "remove" })).toMatchObject({ ok: true });
   expect(validateQueuePayload({ ...base, action: "edit", text: "new" })).toMatchObject({

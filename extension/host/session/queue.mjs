@@ -18,6 +18,7 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000, sendImmediat
         if (set.size > 500)
             set.delete(set.values().next().value);
     };
+    const isoTime = (value) => typeof value === "string" && Number.isFinite(Date.parse(value)) ? value : undefined;
     const rememberSendNow = (requestId, outcome) => {
         sentNow.set(requestId, outcome);
         if (sentNow.size > 500)
@@ -55,6 +56,9 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000, sendImmediat
                         item.kind === "command")))
                 return false;
             const held = new Set(queue.items.map((item) => item.messageId));
+            // The session may not report when an item was queued, so keep the first time this host saw it.
+            const queuedAtById = new Map(items.map((item) => [item.id, item.queuedAt]));
+            const seenAt = new Date().toISOString();
             // The page's request ids stay attached to items so every client can tell its own sends.
             const ids = new Set();
             const next = queue.items
@@ -63,6 +67,10 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000, sendImmediat
                     return [];
                 ids.add(item.id);
                 const requestId = typeof item.messageId === "string" ? requestFor(item.messageId) : undefined;
+                const queuedAt = isoTime(item.queuedAt) ??
+                    isoTime(item.createdAt) ??
+                    queuedAtById.get(item.id) ??
+                    seenAt;
                 return [
                     {
                         id: item.id,
@@ -75,6 +83,7 @@ export function createQueueTracker(rpc, notify, { timeoutMs = 5000, sendImmediat
                             item.displayText.length > QUEUE_LIMITS.maxTextChars
                             ? { truncated: true }
                             : {}),
+                        queuedAt,
                     },
                 ];
             })
