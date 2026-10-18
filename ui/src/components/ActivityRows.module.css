@@ -1,10 +1,9 @@
-/* A run of thinking and tool calls, aligned with the assistant's message body. */
+/* A run of thinking and tool calls, on the same left edge as the message body. */
 .group {
   display: flex;
   flex-direction: column;
   gap: 2px;
   min-width: 0;
-  padding-inline-start: 32px;
 }
 
 .item {
@@ -19,7 +18,7 @@
   width: 100%;
   min-width: 0;
   min-height: 28px;
-  padding: 2px var(--cc-space-2) 2px var(--cc-space-1);
+  padding: 2px var(--cc-space-2) 2px 0;
   border-radius: var(--cc-radius-sm);
   color: var(--cc-text-muted);
   text-align: start;
@@ -118,12 +117,6 @@
 @media (pointer: coarse) {
   .toggle {
     min-height: 44px;
-  }
-}
-
-@media (max-width: 768px) {
-  .group {
-    padding-inline-start: 0;
   }
 }
 

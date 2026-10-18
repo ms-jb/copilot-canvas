@@ -25,7 +25,21 @@
   margin-inline: auto;
 }
 
+/*
+ * On a phone the composer's backdrop is opaque and fades the transcript out above it, so no
+ * message text shows through or butts against the composer's edge.
+ */
 @media (max-width: 768px) {
+  .dock::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    height: var(--cc-space-4);
+    background: linear-gradient(to bottom, transparent, var(--cc-bg));
+    pointer-events: none;
+  }
+
   .activity {
     padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
       max(var(--cc-space-2), env(safe-area-inset-right));

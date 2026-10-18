@@ -79,8 +79,8 @@ export function AssistantMessage({
       data-continued={continued || undefined}
     >
       {!continued && (
-        <Group gap="xs" mih={28} wrap="nowrap">
-          <Avatar name={assistantName} />
+        <Group gap="sm" wrap="nowrap">
+          <Avatar name={assistantName} size="md" />
           <Text span size="sm" fw={600}>
             {assistantName}
           </Text>
@@ -121,13 +121,15 @@ export function ErrorMessage({ text, timestamp }: { text: string; timestamp: str
   );
 }
 
+const AVATAR_PX = { sm: 28, md: 36, lg: 40 };
+
 /** A neutral author initial, independent of personal branding. */
-export function Avatar({ name, size = "sm" }: { name: string; size?: "sm" | "lg" }) {
+export function Avatar({ name, size = "sm" }: { name: string; size?: "sm" | "md" | "lg" }) {
   const initial = Array.from(name.trim())[0]?.toUpperCase() ?? "?";
   return (
     <MantineAvatar
       alt=""
-      size={size === "lg" ? 40 : 28}
+      size={AVATAR_PX[size]}
       radius="xl"
       color="accent"
       variant="light"
