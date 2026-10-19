@@ -14,7 +14,7 @@ replacement for the implementation skills:
 
 ## 1. Work in the user's copy
 
-- Read `.github/skills/setup-copilot-canvas/SKILL.md` if the user has not installed a copy
+- Read `.github/skills/setup-copilot-companion/SKILL.md` if the user has not installed a copy
   yet. Follow its consent and setup steps rather than treating the template checkout as their copy.
 - If setup already selected a folder, keep working there in this conversation.
   A `PanelConfig.sourceDir` hint can help locate it, but verify the checkout:
@@ -28,7 +28,7 @@ replacement for the implementation skills:
   requests then still reach the phone. The conversation keeps the rest: user
   questions, `npm run install-ext`, reopening the canvas, the installed check and
   the commit. One builder at a time per copy. Small configuration edits (a name
-  in `template.config.json`) need no builder. `setup-copilot-canvas/references/change-the-canvas.md` has the brief.
+  in `template.config.json`) need no builder. `setup-copilot-companion/references/change-the-canvas.md` has the brief.
 - **If you are the builder,** do only sections 3 and 4.2, then report the changed
   files, check results and what the user should see. Do not install, commit,
   push, start other agents or ask the user; stop and report any decision you need.
@@ -78,7 +78,7 @@ Respect explicit task limits if the user requested source-only work.
    predates self-reload. Never answer a permission prompt or change session mode.
 5. Verify the requested behavior in the installed canvas. For phone features,
    have the user check the phone too. If it says **Not connected**, follow
-   `setup-copilot-canvas/references/troubleshooting.md`: the desktop canvas must be open and phone hosting must be running.
+   `setup-copilot-companion/references/troubleshooting.md`: the desktop canvas must be open and phone hosting must be running.
    If the change touched `gateway/`, restart `npm run devtunnel` first; the running
    gateway keeps the code it started with.
 6. Report what was observed. If a phone check is still pending, say so; do not
@@ -95,13 +95,13 @@ it is not a substitute for a UI build. Never hand-edit generated output.
   together with the rebuilt `extension/` after verification. Inspect the diff
   first; do not include unrelated files or private data.
 - Ask before pushing. Check the remote again: the user's copy should be their
-  own private repository made from the template (`setup-copilot-canvas` step 3). If `origin`
-  is `ms-jb/copilot-canvas` and the user does not own it, never push there. With
+  own private repository made from the template (`setup-copilot-companion` step 3). If `origin`
+  is `ms-jb/copilot-companion` and the user does not own it, never push there. With
   their approval, run `git remote remove origin` and
   `gh repo create --private --source . --push`, then verify the remotes.
 - Finish with the change, verification result and any remaining human step.
   Suggest one or two small next tweaks based on what the user chose. During
-  setup, return to the `setup-copilot-canvas/references/rest-of-copilot.md` stage where the user stopped.
+  setup, return to the `setup-copilot-companion/references/rest-of-copilot.md` stage where the user stopped.
 
 ## Don't
 

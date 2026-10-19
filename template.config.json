@@ -1,5 +1,5 @@
 {
-  "extensionName": "copilot-canvas",
+  "extensionName": "copilot-companion",
   "canvasId": "chat-panel",
   "assistantName": "Copilot",
   "description": "Your Copilot conversation in a focused, phone-ready canvas.",

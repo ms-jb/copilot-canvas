@@ -1,5 +1,5 @@
 {
-  "name": "copilot-canvas",
+  "name": "copilot-companion",
   "version": "0.1.0",
   "private": true,
   "description": "Your Copilot session in a three-column, phone-ready canvas with native session controls, plus an optional loopback gateway for opening it on your phone.",

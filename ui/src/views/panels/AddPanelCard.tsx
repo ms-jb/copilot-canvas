@@ -3,7 +3,7 @@ import { AddPanelIcon } from "../icons";
 import classes from "./AddPanelCard.module.css";
 
 const SETUP_URL =
-  "https://github.com/ms-jb/copilot-canvas/blob/main/.github/skills/setup-copilot-canvas/SKILL.md";
+  "https://github.com/ms-jb/copilot-companion/blob/main/.github/skills/setup-copilot-companion/SKILL.md";
 
 // Short labels on the chips; the prompt they fill names the source, so Copilot edits this canvas
 // instead of opening a native app panel.
@@ -15,8 +15,8 @@ const SUGGESTIONS = [
 
 function buildPrompt(ask: string, sourceDir: string | undefined): string {
   const where = sourceDir
-    ? `my Copilot Canvas source at ${sourceDir}`
-    : `my Copilot Canvas copy (if I don't have one yet, set it up first with ${SETUP_URL})`;
+    ? `my Copilot Companion source at ${sourceDir}`
+    : `my Copilot Companion copy (if I don't have one yet, set it up first with ${SETUP_URL})`;
   return (
     `In ${where}, add ${ask} to the canvas's right-hand aside. Change the canvas code itself ` +
     "(see ui/src/views/registry.ts and AGENTS.md), then rebuild and reinstall it. Don't open a " +

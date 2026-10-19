@@ -49,7 +49,7 @@ self.addEventListener("push", (event) => {
     latestNotice().then(({ title, body, url, tag }) =>
       self.registration.showNotification(title, {
         body,
-        tag: tag ?? "copilot-canvas",
+        tag: tag ?? "copilot-companion",
         renotify: true,
         icon: "/assets/icon-192.png",
         data: { url: url ?? null },

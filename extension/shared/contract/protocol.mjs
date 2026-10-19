@@ -9,7 +9,7 @@ import { validateActivityItem } from "./activity.mjs";
 import { validateEntry, validateSnapshot, validateStatus, } from "./transcript.mjs";
 import { isPlainObject, makeError, SESSION_ID_PATTERN, } from "./validation.mjs";
 export const CONTRACT_VERSION = 2;
-export const IDENTITY_APP = "copilot-canvas";
+export const IDENTITY_APP = "copilot-companion";
 // Paths are relative to the provider's capability prefix (or to the gateway root).
 export const API = Object.freeze({
     identity: "api/identity",

@@ -26,9 +26,12 @@ export function ComposerTooltip({
   [prop: string]: unknown;
 }) {
   const canHover = useMediaQuery(CAN_HOVER, false);
+  const { className, ...rest } = forwarded;
+  // Merge, so a Popover or Menu target adds its class to the button's own instead of replacing it.
+  const merged = [children.props.className, className].filter(Boolean).join(" ") || undefined;
   return (
     <Tooltip ref={ref} label={label} position="top" offset={6} disabled={hidden || !canHover}>
-      {cloneElement(children, forwarded)}
+      {cloneElement(children, { ...rest, className: merged })}
     </Tooltip>
   );
 }

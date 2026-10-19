@@ -10,7 +10,7 @@ const PUSH_HOSTS = [
   "notify.windows.com",
 ];
 const MAX_ENDPOINT_LENGTH = 1024;
-const VAPID_SUBJECT = "https://github.com/ms-jb/copilot-canvas";
+const VAPID_SUBJECT = "https://github.com/ms-jb/copilot-companion";
 const JWT_LIFETIME_S = 12 * 60 * 60;
 const SEND_TIMEOUT_MS = 10_000;
 
@@ -64,7 +64,7 @@ export const sendPush: PushSender = (endpoint, authorization) =>
           authorization,
           ttl: "3600",
           urgency: "high",
-          topic: "copilot-canvas",
+          topic: "copilot-companion",
           "content-length": 0,
         },
       },

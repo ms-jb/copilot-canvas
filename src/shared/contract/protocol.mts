@@ -22,7 +22,7 @@ import {
 } from "./validation.mts";
 
 export const CONTRACT_VERSION = 2;
-export const IDENTITY_APP = "copilot-canvas";
+export const IDENTITY_APP = "copilot-companion";
 
 export interface PanelConfig {
   /** Name shown in the UI and as the canvas title. */

@@ -15,7 +15,7 @@ export function devMock(repoRoot: string): Plugin {
   const handle = createMockHandler({ repoRoot, config, generation, sessions, scenarios });
   const routes = new Set<string>(Object.values(API));
   return {
-    name: "copilot-canvas-dev-mock",
+    name: "copilot-companion-dev-mock",
     apply: "serve",
     configureServer(server) {
       server.middlewares.use((req, res, next) => {

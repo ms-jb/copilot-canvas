@@ -18,7 +18,7 @@ ask for the next one without this guide.
 - Check that it works; each stage says how. If it loads only in a new chat, say so and check there.
 - End with the one sentence they can use to do it again, for example _"Next time, say: make a
   skill for my weekly status note."_
-- Keep progress in `~/.copilot/canvas-runtime/copilot-canvas/progress.md`: stages done or skipped,
+- Keep progress in `~/.copilot/canvas-runtime/copilot-companion/progress.md`: stages done or skipped,
   the next question, the builder in progress and any change waiting for the user's check. No
   private content and no approvals. When the user comes back, read it first and check for unfinished
   builder work before you start another.

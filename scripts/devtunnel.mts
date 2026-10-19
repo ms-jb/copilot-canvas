@@ -76,7 +76,13 @@ function ensureTunnel(statePath: string): string {
   }
   if (tunnelId && devtunnel(["show", tunnelId, "--json"]).ok) return tunnelId;
 
-  const options = ["--expiration", "30d", "--description", "Copilot Canvas (owner-only)", "--json"];
+  const options = [
+    "--expiration",
+    "30d",
+    "--description",
+    "Copilot Companion (owner-only)",
+    "--json",
+  ];
   // Tunnel ids are unique across all users, so a taken name falls back to a random one.
   const name = tunnelName(userInfo().username);
   let created = name ? devtunnel(["create", name, ...options]) : null;
