@@ -4,7 +4,7 @@ import { createSessionBridge } from "../../src/host/bridge.mts";
 import type { SessionBridge } from "../../src/host/bridge.mts";
 import { createProviderServer } from "../../src/host/server.mts";
 import type { ProviderServer } from "../../src/host/server.mts";
-import { API, type ServerEvent } from "../../src/shared/contract.mts";
+import { API, LIMITS, type ServerEvent } from "../../src/shared/contract.mts";
 import { applyServerEvent, createViewState } from "../../src/shared/entries.mts";
 import { fakeSession } from "./fixtures";
 
@@ -129,15 +129,16 @@ it("streams a reply as appends to the entry this connection already has", async 
   expect(view.entries).toEqual(bridge!.getSnapshot().snapshot.entries);
 });
 
-it("preserves the full bootstrap transcript and stream snapshot", async () => {
+it("sends only the newest turns in api/bootstrap; the stream's snapshot has them all", async () => {
   const history = Array.from({ length: 150 }, (_, index) => ({
     type: index % 2 ? "assistant.message" : "user.message",
     data: { messageId: `m${index}`, content: `turn ${index}` },
   }));
   await start(history);
   const body = await (await fetch(server!.url + API.bootstrap)).json();
-  expect(body.snapshot.entries).toHaveLength(150);
+  expect(body.snapshot.entries).toHaveLength(LIMITS.bootstrapEntries);
   expect(body.snapshot.entries.at(-1).text).toBe("turn 149");
+  expect(body.snapshot.activity).toBeUndefined();
   const stream = listen();
   await stream.received(1);
   stream.close();

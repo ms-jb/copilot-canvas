@@ -4,6 +4,7 @@ import {
   CONTRACT_VERSION,
   ERROR_CODES,
   IDENTITY_APP,
+  LIMITS,
   toPublicOrigin,
   validateSessions,
   validateSkills,
@@ -49,6 +50,7 @@ export function createRoutes({
   const posts = createPostRoutes(bridge, policy, log);
   function handleBootstrap(res: ServerResponse): void {
     const { snapshot, controls } = bridge.getSnapshot();
+    const { activity: _activity, ...snapshotRest } = snapshot;
     let sourceDir = "";
     try {
       sourceDir = getSourceDir();
@@ -66,7 +68,12 @@ export function createRoutes({
         defaultView: config.defaultView,
         ...(sourceDir ? { sourceDir } : {}),
       },
-      snapshot,
+      // The page opens the event stream at the same time, and its snapshot carries everything;
+      // the latest turns here are enough to paint the conversation first.
+      snapshot: {
+        ...snapshotRest,
+        entries: snapshot.entries.slice(-LIMITS.bootstrapEntries),
+      },
       controls,
     };
     sendJson(res, 200, body);

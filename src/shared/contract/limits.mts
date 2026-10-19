@@ -4,6 +4,8 @@ export const LIMITS = Object.freeze({
   sendTimeoutMs: 30000,
   keepaliveMs: 15000,
   maxEntries: 500,
+  /** Entries in api/bootstrap: the newest turns, for a first paint before the SSE snapshot. */
+  bootstrapEntries: 60,
   /** Answering a prompt must stay well under the gateway's upstream timeout. */
   respondTimeoutMs: 20000,
   maxPrompts: 20,

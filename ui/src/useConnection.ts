@@ -2,6 +2,7 @@ import { useNetwork } from "@mantine/hooks";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchBootstrap, fetchIdentity, type SendContext } from "./api";
 import { createStreamBatcher, flushesBufferedText } from "./connection/streamBatcher";
+import { planResume, watchResume } from "./connection/resume";
 import {
   API,
   applyServerEvent,
@@ -75,7 +76,11 @@ export function useConnection(): Connection {
     let offlineTimer: ReturnType<typeof setTimeout> | undefined;
     let retryDelay = RETRY_BASE_MS;
     let stale = false;
+    // A bootstrap in flight; resumes and retries never start a second one.
+    let starting = false;
     const controller = new AbortController();
+    // Events that arrive before the bootstrap names the generation.
+    let early: ServerEvent[] = [];
     const batcher = createStreamBatcher({
       commit: (events) => {
         if (disposed || stale) return;
@@ -124,6 +129,12 @@ export function useConnection(): Connection {
       if (!validateServerEvent(name, data)) return;
       // validateServerEvent has checked the payload shape for this event name.
       const event = { name, data } as ServerEvent;
+      // The stream opens with the bootstrap; until it knows the generation, events wait.
+      if (!generation) early.push(event);
+      else accept(event);
+    };
+
+    const accept = (event: ServerEvent) => {
       if (event.name === "snapshot" && event.data.generation !== generation) {
         markStale();
         return;
@@ -154,7 +165,9 @@ export function useConnection(): Connection {
       next.addEventListener("open", () => {
         retryDelay = RETRY_BASE_MS;
         clearTimeout(offlineTimer);
-        setPhase((current) => (current === "stale" ? current : "connected"));
+        setPhase((current) =>
+          current === "stale" || current === "bootstrapping" ? current : "connected",
+        );
       });
       for (const name of SSE_EVENT_NAMES) {
         next.addEventListener(name, (event) => {
@@ -165,6 +178,8 @@ export function useConnection(): Connection {
         if (disposed || source !== next) return;
         if (next.readyState === EventSource.CLOSED) {
           closeSource();
+          // Before the bootstrap succeeded, its outcome decides what happens next.
+          if (!generation) return;
           setPhase("disconnected");
           void recheckAfterClose();
           return;
@@ -174,12 +189,22 @@ export function useConnection(): Connection {
         );
         clearTimeout(offlineTimer);
         offlineTimer = setTimeout(() => {
+          // A timer that fires late on resume says nothing about the network; the resume reconnects.
+          if (document.visibilityState === "hidden") return;
           setPhase((current) => (current === "reconnecting" ? "disconnected" : current));
         }, OFFLINE_AFTER_MS);
       });
     }
 
+    // The bootstrap and the event stream start together; the stream's snapshot completes the
+    // bootstrap's short transcript.
     async function start() {
+      if (starting) return;
+      starting = true;
+      batcher.flush();
+      generation = "";
+      early = [];
+      open();
       try {
         const bootstrap = await fetchBootstrap(controller.signal);
         if (disposed) return;
@@ -197,34 +222,59 @@ export function useConnection(): Connection {
           status: bootstrap.snapshot.status,
           controls: bootstrap.controls,
           prompts: bootstrap.snapshot.prompts ?? [],
-          activity: bootstrap.snapshot.activity ?? [],
           ...(bootstrap.snapshot.queue ? { queue: bootstrap.snapshot.queue } : {}),
           ...(bootstrap.snapshot.context ? { context: bootstrap.snapshot.context } : {}),
         });
-        setPhase("connecting");
-        open();
+        const waiting = early;
+        early = [];
+        waiting.forEach(accept);
+        if (stale) return;
+        if (!source) open();
+        setPhase(source?.readyState === EventSource.OPEN ? "connected" : "connecting");
       } catch {
         if (disposed) return;
+        closeSource();
         setPhase("disconnected");
         scheduleRetry(() => void start());
+      } finally {
+        starting = false;
       }
     }
 
     void start();
 
-    // Back online: reconnect now instead of waiting out the retry backoff.
-    const onOnline = () => {
-      if (disposed || stale || source?.readyState === EventSource.OPEN) return;
-      retryDelay = RETRY_BASE_MS;
-      clearTimeout(retryTimer);
-      if (generation) open();
-      else void start();
+    // Back from the background, a woken screen or the network returning: replace a stream the OS may
+    // have killed instead of waiting for the browser's own retry. A resume never marks the page
+    // stale on its own; only a changed generation in the fresh snapshot does (`accept`).
+    const stopWatching = watchResume({
+      doc: document,
+      win: window,
+      onResume: (resume) => {
+        if (disposed) return;
+        const plan = planResume(resume, {
+          stale,
+          hasGeneration: generation !== "",
+          streamOpen: source?.readyState === EventSource.OPEN,
+        });
+        if (plan === "none") return;
+        retryDelay = RETRY_BASE_MS;
+        clearTimeout(retryTimer);
+        if (plan === "bootstrap") return void start();
+        setPhase((current) =>
+          current === "reconnecting" || current === "disconnected" ? "connecting" : current,
+        );
+        open();
+      },
+    });
+    const onVisibility = () => {
+      if (document.visibilityState === "hidden") batcher.flush();
     };
-    window.addEventListener("online", onOnline);
+    document.addEventListener("visibilitychange", onVisibility);
 
     return () => {
       disposed = true;
-      window.removeEventListener("online", onOnline);
+      stopWatching();
+      document.removeEventListener("visibilitychange", onVisibility);
       controller.abort();
       clearTimeout(retryTimer);
       closeSource();
