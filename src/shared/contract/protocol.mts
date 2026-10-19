@@ -118,6 +118,8 @@ export const API = Object.freeze({
   pushSubscribe: "api/push/subscribe",
   pushUnsubscribe: "api/push/unsubscribe",
   pushTest: "api/push/test",
+  /** POST endpoint active-hours settings for this device's subscription. */
+  pushSettings: "api/push/settings",
   pushLatest: "api/push/latest",
   pushPresence: "api/push/presence",
 });

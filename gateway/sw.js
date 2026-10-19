@@ -9,12 +9,19 @@
 // Pushes arrive empty: ask the gateway for a one-line status, briefly, and fall back to a generic
 // notice so one is always shown (Safari drops subscriptions that push without showing one).
 // Notices from `npm run notify` may carry a url to open on tap and their own tag.
+//
+// App icon badge: the page keeps the badge in step with what is unread and tells this worker the
+// count. A push while no window is in front adds one to it, so the badge goes up while the app is
+// closed; the page sets the real count when it opens. The Badging API is missing in some browsers,
+// where this does nothing.
 
 // Bump to drop every cached file at the next activation.
 const VERSION = "v1";
 const SHELL_CACHE = `cc-shell-${VERSION}`;
 const ASSET_CACHE = `cc-assets-${VERSION}`;
-const CACHES = [SHELL_CACHE, ASSET_CACHE];
+const BADGE_CACHE = `cc-badge-${VERSION}`;
+const CACHES = [SHELL_CACHE, ASSET_CACHE, BADGE_CACHE];
+const BADGE_KEY = "/__badge";
 // Hashed chunks of the last few builds; the oldest go first.
 const MAX_ASSETS = 80;
 const HASHED = /^\/assets\/[^/]+-[A-Za-z0-9_-]{8}\.(?:js|mjs|css|woff2?)$/;
@@ -153,6 +160,47 @@ async function latestNotice() {
   }
 }
 
+/** The unread count the page last reported, plus the pushes since. */
+async function storedBadge() {
+  try {
+    const hit = await (await caches.open(BADGE_CACHE)).match(BADGE_KEY);
+    const { count } = hit ? await hit.json() : {};
+    return Number.isInteger(count) && count > 0 ? count : 0;
+  } catch {
+    return 0;
+  }
+}
+
+async function storeBadge(count) {
+  try {
+    const cache = await caches.open(BADGE_CACHE);
+    await cache.put(BADGE_KEY, new Response(JSON.stringify({ count })));
+  } catch {
+    // The badge is a courtesy: a full or blocked cache never stops a notice.
+  }
+}
+
+async function paintBadge(count) {
+  try {
+    const nav = self.navigator;
+    if (count > 0 && nav?.setAppBadge) await nav.setAppBadge(count);
+    else if (nav?.clearAppBadge) await nav.clearAppBadge();
+  } catch {
+    // Not supported here, or not allowed.
+  }
+}
+
+const windows = () =>
+  self.clients.matchAll({ type: "window", includeUncontrolled: true }).catch(() => []);
+
+/** Counts a push the reader hasn't seen: none while a window of the app is in front. */
+async function bumpBadge() {
+  if ((await windows()).some((client) => client.visibilityState === "visible")) return;
+  const count = (await storedBadge()) + 1;
+  await storeBadge(count);
+  await paintBadge(count);
+}
+
 self.addEventListener("install", (event) => {
   // A failed precache never blocks the worker: the page still works from the network.
   event.waitUntil(
@@ -178,26 +226,37 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   event.waitUntil(
-    latestNotice().then(({ title, body, url, tag }) =>
-      self.registration.showNotification(title, {
-        body,
-        tag: tag ?? "copilot-companion",
-        renotify: true,
-        icon: "/assets/icon-192.png",
-        data: { url: url ?? null },
-      }),
-    ),
+    Promise.all([
+      latestNotice().then(({ title, body, url, tag }) =>
+        self.registration.showNotification(title, {
+          body,
+          tag: tag ?? "copilot-companion",
+          renotify: true,
+          icon: "/assets/icon-192.png",
+          data: { url: url ?? null },
+        }),
+      ),
+      bumpBadge(),
+    ]),
   );
+});
+
+// The page reports the app's unread total whenever it changes.
+self.addEventListener("message", (event) => {
+  const { type, count } = event.data ?? {};
+  if (type === "badge" && Number.isInteger(count) && count >= 0) event.waitUntil(storeBadge(count));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
   const url = event.notification.data?.url;
   event.waitUntil(
-    url
-      ? self.clients.openWindow(url)
-      : self.clients
-          .matchAll({ type: "window", includeUncontrolled: true })
-          .then((clients) => (clients[0] ? clients[0].focus() : self.clients.openWindow("/"))),
+    windows().then((clients) => {
+      const open = clients[0];
+      if (!open) return self.clients.openWindow(url ?? "/");
+      // An open app is told where to go rather than opened a second time.
+      if (url) open.postMessage({ type: "open", url });
+      return open.focus();
+    }),
   );
 });

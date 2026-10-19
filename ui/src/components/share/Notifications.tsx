@@ -8,6 +8,7 @@ import { usePersistentFlag } from "../../layout/usePersistentFlag";
 import { isRemote, isStandalone } from "../../remote";
 import { BellIcon, BellOffIcon } from "../../views/icons";
 import { detectInstallPlatform, OPEN_INSTALL_GUIDE } from "./installGuide";
+import { NotificationHours } from "./NotificationHours";
 import {
   bellView,
   localOutcomeStore,
@@ -93,8 +94,8 @@ function useFocusPresence(active: boolean) {
 }
 
 /**
- * Phone notifications: when the session needs you or finishes, a push shows a one-line status.
- * Pushes carry no content; the gateway on your computer supplies the line.
+ * Phone notifications: when the session replies, asks something or hits an error, a push shows a
+ * one-line preview. The gateway on your computer supplies the line; nothing is stored elsewhere.
  */
 export function Notifications({ assistantName }: { assistantName: string }) {
   const [opened, { open, close }] = useDisclosure(false);
@@ -102,9 +103,21 @@ export function Notifications({ assistantName }: { assistantName: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [whileOpen, setWhileOpen] = usePersistentFlag("notify-while-open", false);
   const [deliberatelyOff, setDeliberatelyOff] = usePersistentFlag("notify-off", false);
+  const [endpoint, setEndpoint] = useState<string | null>(null);
   const remote = isRemote();
   const supported = pushSupported();
   useFocusPresence(remote && supported && state === "on" && !whileOpen);
+
+  useEffect(() => {
+    if (!remote || !supported || state !== "on") return setEndpoint(null);
+    let cancelled = false;
+    void currentSubscription().then((subscription) => {
+      if (!cancelled) setEndpoint(subscription?.endpoint ?? null);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [remote, supported, state]);
 
   useEffect(() => {
     if (!remote || !supported) return;
@@ -210,8 +223,8 @@ export function Notifications({ assistantName }: { assistantName: string }) {
       : "Add to Home Screen to get notifications."
     : {
         checking: "One moment…",
-        off: `Get a notification when ${assistantName} needs you or finishes. It shows only a short status line; your conversation stays on your computer.`,
-        on: `Notifications are on. You'll hear from ${assistantName} when it needs you or finishes.`,
+        off: `Get a notification when ${assistantName} replies, asks a question or needs an approval, or hits an error. It shows only a short preview line; your conversation stays on your computer.`,
+        on: `Notifications are on. You'll hear from ${assistantName} for each reply, question or approval and error. While ${assistantName} is open and in front on any device, they are held, and the app icon shows how many replies you haven't read.`,
         blocked:
           "Notifications are blocked for this app. Allow them in your phone's settings, then try again.",
         busy: "One moment…",
@@ -234,6 +247,7 @@ export function Notifications({ assistantName }: { assistantName: string }) {
               onChange={(event) => setWhileOpen(event.currentTarget.checked)}
             />
           )}
+          {supported && state === "on" && endpoint && <NotificationHours endpoint={endpoint} />}
           {message && (
             <Text size="sm" c="dimmed" role="status">
               {message}

@@ -91,6 +91,11 @@
   color: var(--cc-accent);
 }
 
+/* The unread count sits at the end of the row. */
+.unread {
+  margin-inline-start: auto;
+}
+
 @media (pointer: coarse) {
   .navLink {
     min-height: 44px;

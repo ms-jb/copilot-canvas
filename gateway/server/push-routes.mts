@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import type { IncomingMessage, ServerResponse } from "node:http";
-import { API, ERROR_CODES } from "../../src/shared/contract.mts";
+import { API, ERROR_CODES, normalizeActiveHours } from "../../src/shared/contract.mts";
 import { SENSITIVE_RESPONSE_HEADERS, isJsonContentType } from "../../src/shared/node/security.mts";
 import { isAllowedPushEndpoint } from "../push/web-push.mts";
 import { readBody, sendError, sendJson } from "./http.mts";
@@ -39,6 +39,7 @@ export function createPushRoutes(push: PushState) {
     const writes = new Set<string>([
       API.pushSubscribe,
       API.pushUnsubscribe,
+      API.pushSettings,
       API.pushTest,
       API.pushPresence,
     ]);
@@ -59,7 +60,7 @@ export function createPushRoutes(push: PushState) {
       return true;
     }
     const body = await readBody(request, PUSH_BODY_MAX_BYTES);
-    let fields: { endpoint?: unknown; focused?: unknown } = {};
+    let fields: { endpoint?: unknown; focused?: unknown; activeHours?: unknown } = {};
     try {
       const parsed: unknown = body ? JSON.parse(body.toString("utf8")) : null;
       if (parsed && typeof parsed === "object") fields = parsed;
@@ -75,11 +76,32 @@ export function createPushRoutes(push: PushState) {
       }
       lastTestAt = now;
       push.latest = { title: push.fallback.title, body: "Notifications are on." };
-      sendJson(response, 200, { ok: true, sent: await push.store.sendAll() });
+      sendJson(response, 200, {
+        ok: true,
+        sent: await push.store.sendAll({ ignoreActiveHours: true }),
+      });
       return true;
     }
     if (!isAllowedPushEndpoint(endpoint)) {
       sendError(request, response, ERROR_CODES.badRequest, "Not a supported push service.");
+      return true;
+    }
+    if (path === API.pushSettings) {
+      if (!push.store.endpoints().includes(endpoint)) {
+        sendError(request, response, ERROR_CODES.badRequest, "Not a subscribed device.");
+        return true;
+      }
+      // Without activeHours this reads the saved setting; with it, replaces it.
+      if (fields.activeHours === undefined) {
+        sendJson(response, 200, { ok: true, activeHours: push.store.activeHours(endpoint) });
+        return true;
+      }
+      const activeHours = normalizeActiveHours(fields.activeHours);
+      if (!activeHours || !push.store.setActiveHours(endpoint, activeHours)) {
+        sendError(request, response, ERROR_CODES.badRequest, "Invalid active hours.");
+        return true;
+      }
+      sendJson(response, 200, { ok: true, activeHours });
       return true;
     }
     if (path === API.pushPresence) {
@@ -92,8 +114,15 @@ export function createPushRoutes(push: PushState) {
       sendJson(response, 200, { ok: true });
       return true;
     }
-    if (path === API.pushSubscribe) push.store.add(endpoint);
-    else {
+    if (path === API.pushSubscribe) {
+      const activeHours =
+        fields.activeHours === undefined ? undefined : normalizeActiveHours(fields.activeHours);
+      if (fields.activeHours !== undefined && !activeHours) {
+        sendError(request, response, ERROR_CODES.badRequest, "Invalid active hours.");
+        return true;
+      }
+      push.store.add(endpoint, activeHours ? { activeHours } : undefined);
+    } else {
       push.store.remove(endpoint);
       push.presence.forget(endpoint);
     }

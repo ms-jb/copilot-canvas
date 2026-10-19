@@ -10,6 +10,7 @@ import { onSuggestedPrompt } from "../composerDraft";
 import { resolvePending, transcriptAttachments, type QueueChange, type SendMode } from "../shared";
 import { useAttachments } from "../features/attachments/useAttachments";
 import { appendDictation } from "../features/dictation/model";
+import { useUnread } from "../features/unread/useUnread";
 import styles from "./ChatView.module.css";
 import type { ViewProps } from "./types";
 
@@ -36,6 +37,7 @@ export function ChatView({ connection }: ViewProps) {
   // Set synchronously before any await so a double click or key repeat can never send twice.
   const inFlight = useRef(false);
   const [stopping, setStopping] = useState(false);
+  const { divider, dismissDivider } = useUnread();
   const running = view.status.phase === "working" || view.status.phase === "waiting";
 
   const stop = async () => {
@@ -167,6 +169,8 @@ export function ChatView({ connection }: ViewProps) {
         assistantName={assistantName}
         description={config?.description}
         onPickPrompt={pickPrompt}
+        unread={divider}
+        onUnreadSeen={dismissDivider}
       />
       <div className={styles.dock}>
         <div className={styles.activity}>

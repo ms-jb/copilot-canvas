@@ -78,6 +78,22 @@ it("serves the service worker, key and latest notice, and validates subscription
     ).toBe(400);
     expect((await call("/api/push/subscribe", "GET")).status).toBe(405);
     expect((await call("/api/push/subscribe", "POST", { endpoint: APPLE })).status).toBe(200);
+    const hours = {
+      on: true,
+      days: [1, 2, 3, 4, 5],
+      start: "08:00",
+      end: "17:00",
+      zone: "UTC",
+    };
+    expect(
+      (await call("/api/push/settings", "POST", { endpoint: APPLE, activeHours: hours })).status,
+    ).toBe(200);
+    expect((await call("/api/push/settings", "POST", { endpoint: APPLE })).status).toBe(200);
+    expect((await call("/api/push/settings", "POST", { endpoint: FCM })).status).toBe(400);
+    expect(
+      (await call("/api/push/settings", "POST", { endpoint: APPLE, activeHours: { on: true } }))
+        .status,
+    ).toBe(400);
 
     expect(
       (await call("/api/push/presence", "POST", { endpoint: FCM, focused: true })).status,
@@ -139,16 +155,81 @@ it("pushes when the live provider starts waiting on the user", async () => {
   try {
     await call("/api/push/subscribe", "POST", { endpoint: APPLE });
     await call("/api/push/subscribe", "POST", { endpoint: FCM });
-    // The phone with the app in front is skipped; the other device still hears about it.
+    // While a subscribed client is visible, the event is held for all push targets.
     await call("/api/push/presence", "POST", { endpoint: FCM, focused: true });
     await until(() => events !== undefined);
     const status = { phase: "waiting", waitingFor: "permission" };
     events?.write(`event: status\ndata: ${JSON.stringify({ seq: 2, status })}\n\n`);
+    await new Promise((done) => setTimeout(done, 300));
+    expect(sent).toEqual([]);
+    expect(JSON.parse((await call("/api/push/latest")).text).body).toBe(
+      "Open the canvas to see what's new.",
+    );
+  } finally {
+    await gateway.close();
+    provider.closeAllConnections();
+    await new Promise((done) => provider.close(done));
+  }
+}, 15_000);
+
+it("pushes one notice with a preview when the live provider's turn ends with a reply", async () => {
+  const generation = "generation-push-bbbb";
+  const capabilityPath = `/chat-panel/${"R".repeat(43)}/`;
+  let events: http.ServerResponse | undefined;
+  const provider = http.createServer((request, response) => {
+    if (request.url === `${capabilityPath}api/identity`) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({ app: IDENTITY_APP, contractVersion: CONTRACT_VERSION, generation }),
+      );
+    } else if (request.url === `${capabilityPath}api/events`) {
+      response.writeHead(200, { "content-type": "text/event-stream" });
+      const snapshot = { entries: [], status: { phase: "idle" }, prompts: [] };
+      response.write(
+        `event: snapshot\ndata: ${JSON.stringify({ seq: 1, generation, snapshot })}\n\n`,
+      );
+      events = response;
+    } else {
+      response.writeHead(404).end();
+    }
+  });
+  await new Promise<void>((done) => provider.listen(0, "127.0.0.1", done));
+  const origin = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`;
+  writeProviderState(
+    join(directory(), "sessions", "session-b.json"),
+    buildProviderState({ generation, origin, capabilityPath, sessionId: "session-b" }),
+  );
+  await startGateway();
+  const until = async (ready: () => boolean) => {
+    for (let waited = 0; !ready() && waited < 8000; waited += 50) {
+      await new Promise((done) => setTimeout(done, 50));
+    }
+  };
+  const emit = (name: string, data: object) =>
+    events?.write(`event: ${name}\ndata: ${JSON.stringify(data)}\n\n`);
+  try {
+    await call("/api/push/subscribe", "POST", { endpoint: APPLE });
+    await until(() => events !== undefined);
+    emit("status", { seq: 2, status: { phase: "working" } });
+    // The reply streams in, settles, and the turn ends: one push, not one per event.
+    const entry = (text: string, streaming?: true) => ({
+      id: "assistant:r1",
+      kind: "assistant",
+      text,
+      timestamp: "2026-10-19T12:00:00.000Z",
+      ...(streaming ? { streaming } : {}),
+    });
+    emit("entry", { seq: 3, entry: entry("The build is", true) });
+    emit("entry", { seq: 4, entry: entry("The build is **green**. See `README.md`.") });
+    emit("status", { seq: 5, status: { phase: "idle" } });
     await until(() => sent.length > 0);
+    await new Promise((done) => setTimeout(done, 300));
     expect(sent).toEqual([APPLE]);
     expect(JSON.parse((await call("/api/push/latest")).text)).toEqual({
-      title: "Atlas needs you",
-      body: "Waiting for your permission.",
+      title: "Atlas replied",
+      body: "The build is green. See README.md.",
+      tag: "reply-assistant_r1",
+      url: "/#/chat",
     });
   } finally {
     await gateway.close();
