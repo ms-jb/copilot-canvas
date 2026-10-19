@@ -19,6 +19,20 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
   <sub>First time here? Either button opens the Copilot app, and if it isn't installed yet, the page it lands on has a button to install it. After installing, come back to this README and click the button again.</sub>
 </p>
 
+<details>
+<summary>Prefer the terminal?</summary>
+
+With the [GitHub Copilot CLI](https://docs.github.com/copilot/concepts/agents/about-copilot-cli)
+signed in, run the same setup from any folder:
+
+```sh
+copilot -i "Set up Copilot Companion for me with the setup-copilot-companion skill. If it isn't available, follow https://github.com/ms-jb/copilot-companion/blob/main/.github/skills/setup-copilot-companion/SKILL.md"
+```
+
+The canvas needs the Copilot app, so the button above is the smoother path.
+
+</details>
+
 <br>
 
 <table>
