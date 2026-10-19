@@ -107,6 +107,25 @@ else access is refused, never changed. It adds port 47600 with `--origin-header 
 gateway can check the phone's exact address, then hosts the tunnel and starts the gateway with
 `GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address.
 
+## Phone notifications and unread
+
+The gateway watches the live provider's event stream (`gateway/server/push-watcher.mts`) and turns
+only **Attention Events** into pushes (`gateway/push/attention.mts`): a reply (one notice per turn,
+for its last reply, with a short preview, tapping opens the chat), a question or approval waiting
+on you, an error, and a reply-less turn that ran over two minutes. Routine status changes stay
+silent, and a long turn that ends with a reply is one notice, not two. Nothing is pushed while any
+subscribed device has the app open and in front (the page reports presence while the "Also notify
+while this app is open" switch is off). Each device can set quiet hours in the bell's panel
+(`POST api/push/settings`); only an error ignores them. Reconnecting to the same provider run never
+repeats a notice. Pushes carry no content: the service worker asks the gateway for the line.
+
+The page keeps a per-device read marker in `localStorage` (`features/unread/`): replies after it
+count as unread while the chat is out of sight (another view, or the page hidden), shown as a count
+on the Chat link and the sidebar button and as an "N new" divider above the first unread reply. The
+installed phone app's icon shows the same count through `navigator.setAppBadge` (feature-detected);
+`gateway/sw.js` raises it for a push that arrives while no window is in front and the page resets it
+when it opens. A tapped notice steers an app that is already open instead of opening a second one.
+
 ## Push a notice to the phone
 
 `npm run notify -- "<title>" "<body>" [url]` pushes a notice to every subscribed phone, even one

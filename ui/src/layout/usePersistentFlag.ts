@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 
-const PREFIX = "copilot-companion:";
+export const STORAGE_PREFIX = "copilot-companion:";
+const PREFIX = STORAGE_PREFIX;
 
 function read(key: string, fallback: boolean): boolean {
   try {

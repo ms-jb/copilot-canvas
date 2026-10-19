@@ -11,14 +11,27 @@ import { LOOPBACK } from "./request-policy.mts";
 const PUSH_WATCH_MS = 2000;
 const PUSH_STREAM_IDLE_MS = 45_000;
 
+/**
+ * Pushes one notice unless a subscribed device has the app open and focused (then the event is held
+ * for every device), to the devices whose active hours allow it; only a blocker ignores those.
+ * Resolves with how many devices the push service accepted for.
+ */
+export async function deliverNotice(
+  push: Pick<PushState, "store" | "presence" | "latest">,
+  notice: Notice | null,
+): Promise<number> {
+  if (!notice || push.presence.hasFocused()) return 0;
+  push.latest = notice;
+  return push.store.sendAll({
+    skip: (endpoint) => push.presence.isFocused(endpoint),
+    ignoreActiveHours: notice.tag === "blocker",
+  });
+}
+
 export function watchPush(push: PushState, selectProvider: SelectProvider): () => void {
   let stream: { generation: string; request: http.ClientRequest } | null = null;
 
-  function notify(notice: Notice | null) {
-    if (!notice) return;
-    push.latest = notice;
-    void push.store.sendAll((endpoint) => push.presence.isFocused(endpoint));
-  }
+  const notify = (notice: Notice | null) => void deliverNotice(push, notice);
 
   function openStream(state: ProviderState) {
     const target = new URL(state.origin);
@@ -48,12 +61,10 @@ export function watchPush(push: PushState, selectProvider: SelectProvider): () =
           try {
             const value = JSON.parse(data);
             if (event === SSE_EVENTS.snapshot) {
-              const { snapshot } = value;
-              notify(
-                push.notifier.snapshot(value.generation, snapshot.status, snapshot.prompts ?? []),
-              );
+              notify(push.notifier.snapshot(value.generation, value.snapshot));
             } else if (event === SSE_EVENTS.status) notify(push.notifier.status(value.status));
             else if (event === SSE_EVENTS.prompts) notify(push.notifier.prompts(value.prompts));
+            else if (event === SSE_EVENTS.entry) notify(push.notifier.entry(value.entry));
           } catch {
             // A malformed frame is skipped; the next snapshot resynchronizes.
           }

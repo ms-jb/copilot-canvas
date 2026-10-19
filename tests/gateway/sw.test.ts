@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { runInNewContext } from "node:vm";
-import { expect, it } from "vite-plus/test";
+import { describe, expect, it } from "vite-plus/test";
 
 const ORIGIN = "https://phone.test";
 const SOURCE = readFileSync(new URL("../../gateway/sw.js", import.meta.url), "utf8");
@@ -15,9 +15,13 @@ type FakeRequest = { url: string; method: string; mode: string; headers: Headers
 function worker(
   network: (url: string, init?: RequestInit) => Response | Promise<Response>,
   stores = new Map<string, Map<string, Response>>(),
+  device: { windows?: object[]; badging?: boolean } = {},
 ) {
   const handlers = new Map<string, Handler>();
   const fetched: string[] = [];
+  const shown: object[] = [];
+  const badges: (number | "clear")[] = [];
+  const opened: string[] = [];
   const href = (key: string | FakeRequest) =>
     new URL(typeof key === "string" ? key : key.url, ORIGIN).href;
   const open = async (name: string) => {
@@ -51,7 +55,21 @@ function worker(
     location: { origin: ORIGIN },
     addEventListener: (name: string, handler: Handler) => handlers.set(name, handler),
     skipWaiting: async () => {},
-    clients: { claim: async () => {} },
+    clients: {
+      claim: async () => {},
+      matchAll: async () => device.windows ?? [],
+      openWindow: async (url: string) => opened.push(url),
+    },
+    navigator:
+      device.badging === false
+        ? {}
+        : {
+            setAppBadge: async (count: number) => badges.push(count),
+            clearAppBadge: async () => badges.push("clear"),
+          },
+    registration: {
+      showNotification: async (title: string, options: object) => shown.push({ title, ...options }),
+    },
   };
   runInNewContext(SOURCE, {
     self,
@@ -84,7 +102,7 @@ function worker(
     headers: new Headers(),
     ...init,
   });
-  return { dispatch, request, stores, fetched };
+  return { dispatch, request, stores, fetched, shown, badges, opened };
 }
 
 const ok = (body: string) => new Response(body, { status: 200 });
@@ -167,4 +185,91 @@ it("keeps only complete, same-origin answers", async () => {
   expect(
     [...(sw.stores.get("cc-assets-v1")?.keys() ?? [])].map((url) => new URL(url).pathname),
   ).toEqual(["/assets/index-AAAAaaaa.js"]);
+});
+
+it("shows a push with the gateway's latest notice, or a generic one when it can't be read", async () => {
+  const notice = { title: "Atlas", body: "Done.", url: "/#/chat", tag: "reply-1" };
+  const sw = worker(() => ok(JSON.stringify(notice)));
+  await sw.dispatch("push");
+  expect(sw.shown).toEqual([
+    {
+      title: "Atlas",
+      body: "Done.",
+      tag: "reply-1",
+      renotify: true,
+      icon: "/assets/icon-192.png",
+      data: { url: `${ORIGIN}/#/chat` },
+    },
+  ]);
+  const down = worker(() => new Response("no", { status: 503 }));
+  await down.dispatch("push");
+  expect(down.shown).toMatchObject([{ title: "Copilot", body: "Something needs your attention." }]);
+});
+
+describe("the app icon badge", () => {
+  const push = () => ok(JSON.stringify({ title: "Atlas", body: "Replied." }));
+  const hidden = { visibilityState: "hidden", focus: async () => {}, postMessage: () => {} };
+
+  it("goes up with each push while no window is in front, from the count the page reported", async () => {
+    const sw = worker(push, undefined, { windows: [hidden] });
+    await sw.dispatch("message", { data: { type: "badge", count: 2 } });
+    await sw.dispatch("push");
+    await sw.dispatch("push");
+    expect(sw.badges).toEqual([3, 4]);
+    expect(sw.shown).toHaveLength(2);
+    // A restarted worker reads the count back.
+    const again = worker(push, sw.stores, { windows: [] });
+    await again.dispatch("push");
+    expect(again.badges).toEqual([5]);
+  });
+
+  it("is left to the page while a window is in front, and restarts from zero when the page says so", async () => {
+    const front = { ...hidden, visibilityState: "visible" };
+    const sw = worker(push, undefined, { windows: [front] });
+    await sw.dispatch("push");
+    expect(sw.badges).toEqual([]);
+    expect(sw.shown).toHaveLength(1);
+    await sw.dispatch("message", { data: { type: "badge", count: 4 } });
+    const closed = worker(push, sw.stores);
+    await closed.dispatch("message", { data: { type: "badge", count: 0 } });
+    await closed.dispatch("push");
+    expect(closed.badges).toEqual([1]);
+    // Junk from a page is ignored.
+    await closed.dispatch("message", { data: { type: "badge", count: -3 } });
+    await closed.dispatch("message", { data: { type: "badge", count: "9" } });
+    await closed.dispatch("push");
+    expect(closed.badges).toEqual([1, 2]);
+  });
+
+  it("still shows the notice where the Badging API is missing", async () => {
+    const sw = worker(push, undefined, { badging: false });
+    await sw.dispatch("push");
+    expect(sw.badges).toEqual([]);
+    expect(sw.shown).toHaveLength(1);
+  });
+});
+
+describe("tapping a notice", () => {
+  it("tells an open app where to go and opens one only when none is open", async () => {
+    const told: object[] = [];
+    let focused = 0;
+    const client = {
+      visibilityState: "hidden",
+      focus: async () => void focused++,
+      postMessage: (message: object) => told.push(message),
+    };
+    const open = worker(() => ok(""), undefined, { windows: [client] });
+    const close = () => {};
+    await open.dispatch("notificationclick", {
+      notification: { close, data: { url: `${ORIGIN}/#/chat` } },
+    });
+    expect(told).toEqual([{ type: "open", url: `${ORIGIN}/#/chat` }]);
+    expect(focused).toBe(1);
+    expect(open.opened).toEqual([]);
+    const none = worker(() => ok(""));
+    await none.dispatch("notificationclick", {
+      notification: { close, data: { url: `${ORIGIN}/#/chat` } },
+    });
+    expect(none.opened).toEqual([`${ORIGIN}/#/chat`]);
+  });
 });

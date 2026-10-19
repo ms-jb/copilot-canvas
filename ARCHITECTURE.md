@@ -129,6 +129,17 @@ How to measure it, the cache table and the measured numbers are in `docs/perf.md
 - **Transcript**: rows are virtualized above 80 entries, streamed text arrives as SSE `append`
   events and is applied once per animation frame, and a reconnect resumes from `Last-Event-ID`.
 
+## Notifications and unread
+
+`gateway/push/attention.mts` classifies stream events (decision, blocker, reply, long reply-less
+completion; everything else is silent), `gateway/push/notifications.mts` turns them into at most one
+notice each and remembers ids per provider run so a reconnect repeats nothing, and
+`push-watcher.mts` holds a notice while any device has the app in front and applies each device's
+quiet hours. The page tracks unread per device (`ui/src/features/unread/`, read marker in
+`localStorage`) and sets the installed app's icon badge; `gateway/sw.js` increments it for pushes
+that arrive while no window is in front. The Badging API is feature-detected everywhere. See
+AGENTS.md ("Phone notifications and unread").
+
 ## Chat input and transcript
 
 The composer uses native Mantine controls, a width-aware toolbar, attachments, a slash-skill

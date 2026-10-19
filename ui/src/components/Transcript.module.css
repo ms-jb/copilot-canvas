@@ -117,3 +117,15 @@
   gap: var(--turn-gap);
   padding-bottom: var(--turn-gap);
 }
+
+/* Where the replies the reader hadn't seen begin. Accent text on the page, a rule either side. */
+.unread {
+  --divider-color: var(--cc-accent);
+  margin-block: var(--cc-space-2);
+}
+
+.unreadLabel {
+  color: var(--cc-accent);
+  font-size: var(--cc-text-xs);
+  font-weight: 600;
+}

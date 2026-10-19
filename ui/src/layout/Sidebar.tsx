@@ -1,5 +1,7 @@
-import { Skeleton } from "@mantine/core";
+import { Badge, Skeleton } from "@mantine/core";
 import { SessionsSection } from "../features/sessions/SessionsSection";
+import { unreadLabel } from "../features/unread/model";
+import { useUnread } from "../features/unread/useUnread";
 import type { Connection } from "../useConnection";
 import { CloseIcon } from "../views/icons";
 import { views } from "../views/registry";
@@ -18,6 +20,7 @@ interface SidebarProps {
 
 export function Sidebar({ connection, activeViewId, onNavigate, onClose }: SidebarProps) {
   const name = connection.config?.assistantName;
+  const unread = useUnread();
 
   return (
     <div className={classes.sidebar}>
@@ -55,6 +58,16 @@ export function Sidebar({ connection, activeViewId, onNavigate, onClose }: Sideb
                 >
                   <view.icon size={18} />
                   <span>{view.title}</span>
+                  {view.id === "chat" && unread.chat > 0 && (
+                    <Badge
+                      size="sm"
+                      circle={unread.chat < 10}
+                      className={classes.unread}
+                      aria-label={unreadLabel(unread.chat)}
+                    >
+                      {unread.chat > 99 ? "99+" : unread.chat}
+                    </Badge>
+                  )}
                 </a>
               </li>
             ))}

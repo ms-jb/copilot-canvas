@@ -20,6 +20,8 @@ interface RowBase {
   key: string;
   /** The row's own timestamp when a day separator goes above it (the local date changed). */
   separator: string | null;
+  /** The "N new" line that goes above this row: the first of the replies the reader hadn't seen. */
+  unread: string | null;
 }
 export type TranscriptRow = RowBase &
   (
@@ -31,12 +33,14 @@ export type TranscriptRow = RowBase &
 /**
  * Orders entries, unconfirmed sends and visible activity into rows: runs of turns by one author,
  * steps between the messages of their turn, and a day separator wherever the local date changes.
+ * `unread` puts its label above the entry it names.
  */
 export function buildRows(
   entries: readonly TranscriptEntry[],
   pending: readonly PendingMessage[],
   activity: readonly ActivityItem[],
   live: boolean,
+  unread: { entryId: string; label: string } | null = null,
 ): TranscriptRow[] {
   const messages = markRuns([
     ...entries.map((entry) => ({
@@ -64,13 +68,30 @@ export function buildRows(
         kind: "activity",
         key: `activity:${item.items[0]!.id}`,
         separator,
+        unread: null,
         items: item.items,
       };
     }
     const { key, continued, endsRun } = item.entry;
     return "entry" in item.entry
-      ? { kind: "entry", key, separator, entry: item.entry.entry, continued, endsRun }
-      : { kind: "pending", key, separator, message: item.entry.message, continued, endsRun };
+      ? {
+          kind: "entry",
+          key,
+          separator,
+          unread: unread?.entryId === item.entry.entry.id ? unread.label : null,
+          entry: item.entry.entry,
+          continued,
+          endsRun,
+        }
+      : {
+          kind: "pending",
+          key,
+          separator,
+          unread: null,
+          message: item.entry.message,
+          continued,
+          endsRun,
+        };
   });
 }
 
@@ -79,7 +100,7 @@ const sameItems = (a: readonly unknown[], b: readonly unknown[]) =>
 
 /** True when `a` and `b` render the same: rows are rebuilt on every update, their content rarely. */
 export function sameRow(a: TranscriptRow, b: TranscriptRow): boolean {
-  if (a.key !== b.key || a.separator !== b.separator) return false;
+  if (a.key !== b.key || a.separator !== b.separator || a.unread !== b.unread) return false;
   switch (a.kind) {
     case "entry":
       return (

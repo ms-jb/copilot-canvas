@@ -1,4 +1,4 @@
-import { Button, Group, Stack, Text, Title } from "@mantine/core";
+import { Button, Divider, Group, Stack, Text, Title } from "@mantine/core";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import {
   memo,
@@ -18,6 +18,7 @@ import { AssistantMessage, Avatar, ErrorMessage, UserMessage } from "./Message";
 import { DaySeparator } from "./Timestamp";
 import { toDate } from "./timeFormat";
 import { buildRows, sameRow, type PendingMessage, type TranscriptRow } from "./transcriptRows";
+import { dividerLabel, type UnreadDivider } from "../features/unread/model";
 import styles from "./Transcript.module.css";
 
 export type { PendingMessage } from "./transcriptRows";
@@ -35,6 +36,10 @@ interface TranscriptProps {
   description?: string;
   /** Fills the composer with an example prompt; never sends it. */
   onPickPrompt: (text: string) => void;
+  /** Replies that came while the chat was out of view: "N new" goes above the first. */
+  unread?: UnreadDivider | null;
+  /** The reader scrolled or sent a message: the line has done its job. */
+  onUnreadSeen?: () => void;
 }
 
 const PIN_THRESHOLD_PX = 48;
@@ -172,6 +177,14 @@ const RowView = memo(
     return (
       <>
         {date && <DaySeparator date={date} />}
+        {row.unread && (
+          <Divider
+            data-unread-divider=""
+            label={row.unread}
+            labelPosition="center"
+            classNames={{ root: styles.unread, label: styles.unreadLabel }}
+          />
+        )}
         <RowContent row={row} assistantName={assistantName} streaming={streaming} />
       </>
     );
@@ -190,11 +203,14 @@ function VirtualRows({
   scroller,
   assistantName,
   streaming,
+  revealKey,
 }: {
   rows: TranscriptRow[];
   scroller: RefObject<HTMLDivElement | null>;
   assistantName: string;
   streaming: boolean;
+  /** A row to scroll to the top when it is set: rows off screen aren't in the page to scroll to. */
+  revealKey: string | null;
 }) {
   // The renderer doesn't use the React Compiler, so its memoization caveat doesn't apply.
   // oxlint-disable-next-line react-hooks/incompatible-library
@@ -205,6 +221,12 @@ function VirtualRows({
     getItemKey: (index) => rows[index]!.key,
     overscan: 6,
   });
+  useEffect(() => {
+    const index = revealKey === null ? -1 : rows.findIndex((row) => row.key === revealKey);
+    if (index >= 0) virtualizer.scrollToIndex(index, { align: "start" });
+    // Only a new request scrolls; later rows arriving must not drag the reader back.
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
+  }, [revealKey]);
   return (
     <div className={styles.virtual} style={{ height: virtualizer.getTotalSize() }}>
       {virtualizer.getVirtualItems().map((item) => (
@@ -231,6 +253,8 @@ export function Transcript({
   assistantName,
   description,
   onPickPrompt,
+  unread = null,
+  onUnreadSeen,
 }: TranscriptProps) {
   const scroller = useRef<HTMLDivElement>(null);
   const content = useRef<HTMLDivElement>(null);
@@ -268,13 +292,14 @@ export function Transcript({
     if (!element) return;
     const mark = () => {
       userScrolled.current = true;
+      onUnreadSeen?.();
     };
     const inputs = ["wheel", "touchstart", "pointerdown", "keydown"] as const;
     for (const name of inputs) element.addEventListener(name, mark, { passive: true });
     return () => {
       for (const name of inputs) element.removeEventListener(name, mark);
     };
-  }, []);
+  }, [onUnreadSeen]);
 
   // Follow new content only while the reader is already at the bottom.
   useLayoutEffect(() => {
@@ -299,14 +324,43 @@ export function Transcript({
     if (pendingCount > 0) {
       pin();
       scrollToBottom();
+      onUnreadSeen?.();
     }
-  }, [pendingCount, pin, scrollToBottom]);
+  }, [pendingCount, pin, scrollToBottom, onUnreadSeen]);
 
   const empty = entries.length === 0 && pending.length === 0;
   const rows = useMemo(
-    () => buildRows(entries, pending, activity, live),
-    [entries, pending, activity, live],
+    () =>
+      buildRows(
+        entries,
+        pending,
+        activity,
+        live,
+        unread && { entryId: unread.entryId, label: dividerLabel(unread) },
+      ),
+    [entries, pending, activity, live, unread],
   );
+
+  // The line is scrolled to once, when it appears, and only if it is above the screen: a reader
+  // who is already looking at it, or who is at the bottom with it in view, is not moved.
+  const unreadId = unread?.entryId ?? null;
+  const [revealKey, setRevealKey] = useState<string | null>(null);
+  const revealed = useRef<string | null>(null);
+  useLayoutEffect(() => {
+    if (unreadId === null || revealed.current === unreadId) {
+      if (unreadId === null) revealed.current = null;
+      return;
+    }
+    revealed.current = unreadId;
+    const area = scroller.current;
+    if (!area) return;
+    const line = content.current?.querySelector("[data-unread-divider]");
+    if (line && line.getBoundingClientRect().top >= area.getBoundingClientRect().top) return;
+    pinned.current = false;
+    setShowJump(true);
+    if (line) area.scrollTop += line.getBoundingClientRect().top - area.getBoundingClientRect().top;
+    else setRevealKey(unreadId);
+  }, [unreadId]);
 
   return (
     <div className={styles.wrap}>
@@ -333,6 +387,7 @@ export function Transcript({
               scroller={scroller}
               assistantName={assistantName}
               streaming={streaming}
+              revealKey={revealKey}
             />
           ) : (
             rows.map((row) => (

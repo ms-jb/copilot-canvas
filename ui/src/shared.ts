@@ -25,8 +25,12 @@ export {
   SKILL_LIMITS,
   validateSkills,
   validateContextState,
+  ACTIVE_HOURS_DEFAULT,
+  deviceTimeZone,
+  normalizeActiveHours,
 } from "../../src/shared/contract.mts";
 export type {
+  ActiveHours,
   AttachmentMimeType,
   SendAttachment,
   TranscriptAttachment,

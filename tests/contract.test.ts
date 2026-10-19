@@ -24,6 +24,7 @@ const payload = { requestId: "abcd1234", sessionId: "session-1", text: "hello" }
 
 it("keeps the public contract exports stable without exposing domain helpers", () => {
   expect(Object.keys(contract).sort()).toEqual([
+    "ACTIVE_HOURS_DEFAULT",
     "ACTIVITIES",
     "ACTIVITY_LIMITS",
     "API",
@@ -49,11 +50,14 @@ it("keeps the public contract exports stable without exposing domain helpers", (
     "SSE_EVENTS",
     "WAITING_FOR",
     "attachmentByteLength",
+    "deviceTimeZone",
     "isAttachmentMimeType",
     "isPlainObject",
     "isSafeAttachmentName",
     "isSkillName",
+    "isWithinActiveHours",
     "makeError",
+    "normalizeActiveHours",
     "parseSlashCommand",
     "pruneActivity",
     "toPublicOrigin",
@@ -70,6 +74,7 @@ it("keeps the public contract exports stable without exposing domain helpers", (
     "validateIdentity",
     "validatePrompt",
     "validatePrompts",
+    "validatePushSettingsPayload",
     "validateQueuePayload",
     "validateQueueState",
     "validateReloadPayload",

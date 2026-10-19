@@ -13,7 +13,9 @@
 //   - the microphone is named, shows its shortcut, and (with a fake SpeechRecognition) a recording
 //     shows the interim words dimmed after the draft, Ctrl+Space stops it and the words join the
 //     draft, a later phrase after a full stop;
-//   - a message sent with Ctrl+Enter while the session works lands in the queue list.
+//   - a message sent with Ctrl+Enter while the session works lands in the queue list;
+//   - a reply that lands while the page is hidden counts as unread (a count on the Chat link and a
+//     value passed to the Badging API), and showing the page reads it ("New" divider, count reset).
 // Screenshots go to [screenshot-dir] when it is given. It exits 1 on any failure. Not part of
 // `vp test`: it needs playwright-core and Chrome; set PLAYWRIGHT_MODULES to the folder holding
 // playwright-core (default /tmp/pw/node_modules) and CHROME to the browser (default
@@ -43,6 +45,7 @@ interface Page {
   keyboard: { press(key: string): Promise<void> };
   screenshot(options: { path: string }): Promise<unknown>;
   addInitScript(script: string): Promise<void>;
+  waitForFunction(fn: string, options?: object): Promise<unknown>;
 }
 interface Context {
   addCookies(cookies: object[]): Promise<void>;
@@ -102,6 +105,19 @@ const FAKE_RECOGNIZER = `(() => {
     if (final) results.push(Object.assign([{ transcript: final }], { isFinal: true }));
     if (interim) results.push(Object.assign([{ transcript: interim }], { isFinal: false }));
     window.__recognizer.onresult({ resultIndex: 0, results });
+  };
+})();`;
+
+// The Badging API and page visibility, recorded and driven from the test.
+const BADGE_SHIM = `(() => {
+  window.__badges = [];
+  Object.defineProperty(navigator, "setAppBadge", { value: async (count) => window.__badges.push(count) });
+  Object.defineProperty(navigator, "clearAppBadge", { value: async () => window.__badges.push("clear") });
+  let hidden = false;
+  Object.defineProperty(document, "visibilityState", { get: () => (hidden ? "hidden" : "visible") });
+  window.__setHidden = (next) => {
+    hidden = next;
+    document.dispatchEvent(new Event("visibilitychange"));
   };
 })();`;
 
@@ -184,7 +200,7 @@ function audit(): string[] {
 
 const browser = await chromium.launch({
   executablePath: process.env.CHROME ?? "/usr/bin/google-chrome",
-  args: ["--no-sandbox"],
+  args: ["--no-sandbox", "--host-resolver-rules=MAP phone.test 127.0.0.1"],
 });
 try {
   for (const size of sizes) {
@@ -270,6 +286,65 @@ try {
     fail("queue", "a message sent with Ctrl+Enter didn't reach the queue list");
   }
   await context.close();
+
+  // Unread, the "N new" divider and the app icon badge: a reply that lands while the page is
+  // hidden counts, and reading it clears the count. A host name other than loopback makes the page
+  // behave as the phone app does.
+  for (const size of [sizes[2], sizes[0]]) {
+    const phone = size.name === "phone";
+    const context = await browser.newContext({
+      viewport: { width: size.width, height: size.height },
+      hasTouch: phone,
+    });
+    await context.addCookies([{ name: COOKIE, value: "", url: base }]);
+    const page = await context.newPage();
+    page.setDefaultTimeout(30_000);
+    await page.addInitScript(BADGE_SHIM);
+    await page.goto(base.replace("127.0.0.1", "phone.test"), { waitUntil: "load" });
+    await page.waitForSelector("textarea");
+    await page.waitForFunction("window.__badges.length > 0");
+    // The first visit offers notifications (a guide where push isn't available); dismiss it.
+    await page.keyboard.press("Escape");
+    // On the phone the Chat link is in a closed drawer: the count shows on the menu button instead.
+    const holder = phone ? 'button[aria-label^="Open navigation"]' : 'nav a[href="#/chat"]';
+    const named = phone ? `${holder}` : `${holder} [aria-label]`;
+    await page.fill("textarea", "Anything new?");
+    await page.keyboard.press("Enter");
+    await page.evaluate(() => (window as any).__setHidden(true));
+    try {
+      await page.waitForFunction("window.__badges.at(-1) === 1");
+      const count = await page.evaluate(
+        (selector) => document.querySelector(selector)?.textContent,
+        holder,
+      );
+      if (!count?.includes("1"))
+        fail(`unread ${size.name}`, `the count shows ${JSON.stringify(count)}`);
+      const label = await page.evaluate(
+        (selector) => document.querySelector(selector)?.getAttribute("aria-label"),
+        named,
+      );
+      if (!label?.includes("1 unread reply")) {
+        fail(`unread ${size.name}`, `the count is named ${JSON.stringify(label)}`);
+      }
+      if (shots) await page.screenshot({ path: join(shots, `unread-count-${size.name}.png`) });
+      await page.evaluate(() => (window as any).__setHidden(false));
+      await page.waitForSelector("[data-unread-divider]");
+      await page.waitForFunction("window.__badges.at(-1) === 'clear'");
+      const after = await page.evaluate(
+        (selector) =>
+          /unread/.test(document.querySelector(selector)?.getAttribute("aria-label") ?? ""),
+        named,
+      );
+      if (after) fail(`unread ${size.name}`, "the count stays after the reply was read");
+      if (shots) await page.screenshot({ path: join(shots, `unread-divider-${size.name}.png`) });
+    } catch (problem) {
+      fail(
+        `unread ${size.name}`,
+        `a reply that landed while hidden wasn't counted: ${String(problem)}`,
+      );
+    }
+    await context.close();
+  }
 } finally {
   await browser.close();
   server.close();
