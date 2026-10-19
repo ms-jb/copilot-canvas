@@ -186,9 +186,15 @@ and check on it.
      phone and browser, and it then opens like an app.
    - After icon changes, tell the user to delete the existing home-screen app and add it again
      (**Share → Add to Home Screen**): iOS snapshots the icon when the app is added.
-   - Then offer notifications: in the installed app, tap the bell, **Turn on**, then **Send test**.
-     Confirm the test arrives. Pushes carry no content. Later notifications stay quiet while the app
-     is open in front; the bell has a switch to change that.
+   - Then offer notifications. The canvas asks by itself the first time it opens on the phone, in
+     the installed app or in a browser tab: the user just approves the system prompt. If none
+     appears, the first tap in the app triggers it (iOS requires a tap, and some browsers only show
+     a quiet indicator). The bell has a slash through it until they approve; tapping it opens
+     **Turn on** to ask again. Where the browser can't send notifications (an iPhone tab), the
+     slashed bell points to **Add to Home Screen** instead. Once approved, have them tap the bell,
+     then **Send test**, and confirm it arrives. Pushes carry no content. Later notifications stay
+     quiet while the app is open in front; the bell has a switch to change that. A user who turned
+     notifications off, or blocked them in system settings, sees a plain bell and is not asked again.
 
    Done when the reopened canvas shows this conversation on their own build and, unless they skipped
    the phone, a phone message has arrived here.

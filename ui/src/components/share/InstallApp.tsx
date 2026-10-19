@@ -4,7 +4,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import { IconButton } from "../../layout/IconButton";
 import { isRemote, isStandalone } from "../../remote";
 import { InstallIcon } from "../../views/icons";
-import { detectInstallPlatform, installGuide } from "./installGuide";
+import { detectInstallPlatform, installGuide, OPEN_INSTALL_GUIDE } from "./installGuide";
 
 interface InstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -61,6 +61,12 @@ export function InstallApp() {
 
   useEffect(() => {
     if (show && !readSeen()) open();
+  }, [show, open]);
+
+  useEffect(() => {
+    if (!show) return;
+    window.addEventListener(OPEN_INSTALL_GUIDE, open);
+    return () => window.removeEventListener(OPEN_INSTALL_GUIDE, open);
   }, [show, open]);
 
   if (!show) return null;

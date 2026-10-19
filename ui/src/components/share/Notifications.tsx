@@ -1,18 +1,26 @@
 import { Button, Group, Modal, Stack, Switch, Text } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { API, LIMITS } from "../../shared";
 import { getJson } from "../../api";
 import { IconButton } from "../../layout/IconButton";
 import { usePersistentFlag } from "../../layout/usePersistentFlag";
-import { isRemote } from "../../remote";
-import { BellIcon } from "../../views/icons";
+import { isRemote, isStandalone } from "../../remote";
+import { BellIcon, BellOffIcon } from "../../views/icons";
+import { detectInstallPlatform, OPEN_INSTALL_GUIDE } from "./installGuide";
+import {
+  bellView,
+  localOutcomeStore,
+  startFirstLaunch,
+  toOutcome,
+  type Permission,
+} from "./notifyLaunch";
 
-type State = "off" | "on" | "blocked" | "busy";
+type State = "checking" | "off" | "on" | "blocked" | "busy";
 
-// iOS exposes PushManager only in an app added to the home screen, so a Safari tab hides the bell.
-const supported = () =>
-  isRemote() && "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
+// iOS exposes PushManager only in an app added to the home screen, so a Safari tab can't subscribe.
+const pushSupported = () =>
+  "serviceWorker" in navigator && "PushManager" in window && "Notification" in window;
 
 async function post(path: string, body: unknown, keepalive = false): Promise<boolean> {
   try {
@@ -90,27 +98,28 @@ function useFocusPresence(active: boolean) {
  */
 export function Notifications({ assistantName }: { assistantName: string }) {
   const [opened, { open, close }] = useDisclosure(false);
-  const [state, setState] = useState<State>("off");
+  const [state, setState] = useState<State>("checking");
   const [message, setMessage] = useState<string | null>(null);
   const [whileOpen, setWhileOpen] = usePersistentFlag("notify-while-open", false);
-  const show = supported();
-  useFocusPresence(show && state === "on" && !whileOpen);
+  const [deliberatelyOff, setDeliberatelyOff] = usePersistentFlag("notify-off", false);
+  const remote = isRemote();
+  const supported = pushSupported();
+  useFocusPresence(remote && supported && state === "on" && !whileOpen);
 
   useEffect(() => {
-    if (!show) return;
+    if (!remote || !supported) return;
     if (Notification.permission === "denied") return setState("blocked");
     void currentSubscription().then((subscription) => setState(subscription ? "on" : "off"));
-  }, [show]);
+  }, [remote, supported]);
 
-  if (!show) return null;
-
-  const turnOn = async () => {
+  // Requests permission and subscribes. The request must be the first await: Safari only asks
+  // from a direct tap.
+  const enable = useCallback(async (): Promise<Permission> => {
     setMessage(null);
-    // Must be the first await: Safari only asks from a direct tap.
     const permission = await Notification.requestPermission();
     if (permission !== "granted") {
       setState(permission === "denied" ? "blocked" : "off");
-      return;
+      return permission;
     }
     setState("busy");
     try {
@@ -125,6 +134,7 @@ export function Notifications({ assistantName }: { assistantName: string }) {
         await subscription.unsubscribe();
         throw new Error("rejected");
       }
+      setDeliberatelyOff(false);
       setState("on");
     } catch {
       setState("off");
@@ -132,9 +142,48 @@ export function Notifications({ assistantName }: { assistantName: string }) {
         "Couldn't turn on notifications. Check that npm run devtunnel is running, then try again.",
       );
     }
+    return permission;
+  }, [setDeliberatelyOff]);
+
+  useEffect(() => {
+    if (!remote) return;
+    return startFirstLaunch({
+      supported,
+      needsGesture: detectInstallPlatform(navigator.userAgent, navigator.maxTouchPoints).startsWith(
+        "ios",
+      ),
+      permission: () => (supported ? Notification.permission : "default"),
+      enable,
+      store: localOutcomeStore(),
+      gestureTarget: document,
+      now: () => performance.now(),
+    });
+  }, [remote, supported, enable]);
+
+  if (!remote) return null;
+
+  const standalone = isStandalone();
+  const bell = bellView({
+    supported,
+    standalone,
+    permission: state === "blocked" ? "denied" : state === "on" ? "granted" : "default",
+    subscribed: state === "on",
+    checking: state === "checking",
+    deliberatelyOff,
+  });
+
+  const turnOn = async () => {
+    // A tap is an answer too: remember it so the automatic prompt never repeats.
+    localOutcomeStore().set(toOutcome(await enable()));
+  };
+
+  const showInstallGuide = () => {
+    close();
+    window.dispatchEvent(new Event(OPEN_INSTALL_GUIDE));
   };
 
   const turnOff = async () => {
+    setDeliberatelyOff(true);
     setState("busy");
     try {
       const subscription = await currentSubscription();
@@ -155,23 +204,28 @@ export function Notifications({ assistantName }: { assistantName: string }) {
     );
   };
 
-  const text = {
-    off: `Get a notification when ${assistantName} needs you or finishes. It shows only a short status line; your conversation stays on your computer.`,
-    on: `Notifications are on. You'll hear from ${assistantName} when it needs you or finishes.`,
-    blocked:
-      "Notifications are blocked for this app. Allow them in your phone's settings, then try again.",
-    busy: "One moment…",
-  }[state];
+  const text = !supported
+    ? standalone
+      ? "This device can't send notifications to this app."
+      : "Add to Home Screen to get notifications."
+    : {
+        checking: "One moment…",
+        off: `Get a notification when ${assistantName} needs you or finishes. It shows only a short status line; your conversation stays on your computer.`,
+        on: `Notifications are on. You'll hear from ${assistantName} when it needs you or finishes.`,
+        blocked:
+          "Notifications are blocked for this app. Allow them in your phone's settings, then try again.",
+        busy: "One moment…",
+      }[state];
 
   return (
     <>
-      <IconButton label="Notifications" onClick={open}>
-        <BellIcon />
+      <IconButton label={bell.label} onClick={open} tooltipOnFocus>
+        {bell.slashed ? <BellOffIcon /> : <BellIcon />}
       </IconButton>
       <Modal opened={opened} onClose={close} title="Notifications" centered size="sm">
         <Stack gap="md">
           <Text size="sm">{text}</Text>
-          {state === "on" && (
+          {supported && state === "on" && (
             <Switch
               size="sm"
               label="Also notify while this app is open"
@@ -186,7 +240,13 @@ export function Notifications({ assistantName }: { assistantName: string }) {
             </Text>
           )}
           <Group justify="flex-end" gap="xs">
-            {state === "on" ? (
+            {!supported ? (
+              !standalone && (
+                <Button size="xs" onClick={showInstallGuide}>
+                  Show me how
+                </Button>
+              )
+            ) : state === "on" ? (
               <>
                 <Button variant="default" size="xs" onClick={() => void turnOff()}>
                   Turn off
@@ -198,7 +258,7 @@ export function Notifications({ assistantName }: { assistantName: string }) {
             ) : (
               <Button
                 size="xs"
-                loading={state === "busy"}
+                loading={state === "busy" || state === "checking"}
                 disabled={state === "blocked"}
                 onClick={() => void turnOn()}
               >
