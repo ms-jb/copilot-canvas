@@ -10,12 +10,25 @@ interface IconButtonProps {
   /** For disclosure buttons: whether the controlled region is open. */
   expanded?: boolean;
   controls?: string;
+  /** Also show the tooltip on keyboard focus, for buttons whose state the label explains. */
+  tooltipOnFocus?: boolean;
 }
 
 /** Quiet square icon button for shell chrome; 44px touch target on coarse pointers. */
-export function IconButton({ label, onClick, children, expanded, controls }: IconButtonProps) {
+export function IconButton({
+  label,
+  onClick,
+  children,
+  expanded,
+  controls,
+  tooltipOnFocus,
+}: IconButtonProps) {
   return (
-    <Tooltip label={label} withinPortal>
+    <Tooltip
+      label={label}
+      withinPortal
+      events={{ hover: true, focus: tooltipOnFocus === true, touch: false }}
+    >
       <UnstyledButton
         className={classes.button}
         onClick={onClick}
