@@ -139,6 +139,11 @@ and check on it.
         that passed, so nothing half-built is ever registered. It swaps their build into
         `~/.copilot/extensions/copilot-companion` in one step and records where the copy is, so later
         tweaks rebuild from it. The open canvas sees the new build and reloads itself.
+     4. Record which template version the copy started from, so it can be updated later with the
+        `update-copilot-canvas` skill: run `node scripts/upstream-sync.mts record` in `<FOLDER>` (it
+        reads the template's latest commit and adds no remote), then
+        `git add .template-sync.json` and commit it as "Record the template version this copy started
+        from". Skip it only if `.template-sync.json` already exists.
    - **Limits:** it works only in `<FOLDER>` and in the
      `~/.copilot/extensions/copilot-companion` swap-in done by `npm run install-ext`. It never asks the
      user: when it needs a decision (Node install, name clash, `gh` not signed in) it stops and
@@ -199,9 +204,12 @@ and check on it.
      a quiet indicator). The bell has a slash through it until they approve; tapping it opens
      **Turn on** to ask again. Where the browser can't send notifications (an iPhone tab), the
      slashed bell points to **Add to Home Screen** instead. Once approved, have them tap the bell,
-     then **Send test**, and confirm it arrives. Pushes carry no content. Later notifications stay
-     quiet while the app is open in front; the bell has a switch to change that. A user who turned
-     notifications off, or blocked them in system settings, sees a plain bell and is not asked again.
+     then **Send test**, and confirm it arrives. Pushes carry no content, only a short preview line
+     from their computer. They cover each reply, a question or approval waiting on them, and
+     errors; the chat shows an unread count and the installed app's icon shows the same number. Later
+     notifications stay quiet while the app is open in front; the bell has a switch to change that,
+     and quiet hours for this phone. A user who turned notifications off, or blocked them in system
+     settings, sees a plain bell and is not asked again.
 
    Done when the reopened canvas shows this conversation on their own build and, unless they skipped
    the phone, a phone message has arrived here.
@@ -227,3 +235,6 @@ and check on it.
   running or the user asks for more.
 - **Something is missing or broken, or the user wants it gone:** read
   [references/troubleshooting.md](references/troubleshooting.md) for the fixes and for Undo.
+- **Keep their copy up to date:** the `update-copilot-canvas` skill (offered as the last, optional
+  stage in [references/rest-of-copilot.md](references/rest-of-copilot.md)) brings new template
+  changes into their copy, with their changes kept.

@@ -66,6 +66,17 @@ Copilot changes your copy, rebuilds it, and the canvas switches to the new build
 Setup makes your own **private** repository from this template on your GitHub account (or a local
 folder, if you prefer). It has fresh history and no link back to this repository.
 
+## Get updates
+
+New features and fixes land here. To bring them into your copy, paste this into any Copilot chat:
+
+> Update my Copilot Canvas from upstream with the update-copilot-canvas skill.
+
+Copilot checks what is new, tells you in plain language, and applies it on a separate branch with your
+own changes kept (your name, icons and anything you built are never overwritten). It asks before it
+merges, installs or restarts anything. Setup can also offer a weekly check that only tells you when
+there is news.
+
 ## Open on phone
 
 Setup gives you a link and a QR code. Scan it, sign in with your GitHub account, and send a
