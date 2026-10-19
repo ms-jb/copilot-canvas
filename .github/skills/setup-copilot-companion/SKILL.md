@@ -214,7 +214,7 @@ and check on it between questions; a polling loop in the foreground is a block.
      computer: use an always-on machine, or turn on **Close to taskbar** so closing the window
      keeps the app (and the link) running.
    - Ask the user to send a message through the link and confirm it arrives in this conversation.
-     Once it has, read [references/phone.md](references/phone.md): dismissing the QR panel, Add to
+     Once it has, read [references/phone.md](references/phone.md): Add to
      Home Screen, notifications.
 
    Done when the reopened canvas shows this conversation on their own build and, unless they skipped

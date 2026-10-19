@@ -4,12 +4,6 @@ Read this once a message sent through the link, from the user's phone or a brows
 computer, has arrived in the conversation. Everything below is optional and phone-only unless the
 user wants it; a user working from this computer's browser can stop here.
 
-- **Dismiss the QR code.** Close the `phone-qr` panel if it is open, so it stops taking up the side panel:
-  `invoke_canvas_action` on `phone-qr` with `evaluate_javascript` and `window.close();`. There is no
-  close action, so confirm with `read_page` that the panel is gone. If it is still open, say so in
-  one line and ask the user to close it with the **x** on its tab. Leave the link in chat and the
-  canvas's **Open on phone** button alone: they show the same QR code whenever it is needed again.
-  If the button is missing (the gateway started after the canvas opened), open the canvas again.
 - **Add to Home Screen.** Offer it: the canvas walks them through **Add to Home Screen** for their
   phone and browser, and it then opens like an app. After icon changes, tell them to delete the
   existing home-screen app and add it again (**Share → Add to Home Screen**): iOS snapshots the icon
@@ -27,4 +21,4 @@ user wants it; a user working from this computer's browser can stop here.
   who turned notifications off, or blocked them in system settings, sees a plain bell and is not
   asked again.
 
-Done when the QR panel is closed and the user has been offered Add to Home Screen and notifications.
+Done when the user has been offered Add to Home Screen and notifications.
