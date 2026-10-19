@@ -9,6 +9,10 @@ const fakeUqr = {
   renderUnicodeCompact: () => "##",
 } as unknown as typeof import("uqr");
 
+const missing = async (): Promise<typeof import("uqr")> => {
+  throw new Error("Cannot find package 'uqr'");
+};
+
 let directory = "";
 beforeEach(() => {
   directory = mkdtempSync(join(tmpdir(), "qr-"));
@@ -38,8 +42,7 @@ it("keeps trying until uqr is installed", async () => {
     retryMs: 5,
     log: () => {},
     importUqr: async () => {
-      if (++calls < 3) throw new Error("Cannot find package 'uqr'");
-      return fakeUqr;
+      return ++calls < 3 ? missing() : fakeUqr;
     },
   });
   expect(await qr.done).toBe(true);
@@ -55,9 +58,7 @@ it("gives up after its attempts and writes nothing", async () => {
     retryMs: 1,
     attempts: 2,
     log: () => {},
-    importUqr: async () => {
-      throw new Error("missing");
-    },
+    importUqr: missing,
   });
   expect(await qr.done).toBe(false);
   expect(existsSync(imagePath)).toBe(false);
@@ -69,9 +70,7 @@ it("stops retrying when asked", async () => {
     imagePath: join(directory, "phone-qr.svg"),
     retryMs: 60_000,
     log: () => {},
-    importUqr: async () => {
-      throw new Error("missing");
-    },
+    importUqr: missing,
   });
   await new Promise((resolve) => setTimeout(resolve, 10));
   qr.stop();
