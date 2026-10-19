@@ -140,7 +140,7 @@ it.each([API.skills, API.context])(
     }
     const response = await fetch(server.url + path);
     expect(response.status).toBe(200);
-    expect(response.headers.get("cache-control")).toContain("no-store");
+    expect(response.headers.get("cache-control")).toBe("private, no-cache");
     for (const effect of effects) expect(effect).not.toHaveBeenCalled();
   },
 );
@@ -177,10 +177,26 @@ it("guards session reads by method, Host, Origin and capability prefix", async (
   expect(getSessions).not.toHaveBeenCalled();
   const reply = await fetch(server.url + API.sessions);
   expect(reply.status).toBe(200);
-  expect(reply.headers.get("cache-control")).toContain("no-store");
+  expect(reply.headers.get("cache-control")).toBe("private, no-cache");
   expect(await reply.json()).toMatchObject({ source: "app", sessions: [] });
   expect(getSessions).toHaveBeenCalledTimes(1);
   for (const fn of effects) expect(fn).not.toHaveBeenCalled();
+});
+
+it("revalidates GET JSON with an ETag and answers 304, but never caches the bootstrap", async () => {
+  const first = await fetch(server.url + API.sessions);
+  const etag = first.headers.get("etag");
+  expect(etag).toMatch(/^"[\w-]+"$/);
+  const again = await fetch(server.url + API.sessions, { headers: { "if-none-match": etag! } });
+  expect(again.status).toBe(304);
+  expect(await again.text()).toBe("");
+  expect(again.headers.get("cache-control")).toBe("private, no-cache");
+  getSessions.mockResolvedValueOnce({ ...(await first.json()), sessionId: "changed" });
+  const changed = await fetch(server.url + API.sessions, { headers: { "if-none-match": etag! } });
+  expect(changed.status).toBe(200);
+  const bootstrap = await fetch(server.url + API.bootstrap);
+  expect(bootstrap.headers.get("cache-control")).toContain("no-store");
+  expect(bootstrap.headers.get("etag")).toBeNull();
 });
 
 it("does not return failed or malformed session payloads", async () => {

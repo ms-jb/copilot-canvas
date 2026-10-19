@@ -49,7 +49,9 @@ Reads do not authorize sending, editing, scheduling or other external writes.
 - In `src/host/http/routes.mts`, add a case to `route` inside
   `createRoutes`, after the existing Host, Origin and capability checks.
   Follow `API.share` for the GET-only method check using `notAllowed`.
-- Return through `sendJson` or `sendError` so sensitive-response headers remain.
+- Return through `sendReadJson` (a GET read that may be revalidated: `private, no-cache` plus an
+  ETag, so an unchanged answer costs a 304) or `sendJson` (the default for anything sensitive:
+  `no-store`), or `sendError`, so sensitive-response headers remain.
   If adding an error code, update `ERROR_CODES` and `HTTP_STATUS_BY_CODE`.
   Map upstream failures to short, safe messages; do not log raw command output,
   headers, tokens, private records or credential-bearing error strings.
@@ -65,7 +67,7 @@ Reads do not authorize sending, editing, scheduling or other external writes.
 - Use an `AbortSignal`, cancel obsolete work and ignore responses after the
   connection becomes stale. Keep loading, empty, stale and error states explicit.
 - If phone access is part of the request, add exactly the new path with `"GET"`
-  to `ROUTES` in `gateway/gateway.mts`. Otherwise leave it inaccessible there.
+  to `ROUTES` in `gateway/server/request-policy.mts`. Otherwise leave it inaccessible there.
   A running `npm run devtunnel` keeps the routes it started with, so restart it after
   installing (it reuses the same tunnel and link). Until the canvas has reloaded
   onto the new build, the gateway forwards to the old provider, which answers 404.
@@ -84,7 +86,7 @@ Reads do not authorize sending, editing, scheduling or other external writes.
 - Use `tests/contract.test.ts` for validator patterns and
   `tests/security.test.ts` for Host/Origin cases. Exercise the new provider route
   through `createProviderServer`, including wrong methods and invalid prefixes.
-- If changing the gateway, extend `tests/gateway.test.ts` to prove that only the
+- If changing the gateway, extend `tests/gateway/proxy.test.ts` to prove that only the
   intended GET is forwarded and unrelated paths/methods remain refused.
 - Run the relevant tests and complete `customization-workflow`. Verify both the
   installed desktop read and the phone read when phone access was requested.

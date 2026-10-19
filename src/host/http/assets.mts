@@ -1,10 +1,12 @@
+import { createHash } from "node:crypto";
 import { createReadStream } from "node:fs";
 import { readFile, realpath, stat } from "node:fs/promises";
-import type { IncomingMessage, ServerResponse } from "node:http";
+import type { IncomingMessage, OutgoingHttpHeaders, ServerResponse } from "node:http";
 import { extname, resolve, sep } from "node:path";
 import { ERROR_CODES } from "../../shared/contract.mts";
 import type { Logger } from "../logging.mts";
-import { baseHeaders, sendError } from "./responses.mts";
+import { createCompressor, isCompressible, pickEncoding } from "./compression.mts";
+import { baseHeaders, cacheHeaders, fileEtag, notModified, sendError } from "./responses.mts";
 
 const MIME_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ".html": "text/html; charset=utf-8",
@@ -28,6 +30,11 @@ const MIME_TYPES: Readonly<Record<string, string>> = Object.freeze({
   ".txt": "text/plain; charset=utf-8",
   ".wasm": "application/wasm",
 });
+// Vite names every built chunk `<name>-<8-character hash>.<ext>`: its content never changes.
+const HASHED_ASSET = /-[A-Za-z0-9_-]{8}\.(?:js|mjs|css|woff2?)$/;
+const IMMUTABLE = "public, max-age=31536000, immutable";
+// Unhashed files (index.html, icons, the manifest) are revalidated on every use.
+const REVALIDATE = "no-cache";
 const APPLE_TOUCH_ICONS = new Set(["apple-touch-icon.png", "apple-touch-icon-precomposed.png"]);
 function buildCsp(frameAncestors: string): string {
   const directives = [
@@ -62,6 +69,31 @@ export function createAssetHandler({
 }) {
   const uiRoot = uiDir ? resolve(uiDir) : null;
   const csp = buildCsp(frameAncestors);
+  const compressor = createCompressor();
+
+  /** Sends `body`, compressed (and cached under `key`) when the client accepts it. */
+  async function sendBody(
+    req: IncomingMessage,
+    res: ServerResponse,
+    headers: OutgoingHttpHeaders,
+    body: Buffer,
+    key: string,
+  ): Promise<void> {
+    const encoding = isCompressible(String(headers["content-type"]), body.length)
+      ? pickEncoding(req.headers["accept-encoding"])
+      : null;
+    const compressed = encoding ? await compressor.compress(key, body, encoding) : null;
+    const payload = compressed ?? body;
+    res.writeHead(200, {
+      ...headers,
+      ...(compressed ? { "content-encoding": encoding! } : {}),
+      // Whatever was sent, a cache must not hand it to a client that accepts other encodings.
+      vary: "accept-encoding",
+      "content-length": payload.length,
+    });
+    res.end(req.method === "HEAD" ? undefined : payload);
+  }
+
   async function serveIndex(req: IncomingMessage, res: ServerResponse): Promise<void> {
     let html: Buffer | null = null;
     if (uiRoot) {
@@ -74,13 +106,22 @@ export function createAssetHandler({
         }
       }
     }
-    const body = html ?? Buffer.from(fallbackPage(assistantName));
-    res.writeHead(200, {
-      ...baseHeaders("text/html; charset=utf-8"),
+    if (!html) {
+      const body = Buffer.from(fallbackPage(assistantName));
+      res.writeHead(200, {
+        ...baseHeaders("text/html; charset=utf-8"),
+        "content-security-policy": csp,
+        "content-length": body.length,
+      });
+      res.end(req.method === "HEAD" ? undefined : body);
+      return;
+    }
+    const etag = `"${createHash("sha256").update(html).digest("base64url").slice(0, 22)}"`;
+    const headers = {
+      ...cacheHeaders("text/html; charset=utf-8", REVALIDATE, etag),
       "content-security-policy": csp,
-      "content-length": body.length,
-    });
-    res.end(req.method === "HEAD" ? undefined : body);
+    };
+    if (!notModified(req, res, headers)) await sendBody(req, res, headers, html, `index:${etag}`);
   }
   async function serveAsset(
     req: IncomingMessage,
@@ -105,14 +146,24 @@ export function createAssetHandler({
       if (!realTarget.startsWith(realRoot + sep)) return notFound();
       const info = await stat(realTarget);
       if (!info.isFile()) return notFound();
-      const path = segments.join("/");
-      res.writeHead(200, {
-        ...baseHeaders(MIME_TYPES[extname(realTarget).toLowerCase()] ?? "application/octet-stream"),
-        ...(APPLE_TOUCH_ICONS.has(path)
-          ? { "cache-control": "public, max-age=31536000, immutable" }
-          : {}),
-        "content-length": info.size,
-      });
+      const type = MIME_TYPES[extname(realTarget).toLowerCase()] ?? "application/octet-stream";
+      const etag = fileEtag(info);
+      const caching =
+        HASHED_ASSET.test(realTarget) || APPLE_TOUCH_ICONS.has(segments.join("/"))
+          ? IMMUTABLE
+          : REVALIDATE;
+      const headers = cacheHeaders(type, caching, etag);
+      if (notModified(req, res, headers)) return;
+      if (isCompressible(type, info.size)) {
+        return await sendBody(
+          req,
+          res,
+          headers,
+          await readFile(realTarget),
+          `${realTarget}:${etag}`,
+        );
+      }
+      res.writeHead(200, { ...headers, "content-length": info.size });
       if (req.method === "HEAD") {
         res.end();
         return;

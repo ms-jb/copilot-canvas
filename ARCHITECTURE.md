@@ -107,6 +107,26 @@ favor of native Mantine components (see "UI: native Mantine first" in AGENTS.md)
 Keep the defaults; add a rule only when it guards a real boundary or a bug class this repository has
 hit.
 
+## Caching and performance
+
+- **Static files** (`src/host/http/assets.mts`): hashed chunks are `public, max-age=31536000,
+  immutable`; `index.html`, icons and the manifest are `no-cache` with an ETag (304 on a match).
+  Text files over 1 KB go out brotli or gzip, compressed once per file version
+  (`compression.mts`). API JSON is never compressed: `api/bootstrap` carries the CSRF token next to
+  transcript text.
+- **JSON reads** that are safe to reuse (`sendReadJson`): `private, no-cache` plus an ETag, and the
+  page fetches with `cache: "no-cache"` so an unchanged answer is a 304. Bootstrap, writes and
+  anything sensitive stay `no-store`.
+- **Gateway** (`gateway/server/proxy.mts`): forwards `accept-encoding` and `if-none-match`, keeps the
+  provider's caching headers for the page, assets and revalidating JSON reads, and answers repeat
+  `api/skills` reads from a 15-second in-memory copy (`get-cache.mts`, per provider run).
+- **Phone app shell** (`gateway/sw.js`): the worker precaches the page and the files it links;
+  the page is network first, hashed chunks cache first, other static files stale while
+  revalidate. API calls and the event stream are never cached; a gateway restart plus one reopen
+  of the home-screen app picks up a new worker.
+- **Transcript**: rows are virtualized above 80 entries, streamed text arrives as SSE `append`
+  events and is applied once per animation frame, and a reconnect resumes from `Last-Event-ID`.
+
 ## Chat input and transcript
 
 The composer uses native Mantine controls, a width-aware toolbar, attachments, a slash-skill
@@ -128,7 +148,9 @@ generation and session policy. Send now sends the item's text as a normal messag
 a repeated `requestId` replays the first outcome instead of sending again. Each queue item carries
 `queuedAt` (the session's time, else when the host first saw it); the page shows "Queued 2m ago"
 and highlights Send now after five minutes.
-These new endpoints are not forwarded by the phone gateway's existing allowlist.
+The phone gateway forwards `GET api/skills`, `GET api/context` and `POST api/queue` (pinned to the
+live provider run like every other write), so the skill picker, context meter and queue editing
+work on the phone too.
 
 Activity summaries are bounded and redacted on the host. Reasoning remains expandable; tools
 are shown for the running turn. Streaming SSE appends are batched in sequence per animation frame.

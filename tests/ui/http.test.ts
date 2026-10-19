@@ -30,7 +30,7 @@ it("uses provider-relative reads without cache and preserves cancellation", asyn
   const controller = new AbortController();
   await expect(getJson("api/resource", controller.signal)).resolves.toEqual({ ok: true });
   expect(fetch).toHaveBeenCalledWith("./api/resource", {
-    cache: "no-store",
+    cache: "no-cache",
     credentials: "same-origin",
     headers: { accept: "application/json" },
     signal: controller.signal,
