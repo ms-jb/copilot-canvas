@@ -41,9 +41,7 @@ it("keeps trying until uqr is installed", async () => {
     imagePath,
     retryMs: 5,
     log: () => {},
-    importUqr: async () => {
-      return ++calls < 3 ? missing() : fakeUqr;
-    },
+    importUqr: async () => (++calls < 3 ? missing() : fakeUqr),
   });
   expect(await qr.done).toBe(true);
   expect(calls).toBe(3);
