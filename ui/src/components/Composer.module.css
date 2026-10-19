@@ -1,0 +1,163 @@
+.composer {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  padding: 0 max(var(--cc-space-4), env(safe-area-inset-right))
+    calc(var(--cc-space-3) + env(safe-area-inset-bottom))
+    max(var(--cc-space-4), env(safe-area-inset-left));
+  background: var(--cc-bg);
+}
+
+.card {
+  width: 100%;
+  max-width: var(--cc-content-max, 760px);
+  margin-inline: auto;
+  border-color: var(--cc-border-strong);
+  background: var(--cc-surface-raised);
+  transition:
+    border-color var(--cc-duration) var(--cc-ease),
+    box-shadow var(--cc-duration) var(--cc-ease);
+}
+
+/* The focus ring is the page's own: 2px, offset from the card, in every mode. The mode edge keeps
+   its colour and width, so a focused Plan or Autopilot card is not told apart by 1px alone. */
+.card:focus-within {
+  border-color: var(--cc-focus);
+  box-shadow:
+    0 0 0 1px var(--cc-focus),
+    var(--cc-shadow-sm);
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 2px;
+}
+
+.card[data-disabled] {
+  border-color: var(--cc-border);
+}
+
+/* The session mode tints the card's edge (Interactive keeps the plain one). Palette tokens only;
+   the steps are chosen for at least 3:1 against the page and the card in both schemes. */
+.card[data-mode="plan"] {
+  --cc-mode: var(--mantine-color-blue-7);
+}
+
+.card[data-mode="autopilot"] {
+  --cc-mode: var(--mantine-color-green-8);
+}
+
+:global([data-mantine-color-scheme="dark"]) .card[data-mode="plan"] {
+  --cc-mode: var(--mantine-color-blue-6);
+}
+
+:global([data-mantine-color-scheme="dark"]) .card[data-mode="autopilot"] {
+  --cc-mode: var(--mantine-color-green-7);
+}
+
+/* A 2px edge: the border plus an inset line, so it reads as a mode and not as a focus ring. */
+.card[data-mode="plan"]:not([data-disabled]),
+.card[data-mode="autopilot"]:not([data-disabled]) {
+  border-color: var(--cc-mode);
+  box-shadow: inset 0 0 0 1px var(--cc-mode);
+}
+
+.card[data-mode="plan"]:not([data-disabled]):focus-within,
+.card[data-mode="autopilot"]:not([data-disabled]):focus-within {
+  box-shadow:
+    inset 0 0 0 1px var(--cc-mode),
+    var(--cc-shadow-sm);
+}
+
+.field {
+  padding: var(--cc-space-3) var(--cc-space-3) 0;
+}
+
+.field .input {
+  min-height: 24px;
+  padding: 0;
+  color: var(--cc-text);
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+}
+
+/* Live dictation: the field's own text turns transparent and a copy painted under it shows the
+   interim words dimmed (the caret and selection stay the field's). */
+.stack {
+  position: relative;
+}
+
+.mirror {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  color: var(--cc-text);
+  font: inherit;
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: break-word;
+  pointer-events: none;
+}
+
+.field .input[data-interim] {
+  color: transparent;
+  -webkit-text-fill-color: transparent;
+  caret-color: var(--cc-text);
+}
+
+.field .input[aria-disabled="true"] {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.footer {
+  min-height: 44px;
+  padding: var(--cc-space-1) var(--cc-space-2) var(--cc-space-2);
+}
+
+.controls {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-1);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.counter {
+  flex: none;
+  font-variant-numeric: tabular-nums;
+}
+
+.send {
+  flex: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+
+/* 16px stops iOS Safari from zooming into the field. */
+@media (max-width: 768px), (pointer: coarse) {
+  .field .input,
+  .mirror {
+    font-size: var(--cc-text-lg);
+  }
+}
+
+@media (max-width: 768px) {
+  .composer {
+    padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
+      max(var(--cc-space-2), env(safe-area-inset-right));
+    padding-bottom: calc(var(--cc-space-1) + env(safe-area-inset-bottom));
+  }
+
+  .footer {
+    padding-bottom: var(--cc-space-1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    transition: none;
+  }
+}

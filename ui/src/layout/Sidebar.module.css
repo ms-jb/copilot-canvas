@@ -1,0 +1,103 @@
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  height: 100%;
+  min-height: 0;
+  padding: 0 var(--cc-space-3) calc(var(--cc-space-3) + env(safe-area-inset-bottom));
+  background: var(--cc-surface);
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  flex: none;
+  min-height: var(--cc-topbar-height);
+  margin-inline: calc(var(--cc-space-3) * -1);
+  padding-inline: calc(var(--cc-space-3) + var(--cc-space-1)) var(--cc-space-3);
+  border-bottom: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent);
+}
+
+.mark {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: var(--cc-radius-sm);
+  background: var(--cc-accent-soft);
+  color: var(--cc-accent);
+  font-size: var(--cc-text-sm);
+  font-weight: 650;
+  line-height: 1;
+}
+
+.name {
+  min-width: 0;
+  overflow: hidden;
+  font-size: var(--cc-text-md);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.close {
+  margin-inline-start: auto;
+}
+
+.nav {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.navList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  min-height: 34px;
+  padding: 0 var(--cc-space-2);
+  border-radius: var(--cc-radius-sm);
+  color: var(--cc-text-muted);
+  font-size: var(--cc-text-md);
+  text-decoration: none;
+  transition:
+    background-color var(--cc-duration) var(--cc-ease),
+    color var(--cc-duration) var(--cc-ease);
+}
+
+.navLink:hover {
+  background: color-mix(in srgb, var(--cc-text) 6%, transparent);
+  color: var(--cc-text);
+}
+
+.navLink[aria-current="page"] {
+  background: var(--cc-accent-soft);
+  color: var(--cc-text);
+  font-weight: 600;
+}
+
+.navLink[aria-current="page"] svg {
+  color: var(--cc-accent);
+}
+
+/* The unread count sits at the end of the row. */
+.unread {
+  margin-inline-start: auto;
+}
+
+@media (pointer: coarse) {
+  .navLink {
+    min-height: 44px;
+  }
+}

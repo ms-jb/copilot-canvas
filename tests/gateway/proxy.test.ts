@@ -1,0 +1,303 @@
+import http from "node:http";
+import type { AddressInfo } from "node:net";
+import { mkdtempSync, rmSync } from "node:fs";
+import { join } from "node:path";
+import { afterEach, beforeEach, expect, it } from "vite-plus/test";
+import { createGateway } from "../../gateway/gateway.mts";
+import type { Gateway } from "../../gateway/gateway.mts";
+import { CONTRACT_VERSION, IDENTITY_APP } from "../../src/shared/contract.mts";
+import { buildProviderState, writeProviderState } from "../../src/shared/node/runtime-state.mts";
+
+const CAPABILITY = `/chat-panel/${"T".repeat(43)}/`;
+const GENERATION = "generation-aaaaaaaaaaaa";
+// A second provider run, told apart by its capability path.
+const CAPABILITY_B = `/chat-panel/${"B".repeat(43)}/`;
+const GENERATION_B = "generation-bbbbbbbbbbbb";
+
+let dir: string;
+let provider: http.Server;
+let gateway: Gateway;
+let gatewayPort: number;
+let upstreamPaths: string[];
+let upstreamHeaders: http.IncomingHttpHeaders[];
+
+// Plain http request so tests can set Host and Origin freely (fetch forbids it).
+function call(path: string, headers: http.OutgoingHttpHeaders = {}, method = "GET", body?: string) {
+  return new Promise<{
+    status: number;
+    headers: http.IncomingHttpHeaders;
+    text: string;
+    json: () => any;
+  }>((resolve, reject) => {
+    const request = http.request(
+      {
+        host: "127.0.0.1",
+        port: gatewayPort,
+        path,
+        method,
+        agent: false,
+        headers: { host: `127.0.0.1:${gatewayPort}`, ...headers },
+      },
+      (response) => {
+        const chunks: Buffer[] = [];
+        response.on("data", (chunk: Buffer) => chunks.push(chunk));
+        response.on("end", () => {
+          const text = Buffer.concat(chunks).toString();
+          resolve({
+            status: response.statusCode ?? 0,
+            headers: response.headers,
+            text,
+            json: () => JSON.parse(text),
+          });
+        });
+      },
+    );
+    request.on("error", reject);
+    request.end(body);
+  });
+}
+
+function publish(
+  generation: string,
+  sessionId = "session-a",
+  capabilityPath = CAPABILITY,
+  openedAt?: string,
+) {
+  const origin = `http://127.0.0.1:${(provider.address() as AddressInfo).port}`;
+  writeProviderState(
+    join(dir, `${sessionId}.json`),
+    buildProviderState({ generation, origin, capabilityPath, sessionId, openedAt }),
+  );
+}
+
+const send = (generation?: string) =>
+  call(
+    "/api/send",
+    {
+      "content-type": "application/json",
+      origin: `http://127.0.0.1:${gatewayPort}`,
+      ...(generation ? { "x-provider-generation": generation } : {}),
+    },
+    "POST",
+    "{}",
+  );
+
+beforeEach(async () => {
+  dir = mkdtempSync(join(process.cwd(), "tests", "gateway", ".proxy-"));
+
+  upstreamPaths = [];
+  upstreamHeaders = [];
+  provider = http.createServer((request, response) => {
+    const path = request.url ?? "";
+    upstreamHeaders.push(request.headers);
+    if (path.endsWith("api/identity")) {
+      response.writeHead(200, { "content-type": "application/json" });
+      response.end(
+        JSON.stringify({
+          app: IDENTITY_APP,
+          contractVersion: CONTRACT_VERSION,
+          generation: path.startsWith(CAPABILITY_B) ? GENERATION_B : GENERATION,
+        }),
+      );
+    } else if (path.endsWith("api/skills") || path.endsWith("api/context")) {
+      upstreamPaths.push(path);
+      if (request.headers["if-none-match"] === '"j1"') {
+        response.writeHead(304, { "cache-control": "private, no-cache", etag: '"j1"' }).end();
+      } else {
+        response
+          .writeHead(200, {
+            "content-type": "application/json",
+            "cache-control": "private, no-cache",
+            etag: '"j1"',
+          })
+          .end("{}");
+      }
+    } else if (request.headers["if-none-match"] === '"v1"') {
+      upstreamPaths.push(path);
+      response.writeHead(304, { "cache-control": "no-cache", etag: '"v1"' }).end();
+    } else {
+      upstreamPaths.push(path);
+      // Every reply claims to be cacheable; the gateway decides which may stay so.
+      response.writeHead(200, { "cache-control": "public, max-age=60", etag: '"v1"' }).end("ok");
+    }
+  });
+  await new Promise<void>((resolve) => provider.listen(0, "127.0.0.1", resolve));
+  gateway = createGateway({ port: 0, sessionsDir: dir });
+  gatewayPort = (await gateway.listen()).port;
+});
+
+afterEach(async () => {
+  await gateway.close();
+  provider.closeAllConnections();
+  await new Promise((resolve) => provider.close(resolve));
+  rmSync(dir, { recursive: true, force: true });
+});
+
+it("answers not_connected when no provider state exists", async () => {
+  const reply = await call("/api/bootstrap");
+  expect(reply.status).toBe(503);
+  expect(reply.json().code).toBe("not_connected");
+});
+
+it("answers not_connected when the state file generation is not the live one", async () => {
+  publish("generation-bbbbbbbbbbbb");
+  expect((await call("/api/bootstrap")).status).toBe(503);
+  expect(upstreamPaths).toEqual([]);
+});
+
+it("forwards allow-listed paths to the provider capability path", async () => {
+  publish(GENERATION);
+  expect((await call("/api/bootstrap")).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/bootstrap`]);
+});
+
+it("forwards root apple-touch fallback icons as static GET routes", async () => {
+  publish(GENERATION);
+  const icon = await call("/apple-touch-icon.png");
+  const precomposed = await call("/apple-touch-icon-precomposed.png");
+  expect(icon.status).toBe(200);
+  expect(precomposed.status).toBe(200);
+  expect(icon.headers["cache-control"]).toBe("public, max-age=60");
+  expect(precomposed.headers["cache-control"]).toBe("public, max-age=60");
+  expect(upstreamPaths).toEqual([
+    `${CAPABILITY}apple-touch-icon.png`,
+    `${CAPABILITY}apple-touch-icon-precomposed.png`,
+  ]);
+});
+
+it("forwards only GET for the sessions list", async () => {
+  publish(GENERATION);
+  expect((await call("/api/sessions")).status).toBe(200);
+  expect(
+    (await call("/api/sessions", { origin: `http://127.0.0.1:${gatewayPort}` }, "POST", "{}"))
+      .status,
+  ).toBe(405);
+  expect((await call("/api/sessions", {}, "HEAD")).status).toBe(405);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/sessions`]);
+});
+
+it("follows the live provider whose canvas was opened most recently", async () => {
+  publish(GENERATION, "session-a", CAPABILITY, "2026-01-01T00:00:01.000Z");
+  publish(GENERATION_B, "session-b", CAPABILITY_B, "2026-01-01T00:00:02.000Z");
+  expect((await call("/api/bootstrap")).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY_B}api/bootstrap`]);
+});
+
+it("refuses a stale or missing generation on send and never forwards it", async () => {
+  publish(GENERATION);
+  for (const reply of [await send("generation-old-0000000"), await send()]) {
+    expect(reply.status).toBe(409);
+    expect(reply.json().code).toBe("stale_provider");
+  }
+  expect(upstreamPaths).toEqual([]);
+  expect((await send(GENERATION)).status).toBe(200);
+});
+
+it("forwards reload, stop and queue edits only when pinned to the live provider run", async () => {
+  publish(GENERATION);
+  const post = (path: string, generation?: string) =>
+    call(
+      path,
+      {
+        "content-type": "application/json",
+        origin: `http://127.0.0.1:${gatewayPort}`,
+        ...(generation ? { "x-provider-generation": generation } : {}),
+      },
+      "POST",
+      "{}",
+    );
+  const paths = ["/api/reload", "/api/stop", "/api/queue"];
+  for (const path of paths) {
+    expect((await post(path)).status).toBe(409);
+    expect((await post(path, "generation-old-0000000")).status).toBe(409);
+  }
+  expect(upstreamPaths).toEqual([]);
+  for (const path of paths) expect((await post(path, GENERATION)).status).toBe(200);
+  expect(upstreamPaths).toEqual(paths.map((path) => `${CAPABILITY}${path.slice(1)}`));
+  for (const path of paths) expect((await call(path)).status).toBe(405);
+});
+
+it.each(["/api/skills", "/api/context"])("forwards only GET for %s", async (path) => {
+  publish(GENERATION);
+  expect((await call(path)).status).toBe(200);
+  expect(
+    (await call(path, { origin: `http://127.0.0.1:${gatewayPort}` }, "POST", "{}")).status,
+  ).toBe(405);
+  expect((await call(path, {}, "HEAD")).status).toBe(405);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}${path.slice(1)}`]);
+});
+
+it("keeps the provider's caching headers only for the page and assets", async () => {
+  publish(GENERATION);
+  const page = await call("/");
+  expect(page.headers["cache-control"]).toBe("public, max-age=60");
+  const asset = await call("/assets/index-abcd1234.js");
+  expect(asset.headers["cache-control"]).toBe("public, max-age=60");
+  const revalidated = await call("/assets/index-abcd1234.js", { "if-none-match": '"v1"' });
+  expect(revalidated.status).toBe(304);
+  expect(revalidated.headers["cache-control"]).toBe("no-cache");
+  for (const path of ["/api/bootstrap", "/api/sessions"]) {
+    const reply = await call(path);
+    expect(reply.headers["cache-control"], path).toBe("no-store");
+    expect(reply.headers.pragma, path).toBe("no-cache");
+  }
+});
+
+it("forwards ETag revalidation for private JSON reads and passes the 304 back", async () => {
+  publish(GENERATION);
+  const first = await call("/api/context");
+  expect(first.headers["cache-control"]).toBe("private, no-cache");
+  expect(first.headers.etag).toBe('"j1"');
+  const again = await call("/api/context", { "if-none-match": '"j1"' });
+  expect(again.status).toBe(304);
+  expect(again.headers["cache-control"]).toBe("private, no-cache");
+  expect(upstreamHeaders.at(-1)?.["if-none-match"]).toBe('"j1"');
+});
+
+it("answers repeat skill reads from memory, and every other read from the provider", async () => {
+  publish(GENERATION);
+  expect((await call("/api/skills")).status).toBe(200);
+  expect((await call("/api/skills")).text).toBe("{}");
+  expect((await call("/api/skills", { "if-none-match": '"j1"' })).status).toBe(304);
+  expect(upstreamPaths.filter((path) => path.endsWith("api/skills"))).toHaveLength(1);
+  // Context usage moves with the session: each read goes to the provider.
+  await call("/api/context");
+  await call("/api/context");
+  expect(upstreamPaths.filter((path) => path.endsWith("api/context"))).toHaveLength(2);
+});
+
+it("rejects a bad Host or Origin with 403", async () => {
+  publish(GENERATION);
+  expect((await call("/api/bootstrap", { host: "evil.example.test" })).status).toBe(403);
+  expect((await call("/api/bootstrap", { origin: "https://evil.example.test" })).status).toBe(403);
+  expect(
+    (await call("/api/send", { "content-type": "application/json" }, "POST", "{}")).status,
+  ).toBe(403);
+  expect(upstreamPaths).toEqual([]);
+});
+
+it("returns 404 for paths outside the allow-list", async () => {
+  publish(GENERATION);
+  for (const path of ["/api/other", "/assets/../api/send", `${CAPABILITY}api/bootstrap`]) {
+    expect((await call(path)).status).toBe(404);
+  }
+  expect(upstreamPaths).toEqual([]);
+});
+
+it("allows larger attachment sends only with a pinned generation, not on other writes", async () => {
+  publish(GENERATION);
+  const headers = {
+    "content-type": "application/json",
+    origin: `http://127.0.0.1:${gatewayPort}`,
+    "x-provider-generation": GENERATION,
+  };
+  const body = JSON.stringify({ text: "A".repeat(70000) });
+  expect(
+    (await call("/api/send", { ...headers, "x-provider-generation": "stale" }, "POST", body))
+      .status,
+  ).toBe(409);
+  expect((await call("/api/controls", headers, "POST", body)).status).toBe(413);
+  expect(upstreamPaths).toEqual([]);
+  expect((await call("/api/send", headers, "POST", body)).status).toBe(200);
+  expect(upstreamPaths).toEqual([`${CAPABILITY}api/send`]);
+});

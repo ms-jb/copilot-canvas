@@ -1,0 +1,195 @@
+/*
+ * Design tokens for Copilot Companion.
+ *
+ * Every color follows the host: when the Copilot app injects its theme variables we use them,
+ * otherwise the fallbacks below keep a plain browser (or a phone over the gateway) looking right.
+ * Light and dark follow `prefers-color-scheme`; there is no in-app picker.
+ * Components consume only the `--cc-*` names, never the host names directly.
+ */
+:root {
+  color-scheme: light;
+
+  /* Surfaces */
+  --cc-bg: var(--background-color-default, #ffffff);
+  --cc-surface: var(--background-color-muted, #f6f8fa);
+  --cc-surface-raised: var(--cc-bg);
+  --cc-surface-sunken: color-mix(in srgb, var(--cc-text) 4%, var(--cc-bg));
+
+  /* Lines: a hairline for structure, a stronger edge (about 3:1) for fields and controls. */
+  --cc-border: var(--border-color-default, #d1d9e0);
+  --cc-border-strong: color-mix(in srgb, var(--cc-text) 45%, var(--cc-bg));
+
+  /* Text: faint is for tertiary meta only (timestamps, hints), never for body copy. */
+  --cc-text: var(--text-color-default, #1f2328);
+  --cc-text-muted: var(--text-color-muted, #59636e);
+  --cc-text-faint: color-mix(in srgb, var(--cc-text-muted) 80%, var(--cc-bg));
+
+  /* The one accent, plus semantic states */
+  --cc-accent: var(--fgColor-accent, #0969da);
+  --cc-accent-contrast: #ffffff;
+  --cc-accent-soft: var(--bgColor-accent-muted, #ddf4ff);
+  --cc-danger: var(--fgColor-danger, #d1242f);
+  --cc-danger-soft: var(--bgColor-danger-muted, #ffebe9);
+  --cc-warning: var(--fgColor-attention, #9a6700);
+  --cc-warning-soft: var(--bgColor-attention-muted, #fff8c5);
+  --cc-success: var(--fgColor-success, #1a7f37);
+  --cc-success-soft: var(--bgColor-success-muted, #dafbe1);
+  --cc-focus: var(--color-focus-outline, var(--cc-accent));
+
+  /* Shape */
+  --cc-radius-sm: 6px;
+  --cc-radius-md: 10px;
+  --cc-radius-lg: 14px;
+
+  /* Spacing scale */
+  --cc-space-1: 4px;
+  --cc-space-2: 8px;
+  --cc-space-3: 12px;
+  --cc-space-4: 16px;
+  --cc-space-5: 24px;
+  --cc-space-6: 32px;
+
+  /* Type */
+  --cc-font-sans:
+    ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  --cc-font-mono:
+    ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --cc-text-xs: 12px;
+  --cc-text-sm: 13px;
+  --cc-text-md: 14px;
+  --cc-text-lg: 16px;
+
+  /* Elevation: only for things that float (menus, drawers, the composer). */
+  --cc-shadow-sm: 0 1px 2px rgb(31 35 40 / 6%);
+  --cc-shadow-md: 0 1px 3px rgb(31 35 40 / 6%), 0 8px 24px rgb(31 35 40 / 10%);
+
+  /* Motion */
+  --cc-ease: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --cc-duration: 180ms;
+
+  /* Layout */
+  --cc-sidebar-width: 232px;
+  --cc-aside-width: 300px;
+  --cc-topbar-height: 48px;
+  --cc-content-max: 760px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --cc-bg: var(--background-color-default, #0d1117);
+    --cc-surface: var(--background-color-muted, #151b23);
+    --cc-surface-raised: color-mix(in srgb, var(--cc-text) 5%, var(--cc-surface));
+    --cc-surface-sunken: color-mix(in srgb, #000000 30%, var(--cc-bg));
+
+    --cc-border: var(--border-color-default, #3d444d);
+    --cc-border-strong: color-mix(in srgb, var(--cc-text) 40%, var(--cc-bg));
+
+    --cc-text: var(--text-color-default, #f0f6fc);
+    --cc-text-muted: var(--text-color-muted, #9198a1);
+
+    --cc-accent: var(--fgColor-accent, #4493f8);
+    /* Dark ink on the brighter dark-theme accent keeps filled buttons above 4.5:1. */
+    --cc-accent-contrast: #0b1220;
+    --cc-accent-soft: var(--bgColor-accent-muted, rgb(56 139 253 / 15%));
+    --cc-danger: var(--fgColor-danger, #f85149);
+    --cc-danger-soft: var(--bgColor-danger-muted, rgb(248 81 73 / 10%));
+    --cc-warning: var(--fgColor-attention, #d29922);
+    --cc-warning-soft: var(--bgColor-attention-muted, rgb(187 128 9 / 15%));
+    --cc-success: var(--fgColor-success, #3fb950);
+    --cc-success-soft: var(--bgColor-success-muted, rgb(46 160 67 / 15%));
+
+    --cc-shadow-sm: 0 1px 2px rgb(1 4 9 / 40%);
+    --cc-shadow-md: 0 1px 3px rgb(1 4 9 / 40%), 0 8px 24px rgb(1 4 9 / 50%);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --cc-duration: 0ms;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* Base */
+html,
+body,
+#root {
+  height: 100%;
+  margin: 0;
+}
+
+/* No pinch or double-tap zoom: the canvas is an app, not a page. */
+html {
+  touch-action: pan-x pan-y;
+}
+
+@media (max-width: 768px) {
+  html,
+  body,
+  #root {
+    overscroll-behavior-x: none;
+  }
+}
+
+body {
+  overflow: hidden;
+  background: var(--cc-bg);
+  color: var(--cc-text);
+  font-family: var(--cc-font-sans);
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--cc-accent-soft);
+  color: var(--cc-text);
+}
+
+:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: 2px;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--cc-border) transparent;
+}
+
+/* Floating Mantine surfaces share one look: raised fill, hairline, soft shadow. */
+.mantine-Menu-dropdown,
+.mantine-Popover-dropdown,
+.mantine-Combobox-dropdown,
+.mantine-Modal-content {
+  background: var(--cc-surface-raised);
+  border: 1px solid var(--cc-border);
+  box-shadow: var(--cc-shadow-md);
+}
+
+.mantine-Tooltip-tooltip {
+  background: var(--cc-text);
+  color: var(--cc-bg);
+  font-size: var(--cc-text-xs);
+}
+
+.mantine-Skeleton-root::after {
+  background: color-mix(in srgb, var(--cc-text) 8%, transparent);
+}
+
+.mantine-Modal-header {
+  background: var(--cc-surface-raised);
+}

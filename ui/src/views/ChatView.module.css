@@ -1,0 +1,47 @@
+.chat {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  background: var(--cc-bg);
+}
+
+/* Activity row and composer stay docked at the bottom of the view. */
+.dock {
+  flex: none;
+  position: sticky;
+  bottom: 0;
+  background: var(--cc-bg);
+}
+
+.activity {
+  padding-inline: max(var(--cc-space-4), env(safe-area-inset-left))
+    max(var(--cc-space-4), env(safe-area-inset-right));
+}
+
+.activityInner {
+  max-width: var(--cc-content-max, 760px);
+  margin-inline: auto;
+}
+
+/*
+ * On a phone the composer's backdrop is opaque and fades the transcript out above it, so no
+ * message text shows through or butts against the composer's edge.
+ */
+@media (max-width: 768px) {
+  .dock::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    bottom: 100%;
+    height: var(--cc-space-4);
+    background: linear-gradient(to bottom, transparent, var(--cc-bg));
+    pointer-events: none;
+  }
+
+  .activity {
+    padding-inline: max(var(--cc-space-2), env(safe-area-inset-left))
+      max(var(--cc-space-2), env(safe-area-inset-right));
+  }
+}

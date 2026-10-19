@@ -1,0 +1,131 @@
+.wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  display: flex;
+}
+
+.scroller {
+  flex: 1;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-gutter: stable both-edges;
+  padding: var(--cc-space-5) max(var(--cc-space-4), env(safe-area-inset-right)) var(--cc-space-4)
+    max(var(--cc-space-4), env(safe-area-inset-left));
+}
+
+.scroller:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: -2px;
+}
+
+.content {
+  --turn-gap: var(--cc-space-5);
+  display: flex;
+  flex-direction: column;
+  gap: var(--turn-gap);
+  width: 100%;
+  max-width: var(--cc-content-max, 760px);
+  min-height: 100%;
+  margin-inline: auto;
+}
+
+/* Empty state */
+.empty {
+  margin-top: auto;
+  padding-block: var(--cc-space-6) var(--cc-space-4);
+}
+
+.prompt {
+  height: auto;
+  min-height: 36px;
+  padding-block: var(--cc-space-2);
+  background: var(--cc-surface);
+}
+
+.promptLabel {
+  white-space: normal;
+  text-align: start;
+  font-weight: 400;
+  line-height: 1.4;
+}
+
+/* Jump to latest */
+.jump {
+  position: absolute;
+  bottom: var(--cc-space-3);
+  inset-inline: 0;
+  width: fit-content;
+  margin-inline: auto;
+  box-shadow: var(--cc-shadow-sm);
+  animation: rise var(--cc-duration) var(--cc-ease);
+}
+
+.jump::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+}
+
+.jump:hover {
+  color: var(--cc-text);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+@media (pointer: coarse) {
+  .prompt {
+    min-height: 44px;
+  }
+}
+
+@media (max-width: 768px) {
+  .scroller {
+    padding-top: var(--cc-space-4);
+  }
+
+  .content {
+    --turn-gap: var(--cc-space-4);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .jump {
+    animation: none;
+  }
+}
+
+/* Long conversations: rows are placed absolutely at their measured offsets. */
+.virtual {
+  position: relative;
+  flex: none;
+  width: 100%;
+}
+
+.virtualRow {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--turn-gap);
+  padding-bottom: var(--turn-gap);
+}
+
+/* Where the replies the reader hadn't seen begin. Accent text on the page, a rule either side. */
+.unread {
+  --divider-color: var(--cc-accent);
+  margin-block: var(--cc-space-2);
+}
+
+.unreadLabel {
+  color: var(--cc-accent);
+  font-size: var(--cc-text-xs);
+  font-weight: 600;
+}

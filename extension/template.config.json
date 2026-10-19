@@ -1,0 +1,9 @@
+{
+  "extensionName": "copilot-companion",
+  "canvasId": "chat-panel",
+  "assistantName": "Copilot",
+  "description": "Your Copilot conversation in a focused, phone-ready canvas.",
+  "defaultView": "chat",
+  "gatewayPort": 47600,
+  "gatewayAllowedOrigin": ""
+}

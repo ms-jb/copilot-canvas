@@ -1,0 +1,49 @@
+.aside {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  background: var(--cc-surface);
+}
+
+/* Same height and rule as the top bar so the three columns line up. */
+.header {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cc-space-2);
+  min-height: var(--cc-topbar-height);
+  padding-inline: var(--cc-space-4) var(--cc-space-2);
+  border-bottom: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent);
+}
+
+.heading {
+  font-size: var(--cc-text-md);
+  font-weight: 600;
+}
+
+.body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-3);
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--cc-space-3) var(--cc-space-3) calc(var(--cc-space-4) + env(safe-area-inset-bottom));
+}
+
+.panel {
+  padding: var(--cc-space-3) var(--cc-space-4) var(--cc-space-4);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-surface-raised);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--cc-border) 60%, transparent);
+}
+
+.panelTitle {
+  margin: 0 0 var(--cc-space-3);
+  font-size: var(--cc-text-sm);
+  font-weight: 600;
+  line-height: 1.4;
+}

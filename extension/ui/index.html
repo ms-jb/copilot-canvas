@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content"
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#151b23" media="(prefers-color-scheme: dark)" />
+    <meta name="referrer" content="no-referrer" />
+    <!-- Installable from the phone (Add to Home Screen). The gateway's service worker caches the
+         app shell (gateway/sw.js) and shows notifications; conversations are never cached. -->
+    <link rel="manifest" href="./assets/manifest.webmanifest" crossorigin="use-credentials" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="data:image/png;base64,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" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-title" content="Copilot" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <title>Copilot</title>
+    <script type="module" crossorigin src="./assets/index-AFXMmRYX.js"></script>
+    <link rel="stylesheet" crossorigin href="./assets/index-ByXrJzqH.css">
+  </head>
+  <body>
+    <div id="root"></div>
+    <noscript>Copilot Companion needs JavaScript.</noscript>
+  </body>
+</html>

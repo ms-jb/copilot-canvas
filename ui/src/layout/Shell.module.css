@@ -1,0 +1,48 @@
+.shell {
+  display: flex;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: var(--cc-bg);
+}
+
+.sidebarColumn {
+  flex: none;
+  width: var(--cc-sidebar-width);
+  min-height: 0;
+  border-inline-end: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent);
+}
+
+.asideColumn {
+  flex: none;
+  width: var(--cc-aside-width);
+  min-height: 0;
+  border-inline-start: 1px solid color-mix(in srgb, var(--cc-border) 70%, transparent);
+}
+
+.center {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Views own their scrolling and their readable width (--cc-content-max). */
+.main {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.drawer {
+  max-width: 88vw;
+  background: var(--cc-surface);
+  box-shadow: var(--cc-shadow-md);
+}
+
+.drawerBody {
+  height: 100%;
+  padding: env(safe-area-inset-top) 0 0;
+}

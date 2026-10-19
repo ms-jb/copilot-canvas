@@ -1,0 +1,20 @@
+.list {
+  padding: var(--cc-space-2);
+  margin: 0;
+  list-style: none;
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  min-width: 0;
+  max-width: 100%;
+  min-height: 44px;
+  padding-inline: var(--cc-space-2);
+  background: var(--cc-surface-sunken);
+}
+
+.name {
+  overflow-wrap: anywhere;
+}

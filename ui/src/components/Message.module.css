@@ -1,0 +1,77 @@
+/* User turn: compact bubble, right-aligned. */
+.user {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: var(--cc-space-1);
+  padding-inline-start: 12%;
+  min-width: 0;
+}
+
+.bubble {
+  max-width: 100%;
+  border-end-end-radius: var(--cc-radius-sm);
+  background: var(--cc-surface-raised);
+  color: var(--cc-text);
+  font-size: var(--cc-text-md);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.user[data-pending] .bubble {
+  opacity: 0.65;
+}
+
+/* Assistant turn: full-width prose under the avatar and name. */
+.assistant {
+  display: flex;
+  flex-direction: column;
+  gap: var(--cc-space-2);
+  min-width: 0;
+}
+
+.body {
+  min-width: 0;
+}
+
+/* Grouped turns: a follow-up from the same author sits close to the one before it. */
+.user[data-continued],
+.assistant[data-continued] {
+  margin-top: calc(var(--cc-space-2) - var(--turn-gap));
+}
+
+/* The run's time, in flow below the last message, so it never covers text. */
+.time {
+  display: block;
+  margin-top: var(--cc-space-2);
+  line-height: 1.2;
+}
+
+.avatarInitial {
+  font-size: var(--cc-text-xs);
+  font-weight: 600;
+}
+
+[data-size="lg"] > .avatarInitial {
+  font-size: var(--cc-text-lg);
+}
+
+/* Error: quiet danger callout. */
+.error {
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--cc-danger) 25%, transparent);
+}
+
+.errorText {
+  color: var(--cc-text);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 768px) {
+  .user {
+    padding-inline-start: 8%;
+  }
+}

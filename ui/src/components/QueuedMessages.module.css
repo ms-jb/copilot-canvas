@@ -1,0 +1,34 @@
+.queue {
+  background: var(--cc-surface-raised);
+}
+
+.list {
+  max-height: min(180px, 25dvh);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.item {
+  padding-block: var(--cc-space-1);
+}
+
+.item + .item {
+  border-top: 1px solid var(--cc-border);
+}
+
+.message {
+  flex: 1 1 12rem;
+  min-width: 0;
+}
+
+.text {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.sendNow {
+  white-space: nowrap;
+}

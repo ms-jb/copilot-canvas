@@ -1,0 +1,121 @@
+.liveRegion {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* Animates between 0 and auto height; collapsed when idle. */
+.collapse {
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition:
+    grid-template-rows var(--cc-duration) var(--cc-ease),
+    opacity var(--cc-duration) var(--cc-ease);
+}
+
+.collapse[data-open] {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.inner {
+  min-height: 0;
+  overflow: hidden;
+}
+
+.row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  column-gap: var(--cc-space-2);
+  row-gap: 2px;
+  min-height: 32px;
+  padding: var(--cc-space-1) var(--cc-space-1) var(--cc-space-2);
+  font-size: var(--cc-text-sm);
+  color: var(--cc-text-muted);
+}
+
+.row[data-tone="waiting"] {
+  margin-bottom: var(--cc-space-2);
+  padding: var(--cc-space-2) var(--cc-space-3);
+  border: 1px solid color-mix(in srgb, var(--cc-warning) 30%, transparent);
+  border-radius: var(--cc-radius-md);
+  background: var(--cc-warning-soft);
+  color: var(--cc-text);
+}
+
+.title {
+  font-weight: 500;
+}
+
+.row[data-tone="waiting"] .title {
+  font-weight: 600;
+}
+
+.detail {
+  color: var(--cc-text);
+}
+
+.icon {
+  display: inline-flex;
+  color: var(--cc-warning);
+}
+
+.dots {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  width: 16px;
+  justify-content: center;
+}
+
+.dots span {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--cc-accent);
+  opacity: 0.7;
+}
+
+/* The row keeps its last label while it collapses; animating then would run forever at rest. */
+.collapse[data-open] .dots span {
+  animation: pulse 1.2s ease-in-out infinite;
+}
+
+.collapse[data-open] .dots span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.collapse[data-open] .dots span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes pulse {
+  0%,
+  80%,
+  100% {
+    opacity: 0.3;
+    transform: translateY(0);
+  }
+  40% {
+    opacity: 1;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .collapse {
+    transition: none;
+  }
+
+  .collapse[data-open] .dots span {
+    animation: none;
+  }
+}

@@ -1,0 +1,44 @@
+{
+  "name": "copilot-companion",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Your Copilot session in a three-column, phone-ready canvas with native session controls, plus an optional loopback gateway for opening it on your phone.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "build": "vp build",
+    "dev": "vp dev",
+    "check": "vp check",
+    "fix": "vp check --fix",
+    "test": "vp test",
+    "sync-ext": "node scripts/sync-extension.mts",
+    "install-ext": "node scripts/install-ext.mts",
+    "gateway": "node gateway/gateway.mts",
+    "devtunnel": "node scripts/devtunnel.mts",
+    "notify": "node scripts/notify.mts"
+  },
+  "dependencies": {
+    "@mantine/core": "^9",
+    "@mantine/hooks": "^9",
+    "@tanstack/react-virtual": "^3",
+    "highlight.js": "^11",
+    "markdown-to-jsx": "^9",
+    "react": "^19",
+    "react-dom": "^19",
+    "uqr": "^0.1.3"
+  },
+  "devDependencies": {
+    "@tsconfig/node22": "^22",
+    "@tsconfig/recommended": "^1",
+    "@tsconfig/vite-react": "^8",
+    "@types/node": "^26",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6",
+    "typescript": "^7",
+    "vite-plus": "^1"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

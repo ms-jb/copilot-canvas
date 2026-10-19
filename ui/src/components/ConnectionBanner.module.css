@@ -1,0 +1,31 @@
+.region {
+  flex: none;
+}
+
+.banner {
+  margin: var(--cc-space-2) auto 0;
+  width: calc(100% - 2 * var(--cc-space-3));
+  max-width: var(--cc-content-max);
+  animation: enter var(--cc-duration) var(--cc-ease) both;
+}
+
+.body {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--cc-space-2);
+}
+
+@keyframes enter {
+  from {
+    opacity: 0;
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .banner {
+    animation: none;
+  }
+}

@@ -1,0 +1,30 @@
+.time {
+  font-size: var(--cc-text-xs);
+  line-height: 1;
+  color: var(--cc-text-faint);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  cursor: default;
+}
+
+.separator {
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-3);
+  margin-block: var(--cc-space-2);
+  color: var(--cc-text-faint);
+  font-size: var(--cc-text-xs);
+  font-weight: 500;
+}
+
+.separator::before,
+.separator::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--cc-border);
+}
+
+.separatorLabel {
+  flex: none;
+}

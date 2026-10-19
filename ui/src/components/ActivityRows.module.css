@@ -1,0 +1,133 @@
+/* A run of thinking and tool calls, on the same left edge as the message body. */
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.item {
+  min-width: 0;
+}
+
+.toggle {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--cc-space-2);
+  width: 100%;
+  min-width: 0;
+  min-height: 28px;
+  padding: 2px var(--cc-space-2) 2px 0;
+  border-radius: var(--cc-radius-sm);
+  color: var(--cc-text-muted);
+  text-align: start;
+}
+
+.toggle:not([data-static]):hover {
+  background: var(--cc-surface-sunken);
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--cc-focus);
+  outline-offset: -2px;
+}
+
+.chevron,
+.chevronSpace {
+  display: inline-flex;
+  flex: none;
+  width: 12px;
+  color: var(--cc-text-faint);
+}
+
+.chevron {
+  transition: transform var(--cc-duration) var(--cc-ease);
+}
+
+.toggle[aria-expanded="true"] .chevron {
+  transform: rotate(90deg);
+}
+
+.status {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  color: var(--cc-accent);
+}
+
+.status[data-state="succeeded"] {
+  color: var(--cc-success);
+}
+
+.status[data-state="failed"] {
+  color: var(--cc-danger);
+}
+
+.label {
+  flex: none;
+}
+
+.name {
+  flex: none;
+  max-width: 45%;
+  overflow: hidden;
+  font-family: var(--cc-font-mono);
+  color: var(--cc-text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.detail {
+  flex: 1;
+  min-width: 0;
+}
+
+.meta {
+  flex: none;
+  margin-inline-start: auto;
+}
+
+.detail + .meta {
+  margin-inline-start: 0;
+}
+
+.panel {
+  min-width: 0;
+  padding: var(--cc-space-1) var(--cc-space-2) var(--cc-space-2) 24px;
+}
+
+.code {
+  max-height: 240px;
+  overflow: auto;
+  font-size: var(--cc-text-xs);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.thoughtText {
+  padding-inline-start: var(--cc-space-3);
+  border-inline-start: 2px solid var(--cc-border);
+  color: var(--cc-text-muted);
+  font-size: var(--cc-text-sm);
+}
+
+@media (pointer: coarse) {
+  .toggle {
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .chevron {
+    transition: none;
+  }
+}
+
+/* Thinking reads quieter than a reply. */
+.thoughtText > * {
+  font-size: var(--cc-text-sm);
+  color: var(--cc-text-muted);
+}
