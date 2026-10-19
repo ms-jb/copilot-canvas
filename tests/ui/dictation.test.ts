@@ -1,3 +1,4 @@
+import { MantineProvider } from "@mantine/core";
 import { expect, it, vi } from "vite-plus/test";
 import {
   appendDictation,
@@ -6,12 +7,14 @@ import {
   dictationReducer,
   IDLE_DICTATION,
   formatElapsed,
+  togglesDictation,
 } from "../../ui/src/features/dictation/model";
 import { watchPageExit } from "../../ui/src/features/dictation/page-exit";
 import { LIMITS } from "../../src/shared/contract.mts";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MicButton } from "../../ui/src/features/dictation/MicButton";
+import type { Dictation } from "../../ui/src/features/dictation/useDictation";
 
 it("appends heard words once and within the prompt limit", () => {
   expect(appendDictation("hello", " there ")).toBe("hello there");
@@ -66,21 +69,63 @@ it("formats elapsed microphone time", () => {
   expect(formatElapsed(-1)).toBe("0:00");
 });
 
-it("hides the microphone entirely when browser recognition is unavailable", () => {
-  expect(
-    renderToStaticMarkup(
-      createElement(MicButton, {
-        disabled: false,
-        dictation: {
-          state: IDLE_DICTATION,
-          engine: null,
-          elapsedMs: 0,
-          toggle: vi.fn(),
-          dismiss: vi.fn(),
-          finishForSend: () => "",
-          absorbInterim: vi.fn(),
-        },
-      }),
+const dictation = (over: Partial<Dictation>): Dictation => ({
+  state: IDLE_DICTATION,
+  engine: "browser",
+  unsupported: false,
+  elapsedMs: 0,
+  toggle: vi.fn(),
+  dismiss: vi.fn(),
+  finishForSend: () => "",
+  absorbInterim: vi.fn(),
+  ...over,
+});
+const mic = (over: Partial<Dictation>, disabled = false) =>
+  renderToStaticMarkup(
+    createElement(
+      MantineProvider,
+      null,
+      createElement(MicButton, { disabled, dictation: dictation(over) }),
     ),
-  ).toBe("");
+  );
+
+it("shows a disabled, named microphone when browser recognition is unavailable", () => {
+  const html = mic({ engine: null, unsupported: true });
+  expect(html).toContain("Dictation isn&#x27;t available in this browser");
+  expect(html).toContain("disabled");
+  expect(html).toContain('aria-keyshortcuts="Control+Space"');
+});
+
+it("offers the shortcut on the idle microphone and a red stop while recording", () => {
+  expect(mic({})).toContain('aria-label="Dictate"');
+  const recording = mic({
+    state: { ...IDLE_DICTATION, phase: "recording", engine: "browser", startedAt: 0 },
+    elapsedMs: 7000,
+  });
+  expect(recording).toContain('aria-label="Stop dictation"');
+  expect(recording).toContain('aria-pressed="true"');
+  expect(recording).toContain("0:07");
+});
+
+it("toggles dictation on Ctrl+Space alone", () => {
+  const key = { code: "Space", shiftKey: false, ctrlKey: true, altKey: false, metaKey: false };
+  expect(togglesDictation({ ...key, isComposing: false })).toBe(true);
+  expect(togglesDictation({ ...key, isComposing: true })).toBe(false);
+  expect(togglesDictation({ ...key, ctrlKey: false, isComposing: false })).toBe(false);
+  expect(togglesDictation({ ...key, shiftKey: true, isComposing: false })).toBe(false);
+  expect(togglesDictation({ ...key, metaKey: true, isComposing: false })).toBe(false);
+  expect(togglesDictation({ ...key, code: "KeyM", isComposing: false })).toBe(false);
+});
+
+it("closes the draft with a full stop only for a later phrase", () => {
+  const later = { sentenceBreak: true };
+  expect(appendDictation("", "hello", later)).toBe("hello");
+  expect(appendDictation("hello", "there", later)).toBe("hello. there");
+  expect(appendDictation("Really?  ", "yes", later)).toBe("Really? yes");
+  expect(appendDictation("a…", "b", later)).toBe("a… b");
+  expect(appendDictation("  ", "b", later)).toBe("b");
+  expect(appendDictation("hello", "there")).toBe("hello there");
+  expect(appendDictation("x".repeat(LIMITS.maxPromptChars), "hi", later)).toHaveLength(
+    LIMITS.maxPromptChars,
+  );
 });

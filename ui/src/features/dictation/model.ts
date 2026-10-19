@@ -117,12 +117,51 @@ export function readResults(
   return { final: final.join(" "), interim: interim.join(" ") };
 }
 
-/** Appends dictated text to the draft with one separating space, within the prompt limit. */
-export function appendDictation(draft: string, text: string): string {
+const SENTENCE_END = /[.?!…]$/;
+
+/**
+ * Appends dictated text to the draft with one separating space, within the prompt limit. With
+ * `sentenceBreak` (a later phrase of the same recording) the draft is closed with a full stop first.
+ */
+export function appendDictation(
+  draft: string,
+  text: string,
+  options: { sentenceBreak?: boolean } = {},
+): string {
   const spoken = text.trim();
   if (!spoken) return draft;
-  const joined = !draft || /\s$/.test(draft) ? draft + spoken : `${draft} ${spoken}`;
+  const joined = (() => {
+    if (!draft) return spoken;
+    if (options.sentenceBreak) {
+      const base = draft.trimEnd();
+      if (!base) return spoken;
+      return `${base}${SENTENCE_END.test(base) ? "" : "."} ${spoken}`;
+    }
+    return /\s$/.test(draft) ? draft + spoken : `${draft} ${spoken}`;
+  })();
   return joined.slice(0, LIMITS.maxPromptChars);
+}
+
+/**
+ * Ctrl+Space alone, once per press (a held key repeats keydown). `code`, not `key`, so it holds on
+ * macOS; any other modifier, or an open IME composition, keeps the key's usual meaning.
+ */
+export function togglesDictation(event: {
+  code: string;
+  shiftKey: boolean;
+  ctrlKey: boolean;
+  altKey: boolean;
+  metaKey: boolean;
+  isComposing: boolean;
+}): boolean {
+  return (
+    event.code === "Space" &&
+    event.ctrlKey &&
+    !event.altKey &&
+    !event.metaKey &&
+    !event.shiftKey &&
+    !event.isComposing
+  );
 }
 
 /** The composer's text while dictating: the draft, then the interim words that are shown dimmed. */

@@ -202,8 +202,8 @@ export function ChatView({ connection }: ViewProps) {
           onStop={onStop}
           stopping={stopping}
           attachments={attachments}
-          onDictation={(text) => {
-            setDraft((current) => appendDictation(current, text));
+          onDictation={(text, options) => {
+            setDraft((current) => appendDictation(current, text, options));
             input.current?.focus();
           }}
         />

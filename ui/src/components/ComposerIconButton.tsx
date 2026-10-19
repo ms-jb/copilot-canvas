@@ -30,7 +30,14 @@ export function ComposerTooltip({
   // Merge, so a Popover or Menu target adds its class to the button's own instead of replacing it.
   const merged = [children.props.className, className].filter(Boolean).join(" ") || undefined;
   return (
-    <Tooltip ref={ref} label={label} position="top" offset={6} disabled={hidden || !canHover}>
+    <Tooltip
+      ref={ref}
+      label={label}
+      position="top"
+      offset={6}
+      events={{ hover: true, focus: true, touch: false }}
+      disabled={hidden || !canHover}
+    >
       {cloneElement(children, { ...rest, className: merged })}
     </Tooltip>
   );
