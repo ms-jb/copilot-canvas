@@ -7,7 +7,7 @@ const NOT_CONNECTED_PAGE = `<!doctype html>
 <meta http-equiv="refresh" content="5"><title>Not connected</title>
 <style>body{font:16px/1.5 system-ui,sans-serif;max-width:32rem;margin:4rem auto;padding:0 1rem;color-scheme:light dark}</style>
 <h1>Not connected</h1>
-<p>Copilot Canvas isn't running. Open the canvas in a Copilot chat and this page reconnects on its own.</p>
+<p>Copilot Companion isn't running. Open the canvas in a Copilot chat and this page reconnects on its own.</p>
 `;
 
 /** Reads the body, or resolves null when it exceeds `maxBytes` or the client goes away. */

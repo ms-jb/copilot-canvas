@@ -1,24 +1,24 @@
 ---
-name: setup-copilot-canvas
-description: "Set up Copilot Canvas for a user who has no copy yet: their own private copy, the canvas open beside this chat, a phone link. Also for first changes during setup, setting up the rest of Copilot (profile, skills, agents, automations), and repairing or undoing an install."
+name: setup-copilot-companion
+description: "Set up Copilot Companion for a user who has no copy yet: their own private copy, the companion open beside this chat, a phone link. Also for first changes during setup, setting up the rest of Copilot (profile, skills, agents, automations), and repairing or undoing an install."
 ---
 
-# Set up Copilot Canvas
+# Set up Copilot Companion
 
 This is the playbook Copilot follows when the user clicks **Install** in the README, or pastes
-_"Set up Copilot Canvas for me with the setup-copilot-canvas skill"_ into any Copilot chat. The user
+_"Set up Copilot Companion for me with the setup-copilot-companion skill"_ into any Copilot chat. The user
 does not run any of it.
 
 **For Copilot.** Get the user to a canvas they own, on desktop and on their phone, as fast as you
 can. Then help them change it and set up the rest of their Copilot, while builders write the code
 in the background. Use the platform's shell and paths (Windows or macOS). The user needs a GitHub
 account with any Copilot plan (Copilot Free works, within its monthly limits) and the GitHub
-Copilot app; README.md lists the rest. `<FOLDER>` is their copy's folder, `~/repos/copilot-canvas`
+Copilot app; README.md lists the rest. `<FOLDER>` is their copy's folder, `~/repos/copilot-companion`
 unless they chose another.
 
 **Read the latest version first.** A local checkout may be older than the template. Run `git fetch`
 and read this skill from `origin/main` (or from
-`https://raw.githubusercontent.com/ms-jb/copilot-canvas/main/.github/skills/setup-copilot-canvas/SKILL.md`,
+`https://raw.githubusercontent.com/ms-jb/copilot-companion/main/.github/skills/setup-copilot-companion/SKILL.md`,
 with `references/` beside it). If the local copy is behind, follow the `origin/main` version.
 Done when you know which version you follow.
 
@@ -48,8 +48,8 @@ and check on it.
 
 ## Part 1: Install
 
-0. **Consent (one question).** Say what will happen: their own copy of Copilot Canvas in
-   `~/repos/copilot-canvas`, the canvas installed for their user, and phone access through a private
+0. **Consent (one question).** Say what will happen: their own copy of Copilot Companion in
+   `~/repos/copilot-companion`, the canvas installed for their user, and phone access through a private
    dev tunnel that only they can sign in to. With `gh` signed in, the copy is a new **private**
    repository on their GitHub account made from this template (fresh history, not a fork), so they
    can keep and back up their changes; pushing is up to them. Without it, or if they prefer, it is a
@@ -72,10 +72,10 @@ and check on it.
 
 1. **Instant canvas** (track a; the wow starts here). Open the template's prebuilt canvas immediately:
    - Look in `~/.copilot/extensions/` for other folders whose `template.config.json` has
-     `"canvasId": "chat-panel"` and that are not named `copilot-canvas` (for example `extension`, from
+     `"canvasId": "chat-panel"` and that are not named `copilot-companion` (for example `extension`, from
      an earlier link install). Two copies show two canvases; offer to remove them.
-   - `install_extension` with URL `https://github.com/ms-jb/copilot-canvas/tree/main/extension`,
-     `name: copilot-canvas`, scope `user`. It installs the committed, already-built `extension/`
+   - `install_extension` with URL `https://github.com/ms-jb/copilot-companion/tree/main/extension`,
+     `name: copilot-companion`, scope `user`. It installs the committed, already-built `extension/`
      and reloads extensions for you, so the user never taps a reload button. Never copy a folder in
      by hand first: a new extension folder only registers on a reload.
    - Wait about five seconds, then `open_canvas` with canvas id `chat-panel` and a stable
@@ -84,7 +84,7 @@ and check on it.
      own copy replaces it in a minute.
    - If `install_extension` says the folder exists, try `open_canvas` first. If it is not
      registered (a folder copied earlier without a reload), rename
-     `~/.copilot/extensions/copilot-canvas` to `~/.copilot/extensions/.copilot-canvas.unregistered`
+     `~/.copilot/extensions/copilot-companion` to `~/.copilot/extensions/.copilot-companion.unregistered`
      and run `install_extension` again; remove the renamed folder once step 4 has swapped in their build.
 
    Done when `open_canvas` shows this conversation.
@@ -110,24 +110,24 @@ and check on it.
    this brief, with the inputs filled in:
    - **Inputs:** `<FOLDER>`; whether the copy is a private repository (then the GitHub `<login>`,
      from `gh auth status`) or a local folder only; the template URL
-     `https://github.com/ms-jb/copilot-canvas`.
+     `https://github.com/ms-jb/copilot-companion`.
    - **Job:**
      1. Get their copy into `<FOLDER>`, never inside the checkout this session started in. If
-        `<FOLDER>` exists, use it only if it is a git checkout of `copilot-canvas`; otherwise stop and
+        `<FOLDER>` exists, use it only if it is a git checkout of `copilot-companion`; otherwise stop and
         report the question.
         - **Private copy** (default, needs `gh auth status` signed in to github.com):
-          `gh repo create <login>/copilot-canvas --private --template ms-jb/copilot-canvas`, then
-          `gh repo clone <login>/copilot-canvas <FOLDER>`. If `<login>/copilot-canvas` already exists,
+          `gh repo create <login>/copilot-companion --private --template ms-jb/copilot-companion`, then
+          `gh repo clone <login>/copilot-companion <FOLDER>`. If `<login>/copilot-companion` already exists,
           use it only if it is theirs and private; otherwise stop and report, asking for another name.
           If they are `ms-jb` (the template's owner), stop and ask for another name, for example
-          `copilot-canvas-mine`.
+          `copilot-companion-mine`.
         - **Local folder only** (no `gh`, or they chose it):
-          `git clone https://github.com/ms-jb/copilot-canvas <FOLDER>`, then
+          `git clone https://github.com/ms-jb/copilot-companion <FOLDER>`, then
           `git -C <FOLDER> remote remove origin`. They can publish it later with
           `gh repo create --private --source <FOLDER> --push`.
-        - Check: `git -C <FOLDER> remote -v` lists nothing that points at `ms-jb/copilot-canvas` (unless
+        - Check: `git -C <FOLDER> remote -v` lists nothing that points at `ms-jb/copilot-companion` (unless
           they are its owner and chose to), and for a private copy
-          `gh repo view <login>/copilot-canvas --json visibility` says `PRIVATE`.
+          `gh repo view <login>/copilot-companion --json visibility` says `PRIVATE`.
      2. Run `npm install` in `<FOLDER>` (use a background shell and wait for it). It needs Node.js
         22.18+ (24 recommended). If Node is missing or older, check where `node` resolves first:
         when a version manager provides it (`pnpm env`, nvm, fnm, Volta, mise), the fix is an upgrade
@@ -137,10 +137,10 @@ and check on it.
         `npm config get registry`; never edit `.npmrc` or install anything globally.
      3. Run `npm run install-ext` in `<FOLDER>`. It builds their copy first and installs only a build
         that passed, so nothing half-built is ever registered. It swaps their build into
-        `~/.copilot/extensions/copilot-canvas` in one step and records where the copy is, so later
+        `~/.copilot/extensions/copilot-companion` in one step and records where the copy is, so later
         tweaks rebuild from it. The open canvas sees the new build and reloads itself.
    - **Limits:** it works only in `<FOLDER>` and in the
-     `~/.copilot/extensions/copilot-canvas` swap-in done by `npm run install-ext`. It never asks the
+     `~/.copilot/extensions/copilot-companion` swap-in done by `npm run install-ext`. It never asks the
      user: when it needs a decision (Node install, name clash, `gh` not signed in) it stops and
      reports the exact question. It does not start other agents, publish beyond the consented
      private repository, or touch other folders.
@@ -170,7 +170,7 @@ and check on it.
      click for it.** Call `open_canvas` with `canvasId: "browser"`, a new `instanceId`
      (for example `phone-qr`), `input: { url: "file:///<path>", title: "Scan to open on phone",
      placement: { surface: "side", focus: true } }` (`<path>` is the printed `QR image:` path,
-     `phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-canvas/`, with forward slashes). If it
+     `phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-companion/`, with forward slashes). If it
      does not open, retry without `placement`.
    - **Also post the link and the QR code in chat.** Attach the QR image: copy `<path>` into your
      session files and attach it. If you cannot attach images, paste the printed QR exactly as
@@ -182,6 +182,13 @@ and check on it.
    - The canvas's **Open on phone** button shows the same link and QR code. If the button is
      missing (the gateway started after the canvas opened), open the canvas again. Ask the user to
      send a message from the phone and confirm it arrives in this conversation.
+   - **Dismiss the QR code once the phone works.** When the user's phone message has arrived here
+     (or they say the phone is set up), close the `phone-qr` panel so it stops taking up the side
+     panel: `invoke_canvas_action` on `phone-qr` with `evaluate_javascript` and `window.close();`.
+     There is no close action, so confirm with `read_page` that the panel is gone. If it is still
+     open, say so in one line and ask the user to close it with the **x** on its tab. Leave the
+     link in chat and the canvas's **Open on phone** button alone: they show the same QR code
+     whenever it is needed again.
    - Offer to install it on the phone: the canvas walks them through **Add to Home Screen** for their
      phone and browser, and it then opens like an app.
    - After icon changes, tell the user to delete the existing home-screen app and add it again

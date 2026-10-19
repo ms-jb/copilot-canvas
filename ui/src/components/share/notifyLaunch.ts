@@ -1,6 +1,6 @@
 // Pure logic for the automatic notification prompt on a device's first visit and for the bell's look.
 
-const OUTCOME_KEY = "copilot-canvas:notify-launch";
+const OUTCOME_KEY = "copilot-companion:notify-launch";
 
 /** A request that returns "default" faster than a person could answer was never shown a prompt. */
 export const QUICK_DECLINE_MS = 500;

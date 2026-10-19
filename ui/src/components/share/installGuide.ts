@@ -1,7 +1,7 @@
 // Pure install-guide content, chosen from the browser's user agent so it is testable.
 
 /** Dispatched on `window` to open the Add to Home Screen walkthrough from elsewhere in the app. */
-export const OPEN_INSTALL_GUIDE = "copilot-canvas:open-install-guide";
+export const OPEN_INSTALL_GUIDE = "copilot-companion:open-install-guide";
 
 export type InstallPlatform =
   | "ios-safari"

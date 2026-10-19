@@ -1,9 +1,9 @@
-# Copilot Canvas: agent guide
+# Copilot Companion: agent guide
 
-This repository is usually the user's own copy of Copilot Canvas. When they ask to change the canvas
+This repository is usually the user's own copy of Copilot Companion. When they ask to change the canvas
 ("add a panel", "rename the assistant", "show my agenda"), change **this code**, then rebuild and
 reinstall it. Don't open a native app panel, a My work tab or a separate canvas instead. If you are
-in a session without this repository and the user has no copy yet, follow the [setup-copilot-canvas skill](.github/skills/setup-copilot-canvas/SKILL.md).
+in a session without this repository and the user has no copy yet, follow the [setup-copilot-companion skill](.github/skills/setup-copilot-companion/SKILL.md).
 
 ## Where things live
 
@@ -83,11 +83,11 @@ rest and keeps guiding them meanwhile (see `customization-workflow`).
    never restarts the phone gateway: after changing `gateway/` or the shared contract it imports,
    restart `npm run devtunnel` too, or the phone keeps rejecting new routes with 404.
 5. Commit, including the rebuilt `extension/` folder. Pushing is the user's choice; ask first. Their
-   copy should be their own private repository made from the template (`setup-copilot-canvas` step 3). If
-   `origin` still points at `ms-jb/copilot-canvas` and they don't own it, don't push there: offer
+   copy should be their own private repository made from the template (`setup-copilot-companion` step 3). If
+   `origin` still points at `ms-jb/copilot-companion` and they don't own it, don't push there: offer
    `git remote remove origin` and `gh repo create --private --source . --push` instead.
 6. Suggest one or two next tweaks that build on what they just asked for.
-   During setup, go back to the `setup-copilot-canvas` `references/rest-of-copilot.md` stage where the user stopped.
+   During setup, go back to the `setup-copilot-companion` `references/rest-of-copilot.md` stage where the user stopped.
 
 Requires Node.js 22.18+. Code is erasable TypeScript (no enums or namespaces).
 
@@ -135,7 +135,7 @@ and never add this route to `ROUTES`.
 
 ## Contributing to the template
 
-This applies only when you are changing `ms-jb/copilot-canvas` itself, not a user's copy. The
+This applies only when you are changing `ms-jb/copilot-companion` itself, not a user's copy. The
 template accepts pull requests, but only its owner pushes to `main`: open a branch and a pull
 request, never push to `main` directly. Keep a pull request to one generic change, with no personal
 names, accounts, hosts, keys or branding, and pass `npx vp check`, `npx vp test` and

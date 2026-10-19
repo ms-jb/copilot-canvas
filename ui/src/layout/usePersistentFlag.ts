@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
 
-const PREFIX = "copilot-canvas:";
+const PREFIX = "copilot-companion:";
 
 function read(key: string, fallback: boolean): boolean {
   try {
@@ -11,7 +11,7 @@ function read(key: string, fallback: boolean): boolean {
   }
 }
 
-/** A boolean remembered in localStorage under `copilot-canvas:<key>`; storage failures are ignored. */
+/** A boolean remembered in localStorage under `copilot-companion:<key>`; storage failures are ignored. */
 export function usePersistentFlag(
   key: string,
   fallback: boolean,

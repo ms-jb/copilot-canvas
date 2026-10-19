@@ -21,7 +21,7 @@ const NAME_PATTERN = /^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$/;
 const CANVAS_ID_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}$/;
 
 export const DEFAULT_CONFIG: Readonly<TemplateConfig> = Object.freeze({
-  extensionName: "copilot-canvas",
+  extensionName: "copilot-companion",
   canvasId: "chat-panel",
   assistantName: "Copilot",
   description: "Your Copilot conversation in a focused, phone-ready canvas.",

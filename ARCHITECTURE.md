@@ -1,6 +1,6 @@
 # Architecture
 
-How Copilot Canvas is organized, and the rules that keep it easy to change. Read this before you
+How Copilot Companion is organized, and the rules that keep it easy to change. Read this before you
 move code or add a new area. [AGENTS.md](AGENTS.md) covers the day-to-day customization loop.
 
 ## The pieces

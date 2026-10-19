@@ -148,8 +148,8 @@ it("replaces only installs of this canvas", async () => {
 
 it("puts the previous install back when the new build cannot be swapped in", async () => {
   const root = mkdtempSync(join(tmpdir(), "canvas-promote-"));
-  const target = join(root, "copilot-canvas");
-  const staging = join(root, ".copilot-canvas.installing");
+  const target = join(root, "copilot-companion");
+  const staging = join(root, ".copilot-companion.installing");
   mkdirSync(target);
   writeFileSync(join(target, "extension.mjs"), "old");
   mkdirSync(staging);
@@ -169,7 +169,7 @@ it("puts the previous install back when the new build cannot be swapped in", asy
   });
   await promote(staging, target, { move: flaky, delayMs: 0 });
   expect(readFileSync(join(target, "extension.mjs"), "utf8")).toBe("new");
-  expect(readdirSync(root).sort()).toEqual(["copilot-canvas"]);
+  expect(readdirSync(root).sort()).toEqual(["copilot-companion"]);
 });
 
 it("reloads a running canvas once a new build's marker lands, and stops watching on shutdown", async () => {

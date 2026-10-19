@@ -1,17 +1,17 @@
-# Copilot Canvas
+# Copilot Companion
 
 Your Copilot conversation in three columns, on your computer and on your phone. Answer Copilot's
-questions and approvals from anywhere, and ask Copilot to add panels or change how the canvas looks.
+questions and approvals from anywhere, and ask Copilot to add panels or change how the companion looks.
 
 <p align="center">
   <b>Using a GitHub Enterprise account? Do this first.</b><br>
-  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fgithub.com%2Fms-jb%2Fcopilot-canvas"><img src="https://img.shields.io/badge/Add_the_project-6e7781?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Add the project" height="40"></a><br>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fgithub.com%2Fms-jb%2Fcopilot-companion"><img src="https://img.shields.io/badge/Add_the_project-6e7781?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Add the project" height="40"></a><br>
   <sub>Adds this project to the GitHub Copilot app, or offers to install the app first. Then click Install below.</sub>
 </p>
 
 <p align="center">
   <b>Everyone else: one click.</b><br>
-  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520with%2520the%2520setup-copilot-canvas%2520skill.%2520If%2520it%2520isn%2527t%2520available%252C%2520follow%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252F.github%252Fskills%252Fsetup-copilot-canvas%252FSKILL.md"><img src="https://img.shields.io/badge/Install-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install Copilot Canvas" height="56"></a><br>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-companion%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Companion%2520for%2520me%2520with%2520the%2520setup-copilot-companion%2520skill.%2520If%2520it%2520isn%2527t%2520available%252C%2520follow%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-companion%252Fblob%252Fmain%252F.github%252Fskills%252Fsetup-copilot-companion%252FSKILL.md"><img src="https://img.shields.io/badge/Install-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install Copilot Companion" height="56"></a><br>
   <sub>Copilot adds the project and does the setup. It asks before it installs software, publishes anything or turns on phone access.</sub>
 </p>
 
@@ -23,15 +23,15 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 
 <table>
   <tr>
-    <td width="72%"><img src="docs/screenshots/desktop.png" alt="Copilot Canvas on desktop, light theme, with a queued message and the Plan mode chip"></td>
-    <td width="28%"><img src="docs/screenshots/phone.png" alt="Copilot Canvas on a phone, light theme"></td>
+    <td width="72%"><img src="docs/screenshots/desktop.png" alt="Copilot Companion on desktop, light theme, with a queued message and the Plan mode chip"></td>
+    <td width="28%"><img src="docs/screenshots/phone.png" alt="Copilot Companion on a phone, light theme"></td>
   </tr>
 </table>
 
 <details>
 <summary>Dark theme</summary>
 
-![Copilot Canvas on desktop, dark theme](docs/screenshots/desktop-dark.png)
+![Copilot Companion on desktop, dark theme](docs/screenshots/desktop-dark.png)
 
 </details>
 

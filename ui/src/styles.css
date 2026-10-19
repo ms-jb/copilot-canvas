@@ -1,5 +1,5 @@
 /*
- * Design tokens for Copilot Canvas.
+ * Design tokens for Copilot Companion.
  *
  * Every color follows the host: when the Copilot app injects its theme variables we use them,
  * otherwise the fallbacks below keep a plain browser (or a phone over the gateway) looking right.

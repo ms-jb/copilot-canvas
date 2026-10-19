@@ -18,9 +18,9 @@ confirm the canvas or phone works again before you report it fixed.
 ## Undo
 
 Stop `npm run devtunnel`; `devtunnel delete <tunnel-id>` (the id is in
-`~/.copilot/canvas-runtime/copilot-canvas/phone.json`); remove `~/.copilot/extensions/copilot-canvas`
-and `~/.copilot/canvas-runtime/copilot-canvas` (tunnel id, notification keys, subscriptions and
+`~/.copilot/canvas-runtime/copilot-companion/phone.json`); remove `~/.copilot/extensions/copilot-companion`
+and `~/.copilot/canvas-runtime/copilot-companion` (tunnel id, notification keys, subscriptions and
 setup progress); delete `<FOLDER>` and, if they want, their private repository
-(`gh repo delete <login>/copilot-canvas`, after they confirm). The profile, skills, agents and
+(`gh repo delete <login>/copilot-companion`, after they confirm). The profile, skills, agents and
 automations from [rest-of-copilot.md](rest-of-copilot.md) are not part of the canvas; they stay until
 the user removes them.
