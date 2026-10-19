@@ -1,8 +1,8 @@
-import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, expect, it } from "vite-plus/test";
-import { publishQr } from "../../gateway/qr.mts";
+import { importUqrFromDisk, publishQr } from "../../gateway/qr.mts";
 
 const fakeUqr = {
   renderSVG: (text: string) => `<svg>${text}</svg>`,
@@ -73,4 +73,17 @@ it("stops retrying when asked", async () => {
   await new Promise((resolve) => setTimeout(resolve, 10));
   qr.stop();
   expect(await qr.done).toBe(false);
+});
+
+it("loads uqr once a half-extracted install completes, in the same process", async () => {
+  const pkg = join(directory, "node_modules", "uqr");
+  mkdirSync(pkg, { recursive: true });
+  await expect(importUqrFromDisk(directory)).rejects.toThrow();
+
+  writeFileSync(join(pkg, "package.json"), JSON.stringify({ name: "uqr", module: "./index.mjs" }));
+  await expect(importUqrFromDisk(directory)).rejects.toThrow();
+
+  writeFileSync(join(pkg, "index.mjs"), "export const renderSVG = () => '<svg/>';");
+  const uqr = await importUqrFromDisk(join(directory, "nested"));
+  expect(uqr.renderSVG("x")).toBe("<svg/>");
 });
