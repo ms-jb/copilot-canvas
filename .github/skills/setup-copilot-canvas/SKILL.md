@@ -5,7 +5,7 @@ description: "Set up Copilot Canvas for a user who has no copy yet: their own pr
 
 # Set up Copilot Canvas
 
-This is the playbook Copilot follows when the user clicks **Start setup** in the README, or pastes
+This is the playbook Copilot follows when the user clicks **Install** in the README, or pastes
 _"Set up Copilot Canvas for me with the setup-copilot-canvas skill"_ into any Copilot chat. The user
 does not run any of it.
 

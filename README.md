@@ -4,18 +4,19 @@ Your Copilot conversation in three columns, on your computer and on your phone. 
 questions and approvals from anywhere, and ask Copilot to add panels or change how the canvas looks.
 
 <p align="center">
-  <b>1.</b> <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fgithub.com%2Fms-jb%2Fcopilot-canvas"><img src="https://img.shields.io/badge/Add_the_project-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Add the project" height="56"></a><br>
-  <sub>Adds this project to the GitHub Copilot app, or offers to install the app first.</sub>
+  <b>Using a GitHub Enterprise account? Do this first.</b><br>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fgithub.com%2Fms-jb%2Fcopilot-canvas"><img src="https://img.shields.io/badge/Add_the_project-6e7781?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Add the project" height="40"></a><br>
+  <sub>Adds this project to the GitHub Copilot app, or offers to install the app first. Then click Install below.</sub>
 </p>
 
 <p align="center">
-  <b>2.</b> <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520with%2520the%2520setup-copilot-canvas%2520skill.%2520If%2520it%2520isn%2527t%2520available%252C%2520follow%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252F.github%252Fskills%252Fsetup-copilot-canvas%252FSKILL.md"><img src="https://img.shields.io/badge/Start_setup-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Start setup" height="56"></a><br>
-  <sub>Click this after the project appears in the app. Copilot does the setup and asks before it
-  installs software, publishes anything or turns on phone access.</sub>
+  <b>Everyone else: one click.</b><br>
+  <a href="https://github.com/copilot/app/launch?open=ghapp%3A%2F%2Fsession%2Fnew%3Frepo%3Dms-jb%252Fcopilot-canvas%26mode%3Dinteractive%26prompt%3DSet%2520up%2520Copilot%2520Canvas%2520for%2520me%2520with%2520the%2520setup-copilot-canvas%2520skill.%2520If%2520it%2520isn%2527t%2520available%252C%2520follow%2520https%253A%252F%252Fgithub.com%252Fms-jb%252Fcopilot-canvas%252Fblob%252Fmain%252F.github%252Fskills%252Fsetup-copilot-canvas%252FSKILL.md"><img src="https://img.shields.io/badge/Install-339933?style=for-the-badge&logo=githubcopilot&logoColor=white" alt="Install Copilot Canvas" height="56"></a><br>
+  <sub>Copilot adds the project and does the setup. It asks before it installs software, publishes anything or turns on phone access.</sub>
 </p>
 
 <p align="center">
-  <sub>First time here? Either button opens the Copilot app, and if it isn't installed yet, the page it lands on has a button to install it. After installing, come back to this README and click Step 1 (Add the project), then Step 2 (Start setup), again.</sub>
+  <sub>First time here? Either button opens the Copilot app, and if it isn't installed yet, the page it lands on has a button to install it. After installing, come back to this README and click the button again.</sub>
 </p>
 
 <br>
