@@ -8,6 +8,8 @@ const MAX_DURATION_MS = 5 * 60_000;
 export interface Dictation {
   state: DictationState;
   engine: "browser" | null;
+  /** This browser has no speech recognition: the microphone is shown but cannot start. */
+  unsupported: boolean;
   elapsedMs: number;
   toggle: () => void;
   dismiss: () => void;
@@ -20,7 +22,8 @@ export function useDictation({
   onText,
   enabled,
 }: {
-  onText: (text: string) => void;
+  /** `sentenceBreak` is set from the second phrase of a recording on: it follows a full stop. */
+  onText: (text: string, options?: { sentenceBreak?: boolean }) => void;
   enabled: boolean;
 }): Dictation {
   const [state, dispatch] = useReducer(dictationReducer, IDLE_DICTATION);
@@ -28,10 +31,15 @@ export function useDictation({
   const Make = useMemo(browserRecognizer, []);
   const capture = useRef<Recognition | null>(null);
   const skipSegment = useRef(false);
+  const committed = useRef(0);
   const mounted = useRef(true);
   const latest = useRef(onText);
   latest.current = onText;
 
+  const commit = useCallback((text: string) => {
+    latest.current(text, { sentenceBreak: committed.current > 0 });
+    committed.current += 1;
+  }, []);
   const finishForSend = useCallback(() => {
     const current = capture.current;
     capture.current = null;
@@ -41,13 +49,14 @@ export function useDictation({
   }, []);
   const finish = useCallback(() => {
     const words = finishForSend();
-    if (words) latest.current(words);
-  }, [finishForSend]);
+    if (words) commit(words);
+  }, [finishForSend, commit]);
 
   const toggle = () => {
     if (capture.current) return finish();
     if (!enabled || !Make) return;
     skipSegment.current = false;
+    committed.current = 0;
     dispatch({ type: "start", engine: "browser" });
     // startRecognition may fail synchronously, before it returns a handle.
     let ended = false;
@@ -62,8 +71,10 @@ export function useDictation({
           if (mounted.current && !skipSegment.current) dispatch({ type: "interim", text });
         },
         committed: (text) => {
-          if (skipSegment.current) skipSegment.current = false;
-          else if (mounted.current) latest.current(text);
+          if (skipSegment.current) {
+            skipSegment.current = false;
+            committed.current += 1;
+          } else if (mounted.current) commit(text);
         },
         ended: (problem) => {
           ended = true;
@@ -109,6 +120,7 @@ export function useDictation({
   return {
     state,
     engine: Make ? "browser" : null,
+    unsupported: !Make,
     elapsedMs: state.startedAt === null ? 0 : Math.max(0, now - state.startedAt),
     toggle,
     dismiss: () => dispatch({ type: "dismiss" }),

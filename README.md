@@ -45,6 +45,8 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 
 - Your Copilot conversation in the center, with a status line showing what Copilot is doing.
 - Permission requests, questions and plan approvals answered right in the canvas.
+- Dictation from the microphone button or Ctrl+Space, using your browser's own speech recognition
+  (no account or key).
 - Your own panels on the right, starting with a few ideas you can tap.
 - Your recent sessions in the left rail, so you can jump back into one.
 

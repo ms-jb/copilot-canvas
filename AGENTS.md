@@ -132,6 +132,9 @@ and never add this route to `ROUTES`.
   an explicit tap from the user.
 - The phone tunnel stays owner-only. Never add anonymous, tenant or organization access.
 - No secrets in `template.config.json`, the repository or `extension/`: it all ships to the canvas.
+- No external services or API keys in the template itself: dictation is the browser's own
+  `SpeechRecognition` only (no hosted speech-to-text, no audio uploaded to the host). A user's copy
+  may add its own.
 
 ## Contributing to the template
 

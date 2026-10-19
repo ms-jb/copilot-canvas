@@ -19,7 +19,12 @@ import type { useAttachments } from "../features/attachments/useAttachments";
 import { queuesOnEnter } from "./sendPress";
 import { MicButton } from "../features/dictation/MicButton";
 import { useDictation } from "../features/dictation/useDictation";
-import { appendDictation, editWithInterim, withInterim } from "../features/dictation/model";
+import {
+  appendDictation,
+  editWithInterim,
+  togglesDictation,
+  withInterim,
+} from "../features/dictation/model";
 import { ContextUsageIndicator } from "../features/context/ContextUsageIndicator";
 import { SkillPicker } from "../features/skills/SkillPicker";
 import { useSkillPicker } from "../features/skills/useSkillPicker";
@@ -46,7 +51,7 @@ interface ComposerProps {
   stopping?: boolean;
   attachments: ReturnType<typeof useAttachments>;
   /** Receives dictated text; the caller appends it to the draft. */
-  onDictation: (text: string) => void;
+  onDictation: (text: string, options?: { sentenceBreak?: boolean }) => void;
 }
 
 // Show the counter only when the limit is close enough to matter.
@@ -115,6 +120,13 @@ export function Composer({
 
   const onKeyDown = (event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (skills.onKeyDown(event)) return;
+    // Ctrl+Space toggles dictation from the box, once per press; it never types or sends.
+    if (togglesDictation({ ...event, isComposing: event.nativeEvent.isComposing })) {
+      if (disabled || dictation.unsupported) return;
+      event.preventDefault();
+      if (!event.repeat) dictation.toggle();
+      return;
+    }
     // Enter sends, Ctrl/Cmd/Alt+Enter queues, Shift+Enter inserts a newline; never fire while an
     // IME is composing.
     if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
@@ -198,8 +210,8 @@ export function Composer({
             maxRows={10}
             maxLength={LIMITS.maxPromptChars}
             value={shown}
-            readOnly={busy}
-            disabled={disabled}
+            readOnly={busy || disabled}
+            aria-disabled={disabled || undefined}
             onChange={(event) => {
               skills.track(event.currentTarget);
               edit(event.currentTarget.value);

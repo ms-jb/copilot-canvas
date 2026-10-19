@@ -10,23 +10,33 @@ const ANNOUNCE: Record<string, string> = {
     "Listening. Your words appear in the message box. Press the microphone or Escape to stop.",
 };
 
-/** Only browsers with speech recognition show a microphone. */
+/** Microphone toggle: red while recording; slashed and disabled where the browser can't recognize speech. */
 export function MicButton({ dictation, disabled }: { dictation: Dictation; disabled: boolean }) {
-  const { state, engine, elapsedMs, toggle } = dictation;
+  const { state, unsupported, elapsedMs, toggle } = dictation;
   const { phase } = state;
   const active = phase === "starting" || phase === "recording";
-  const label = active ? "Stop dictation" : "Dictate";
-  if (engine === null) return null;
+  const label = unsupported
+    ? "Dictation isn't available in this browser"
+    : active
+      ? "Stop dictation"
+      : "Dictate";
   return (
     <>
       <ComposerIconButton
         label={label}
-        tip={active ? "Stop dictation (Esc)" : label}
+        tip={
+          active
+            ? "Stop dictation (Ctrl+Space or Esc)"
+            : unsupported
+              ? label
+              : `${label} (Ctrl+Space)`
+        }
+        aria-keyshortcuts="Control+Space"
         active={active}
         color={active ? "red" : "gray"}
         className={styles.mic}
         data-state={phase}
-        disabled={disabled && !active}
+        disabled={(disabled && !active) || unsupported}
         loading={phase === "starting"}
         loaderProps={{ size: 16 }}
         aria-pressed={active}
@@ -55,6 +65,9 @@ export function MicButton({ dictation, disabled }: { dictation: Dictation; disab
               strokeWidth="1.8"
               strokeLinecap="round"
             />
+            {unsupported && (
+              <path d="m4 4 16 16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+            )}
           </svg>
         )}
       </ComposerIconButton>

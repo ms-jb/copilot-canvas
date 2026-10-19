@@ -110,9 +110,15 @@ hit.
 ## Chat input and transcript
 
 The composer uses native Mantine controls, a width-aware toolbar, attachments, a slash-skill
-picker and browser speech recognition when supported. Dictation only fills the draft; it never
-sends automatically. Recognition uses the browser's speech service and may require network access.
-There are no host audio endpoints, API keys or paid speech integrations.
+picker and browser speech recognition when supported. Keys: Enter sends, Ctrl/Cmd/Alt+Enter
+queues, Shift+Enter adds a line, Alt+M cycles the session mode and Ctrl+Space (or the microphone)
+starts and stops dictation; Escape also stops it. The page's own recognizer (`SpeechRecognition`)
+does the listening: words not yet final show dimmed after the draft, final phrases join the draft
+(a later phrase of one recording after a full stop), the recognizer restarts itself after a pause
+and the microphone is released when the page hides. Dictation only fills the draft; it never sends
+automatically. Recognition uses the browser's speech service and may require network access; where
+the browser has none, the microphone is shown disabled. There are no host audio endpoints, API
+keys or paid speech integrations, and the template must stay free of them.
 
 `GET api/skills` reads the current session's bounded skill catalog. Skill expansion happens only
 after an explicit send, through that session's command RPC. `GET api/context` reads measured
