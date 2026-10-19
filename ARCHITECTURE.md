@@ -109,6 +109,8 @@ hit.
 
 ## Caching and performance
 
+How to measure it, the cache table and the measured numbers are in `docs/perf.md`.
+
 - **Static files** (`src/host/http/assets.mts`): hashed chunks are `public, max-age=31536000,
   immutable`; `index.html`, icons and the manifest are `no-cache` with an ETag (304 on a match).
   Text files over 1 KB go out brotli or gzip, compressed once per file version

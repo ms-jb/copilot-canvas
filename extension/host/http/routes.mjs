@@ -1,4 +1,4 @@
-import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, validateSessions, validateSkills, validateContextState, } from "../../shared/contract.mjs";
+import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, LIMITS, toPublicOrigin, validateSessions, validateSkills, validateContextState, } from "../../shared/contract.mjs";
 import { createPostRoutes } from "./post-routes.mjs";
 import { isRead } from "./request-policy.mjs";
 import { errorMessage, notAllowed, sendError, sendJson, sendReadJson } from "./responses.mjs";
@@ -6,6 +6,7 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
     const posts = createPostRoutes(bridge, policy, log);
     function handleBootstrap(res) {
         const { snapshot, controls } = bridge.getSnapshot();
+        const { activity: _activity, ...snapshotRest } = snapshot;
         let sourceDir = "";
         try {
             sourceDir = getSourceDir();
@@ -24,7 +25,12 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 defaultView: config.defaultView,
                 ...(sourceDir ? { sourceDir } : {}),
             },
-            snapshot,
+            // The page opens the event stream at the same time, and its snapshot carries everything;
+            // the latest turns here are enough to paint the conversation first.
+            snapshot: {
+                ...snapshotRest,
+                entries: snapshot.entries.slice(-LIMITS.bootstrapEntries),
+            },
             controls,
         };
         sendJson(res, 200, body);
