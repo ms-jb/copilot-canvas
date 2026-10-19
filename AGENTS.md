@@ -143,6 +143,19 @@ on, keeps a valid private one across restarts, and replaces one that is malforme
 others. Delete the file and restart the gateway to rotate it. Never print, log or serve the token,
 and never add this route to `ROUTES`.
 
+## Get updates
+
+Users bring in template changes with the `update-copilot-canvas` skill
+(`.github/skills/update-copilot-canvas/`), backed by `scripts/upstream-sync.mts`. A copy made from the
+template shares no git history with it, so `.template-sync.json` (tracked, written by setup) names the
+upstream commit the copy last synced to, and every file upstream changed since is classified:
+untouched (taken), changed by the user (three-way merged, conflicts left for a person), personalization
+(`template.config.json`, `.template-sync.json`, `ui/public/assets/`: never overwritten) or built
+(`extension/`: rebuilt). `check` only reads (exit 10 when there is news, `--notify` tells the phone),
+`apply` works on a new `update-from-upstream-*` branch. The skill asks before merging, installing or
+restarting, and never force-pushes. Keep those classifications in `scripts/upstream-sync.mts` in step
+with new personalization files.
+
 ## Keep it safe
 
 - Loopback only: never bind the provider or gateway to anything but `127.0.0.1`.
