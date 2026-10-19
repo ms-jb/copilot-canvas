@@ -2,7 +2,8 @@ import { suggestPrompt } from "../../composerDraft";
 import { AddPanelIcon } from "../icons";
 import classes from "./AddPanelCard.module.css";
 
-const SETUP_URL = "https://github.com/ms-jb/copilot-canvas/blob/main/SETUP.md";
+const SETUP_URL =
+  "https://github.com/ms-jb/copilot-canvas/blob/main/.github/skills/setup-copilot-canvas/SKILL.md";
 
 // Short labels on the chips; the prompt they fill names the source, so Copilot edits this canvas
 // instead of opening a native app panel.
