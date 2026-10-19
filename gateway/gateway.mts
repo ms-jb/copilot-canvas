@@ -3,7 +3,6 @@
 import { rmSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import { renderSVG, renderUnicodeCompact } from "uqr";
 import {
   gatewayStatePath,
   loadConfig,
@@ -14,9 +13,9 @@ import {
 import {
   buildGatewayState,
   readGatewayState,
-  writePrivateFile,
   writePrivateJson,
 } from "../src/shared/node/runtime-state.mts";
+import { publishQr } from "./qr.mts";
 import { createGateway } from "./server/gateway.mts";
 
 export { createGateway };
@@ -44,15 +43,13 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
   // Publish only the public root origin so the canvas can offer "Open on phone".
   const sharePath = gatewayStatePath(config);
   const share = config.gatewayAllowedOrigin ? buildGatewayState(config.gatewayAllowedOrigin) : null;
+  let qr: ReturnType<typeof publishQr> | undefined;
   if (share) {
     writePrivateJson(sharePath, share);
-    // The same QR is saved as an image so setup can post it in chat; it holds only the public link.
-    const qrPath = join(runtimeDir(config), "phone-qr.svg");
-    writePrivateFile(qrPath, renderSVG(share.publicUrl, { border: 2, pixelSize: 8 }));
     console.log(`Open on phone: ${share.publicUrl}`);
-    console.log(`\n${renderUnicodeCompact(share.publicUrl, { border: 2 })}\n`);
-    console.log(`QR image: ${qrPath}`);
     console.log("Use an owner-only tunnel and a browser signed in as the tunnel owner.");
+    // The QR is also saved as an image so setup can post it in chat; it holds only the public link.
+    qr = publishQr({ url: share.publicUrl, imagePath: join(runtimeDir(config), "phone-qr.svg") });
   } else {
     console.log("Set GATEWAY_ALLOWED_ORIGIN to your tunnel origin to enable Open on phone.");
   }
@@ -61,7 +58,10 @@ if (process.argv[1] && import.meta.url === pathToFileURL(resolve(process.argv[1]
       rmSync(sharePath, { force: true });
   };
   process.on("exit", removeShare);
-  const shutdown = () => void gateway.close().then(() => process.exit(0));
+  const shutdown = () => {
+    qr?.stop();
+    void gateway.close().then(() => process.exit(0));
+  };
   process.on("SIGINT", shutdown);
   process.on("SIGTERM", shutdown);
 }

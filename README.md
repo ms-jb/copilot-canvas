@@ -93,8 +93,9 @@ there is news.
 
 ## Open on phone
 
-Setup gives you a link and a QR code. Scan it, sign in with your GitHub account, and send a
-message. The canvas then shows you how to add it to your home screen. If you change the icon later,
+Setup gives you a link, and a QR code once the install finishes. Open the link on your phone or in a
+browser on your computer, sign in with your GitHub account, and send a
+message. On a phone, the canvas then shows you how to add it to your home screen. If you change the icon later,
 remove the home-screen app and add it again.
 
 ## Safety

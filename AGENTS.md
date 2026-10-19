@@ -105,7 +105,10 @@ colors and the phone app's branding.
 owner-only tunnel once and remembers its id outside the repository; a tunnel that grants anyone
 else access is refused, never changed. It adds port 47600 with `--origin-header unchanged`, so the
 gateway can check the phone's exact address, then hosts the tunnel and starts the gateway with
-`GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address.
+`GATEWAY_ALLOWED_ORIGIN` set to the tunnel's address. The tunnel and gateway must run from a bare
+clone with no `node_modules` (setup starts them before `npm install` finishes), so the gateway
+imports no npm package at load time; `gateway/qr.mts` loads `uqr` lazily and retries until it is
+installed. `tests/gateway/bare-clone.test.ts` enforces this.
 
 ## Phone notifications and unread
 

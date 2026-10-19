@@ -1,8 +1,10 @@
-# After the first phone message
+# After the first message through the link
 
-Read this once a message from the user's phone has arrived in the conversation.
+Read this once a message sent through the link, from the user's phone or a browser on this
+computer, has arrived in the conversation. Everything below is optional and phone-only unless the
+user wants it; a user working from this computer's browser can stop here.
 
-- **Dismiss the QR code.** Close the `phone-qr` panel so it stops taking up the side panel:
+- **Dismiss the QR code.** Close the `phone-qr` panel if it is open, so it stops taking up the side panel:
   `invoke_canvas_action` on `phone-qr` with `evaluate_javascript` and `window.close();`. There is no
   close action, so confirm with `read_page` that the panel is gone. If it is still open, say so in
   one line and ask the user to close it with the **x** on its tab. Leave the link in chat and the

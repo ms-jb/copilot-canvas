@@ -9,9 +9,9 @@ This is the playbook Copilot follows when the user clicks **Install** in the REA
 _"Set up Copilot Companion for me with the setup-copilot-companion skill"_ into any Copilot chat. The user
 does not run any of it.
 
-**For Copilot.** Get the user to a canvas they own, on desktop and on their phone, as fast as you
-can. Then help them change it and set up the rest of their Copilot, while builders write the code
-in the background. Use the platform's shell and paths (Windows or macOS). The user needs a GitHub
+**For Copilot.** Get the user to a canvas they own, beside this chat and, if they want it, on their
+phone or in another browser. Then help them change it and set up the rest of their Copilot, while
+builders write the code in the background. Use the platform's shell and paths (Windows or macOS). The user needs a GitHub
 account with any Copilot plan (Copilot Free works) and the GitHub
 Copilot app; README.md lists the rest. `<FOLDER>` is their copy's folder, `~/repos/copilot-companion`
 unless they chose another.
@@ -25,12 +25,13 @@ this session started in a checkout of the template, `git diff HEAD origin/main -
 Done when you know which version you follow.
 
 **The point is a fast wow, and what it teaches.** Within minutes the user should (1) see the canvas
-open beside this conversation, (2) send a message from their phone and watch it arrive here, and
+open beside this conversation, (2) open the link on their phone or in a browser on this computer,
+send a message and watch it arrive here, and
 (3) watch several sessions work at once while this conversation stays free. That last one is the
 lesson: this conversation conducts, sessions do the work, the canvas is the remote control. Every
 step below runs the slow things (installs, builds, sign-ins, the tunnel) in the background and
 never blocks the user on them. Put each long command in its own background shell, keep talking,
-and check on it.
+and check on it between questions; a polling loop in the foreground is a block.
 
 ## Ground rules
 
@@ -47,37 +48,39 @@ and check on it.
   commands out of chat unless asked.
 - **Verification.** Report a step as done only after you see the result. Checks you can run: the
   canvas URL that `open_canvas` returns answers 200; the gateway answers 200 on
-  `http://127.0.0.1:47600/`; `devtunnel user show` lists a user; a phone message appears in this
+  `http://127.0.0.1:47600/`; `devtunnel user show` lists a user; a message sent through the link
+  (phone or browser) appears in this
   conversation; `npx vp check` passes. Report anything blocked as blocked.
 
 ## Part 1: Install
 
 0. **Consent (one question).** Say what will happen: their own copy of Copilot Companion in
-   `~/repos/copilot-companion`, the canvas installed for their user, and phone access through a private
-   dev tunnel that only they can sign in to. With `gh` signed in, the copy is a new **private**
+   `~/repos/copilot-companion`, the canvas installed for their user, and a private link (a dev
+   tunnel that only they can sign in to) that opens the canvas on their phone or in any browser. With `gh` signed in, the copy is a new **private**
    repository on their GitHub account made from this template (fresh history, not a fork), so they
    can keep and back up their changes; pushing is up to them. Without it, or if they prefer, it is a
    local folder only. Either way their copy never points back at this template. The one manual step
-   is signing in on their phone. Decide the repository name before asking, from `gh auth status`:
+   is signing in to the link with GitHub. Decide the repository name before asking, from `gh auth status`:
    `<login>/copilot-companion`, or `<login>/copilot-companion-mine` when `<login>` is `ms-jb` (the
    template's owner), and say the name in the question. Choices: "Go (Recommended)", "Go, local
-   folder only", "Go, but skip the phone", "Change folder", "Not now". Ask for a folder or name
+   folder only", "Go, but skip the link", "Change folder", "Not now". Ask for a folder or name
    only after "Change folder".
    Done when the user has answered; "Not now" ends the setup.
 
    **Right after "Go", start three tracks at once** and never wait for one before starting another:
    - **(a) Canvas now** (step 1, this conversation): the template ships a ready build, so the canvas
      opens in seconds, before anything is cloned or built.
-   - **(b) Phone** (step 2, this conversation): the CLI install and the sign-in question need nothing
-     from the source. Start the sign-in first, so the user does their part while the rest runs. The
-     tunnel starts as soon as track (c) has installed the packages (its marker file, step 3), not
-     when it finishes building: the phone talks to the instant canvas until the build lands.
+   - **(b) Link** (steps 2 and 4, this conversation): the CLI install and the sign-in question need
+     nothing from the source. Start the sign-in first, so the user does their part while the rest
+     runs. The tunnel needs only the clone, not `npm install` or the build: start it the moment the
+     agent's `<FOLDER>/.git/setup-cloned` marker (step 3) appears, and the link works with the
+     instant canvas until the build lands.
    - **(c) Their copy** (step 3): ONE background `task` agent (general-purpose) clones, installs,
      builds and swaps in their own build. The build is the slow part. This conversation never
-     waits on it, and keeps the user busy meanwhile: the phone QR code, then the questions in
+     waits on it, and keeps the user busy meanwhile: the link, then the questions in
      `references/rest-of-copilot.md`.
 
-   This conversation keeps consent, the sign-in question, the instant canvas, the phone QR code and
+   This conversation keeps consent, the sign-in question, the instant canvas, the link and
    the talking with the user.
 
 1. **Instant canvas** (track a; the wow starts here). Open the template's prebuilt canvas immediately:
@@ -99,7 +102,7 @@ and check on it.
 
    Done when `open_canvas` shows this conversation.
 
-2. **Phone: CLI and sign-in** (track b; skip if they chose to). Start right after consent, in the
+2. **Link: CLI and sign-in** (track b; skip if they chose to). Start right after consent, in the
    background, before the source is even cloned:
    - Install the dev tunnel CLI if missing (`winget install Microsoft.devtunnel`,
      `brew install --cask devtunnel`). On Windows a fresh install may not be on `PATH` in shells
@@ -107,13 +110,13 @@ and check on it.
    - **Sign-in needs the user, so make it impossible to miss.** If `devtunnel user show` is not
      signed in, start `devtunnel user login -g -d` (GitHub, device code) in its own background shell
      and read its output until the device code and link appear. Then ask a question (`ask_user`,
-     choices "I've signed in", "Skip the phone") that contains the link and the code in its text;
+     choices "I've signed in", "Skip the link") that contains the link and the code in its text;
      a blocking question cannot scroll past, and the other tracks keep running meanwhile. Say it is
-     the account they will use on their phone. Do not bury the code in progress text. When they
+     the account they will use to open the link. Do not bury the code in progress text. When they
      answer, check `devtunnel user show`.
 
    Done when `devtunnel --version` runs and `devtunnel user show` shows a signed-in user (or the
-   user chose "Skip the phone").
+   user chose "Skip the link").
 
 3. **Their copy** (track c): start ONE background `task` agent (general-purpose) right after "Go".
    Its permission requests show in this chat; take the user to each click (see Ground rules). Give it
@@ -136,15 +139,16 @@ and check on it.
         - Check: `git -C <FOLDER> remote -v` lists nothing that points at `ms-jb/copilot-companion` (unless
           they are its owner and chose to), and for a private copy
           `gh repo view <REPO> --json visibility` says `PRIVATE`.
+        - When the check passes, immediately create an empty file `<FOLDER>/.git/setup-cloned`
+          (inside `.git`, so it is never tracked). The conversation starts the tunnel on seeing it,
+          while the install and build run.
      2. Run `npm install` in `<FOLDER>` (use a background shell and wait for it). It needs Node.js
         22.18+ (24 recommended). If Node is missing or older, check where `node` resolves first:
         when a version manager provides it (`pnpm env`, nvm, fnm, Volta, mise), the fix is an upgrade
         through that manager, since a second install would compete on `PATH`; otherwise the fix is the
         platform's package manager (`winget install OpenJS.NodeJS.LTS`, `brew install node`). Either way,
         stop and report the question before installing. If the registry fails, read
-        `npm config get registry`; never edit `.npmrc` or install anything globally. When it
-        succeeds, immediately create an empty file `<FOLDER>/node_modules/.setup-installed` (ignored
-        by git). The conversation starts the phone tunnel on seeing it, while the build still runs.
+        `npm config get registry`; never edit `.npmrc` or install anything globally.
      3. Run `npm run install-ext` in `<FOLDER>`. It builds their copy first and installs only a build
         that passed, so nothing half-built is ever registered. It swaps their build into
         `~/.copilot/extensions/copilot-companion` in one step and records where the copy is, so later
@@ -169,50 +173,56 @@ and check on it.
    Done when the agent has reported with the folder, remotes, install and `install-ext` results all
    present and nothing blocked.
 
-4. **Bring up the phone as soon as the packages are installed; switch to the copy when it reports.**
+4. **Bring up the link as soon as the clone exists; switch to the copy when it reports.**
    Two triggers, in any order; neither blocks the other or the conversation.
-   - **Trigger 1: `<FOLDER>/node_modules/.setup-installed` exists** (check it between questions
-     to the user). Do the phone work below now, while the build runs, and keep talking: start the
-     questions from `references/rest-of-copilot.md` right after posting the QR code.
+   - **Trigger 1: `<FOLDER>/.git/setup-cloned` exists** (check it between questions to the user,
+     never in a waiting loop). Do the link work below now, while the install and build run, and keep
+     talking: start the questions from `references/rest-of-copilot.md` right after posting the link.
    - **Trigger 2: the agent reports.** `open_canvas` again (same `instanceId`), retrying every five
      seconds up to three times, and confirm it shows this conversation. On the phone, a page
      refresh picks it up. Only if the canvas does not switch (a build that predates self-reload),
      ask the user once to tap **Reload extensions** (the circular arrow in the canvas's top bar) or
      restart the Copilot app, then open it again. The swap can close side panels: if the
-     `phone-qr` panel is gone and the phone is not connected yet, open it again with the same call
-     and re-post the QR code in chat. The tunnel and gateway keep running through the swap.
-   - **Phone work (trigger 1).** Skip it if they skipped the phone. In `<FOLDER>`, start
+     `phone-qr` panel is gone and the link is not connected yet, open it again with the same call
+     and re-post the link in chat. The tunnel and gateway keep running through the swap.
+   - **Link work (trigger 1).** Skip it if they skipped the link, or if `node --version` is below
+     22.18 (the agent will report its Node question; start the tunnel after it is answered). In
+     `<FOLDER>`, start
      `npm run devtunnel` with `NO_COLOR=1` as a long-lived background process whose output goes to
      a file you can read (on Windows: `Start-Process npm.cmd -ArgumentList 'run','devtunnel'
      -WorkingDirectory <FOLDER> -WindowStyle Hidden -RedirectStandardOutput <log>
-     -RedirectStandardError <errlog>`). If the sign-in is still pending it prints the same device
+     -RedirectStandardError <errlog>`). It needs no `node_modules`. If the sign-in is still pending
+     it prints the same device
      code, so relay it the same way as in step 2. It creates or reuses their owner-only tunnel,
      refuses one with extra access, hosts it and starts the gateway, then prints
-     `Open on phone: <link>`, a QR code and `QR image: <path>`. A new tunnel is named after their
+     `Open on phone: <link>`. A new tunnel is named after their
      computer's user name when that name is free (for example
      `https://jordan-canvas-47600.usw2.devtunnels.ms`), otherwise it gets a random name. Tell the
      user the link shows that name. Check that `http://127.0.0.1:47600/` answers 200.
-   - **The moment that appears, open the QR code in the side panel so the user doesn't have to
-     click for it.** Call `open_canvas` with `canvasId: "browser"`, a new `instanceId`
-     (for example `phone-qr`), `input: { url: "file:///<path>", title: "Scan to open on phone",
-     placement: { surface: "side", focus: true } }` (`<path>` is the printed `QR image:` path,
-     `phone-qr.svg` in `~/.copilot/canvas-runtime/copilot-companion/`, with forward slashes). If it
-     does not open, retry without `placement`. Post the link in chat as well and ask the user to
-     scan the panel's QR code and sign in. If the panel is gone, copy `<path>` into your session
-     files and attach it with `publish_chat_update` instead (or paste the printed QR in a plain
-     code block). The canvas is already open, so the phone connects as soon as the gateway is up.
-   - Tell the user, in one line, that the phone only works while the Copilot app stays open on this
+   - **Give them the link, for any device.** Post it in chat and say it opens the canvas on a phone
+     or in a browser on this computer, signed in to GitHub as themselves; offer to open it in their
+     default browser here. A phone is optional.
+   - **The QR code follows by itself.** It is written to `phone-qr.svg` in
+     `~/.copilot/canvas-runtime/copilot-companion/` and printed as `QR image: <path>` once `npm
+     install` has finished, since drawing it needs the `uqr` package. When the file exists (check
+     between questions) and they want a phone, open it in the side panel: `open_canvas` with
+     `canvasId: "browser"`, a new `instanceId` (for example `phone-qr`), `input: { url:
+     "file:///<path>", title: "Scan to open on phone", placement: { surface: "side", focus: true } }`
+     (forward slashes). If it does not open, retry without `placement`. If the panel is gone, copy
+     `<path>` into your session files and attach it with `publish_chat_update` instead.
+   - Tell the user, in one line, that the link only works while the Copilot app stays open on this
      computer: use an always-on machine, or turn on **Close to taskbar** so closing the window
-     keeps the app (and the phone link) running.
-   - Ask the user to send a message from the phone and confirm it arrives in this conversation.
+     keeps the app (and the link) running.
+   - Ask the user to send a message through the link and confirm it arrives in this conversation.
      Once it has, read [references/phone.md](references/phone.md): dismissing the QR panel, Add to
      Home Screen, notifications.
 
    Done when the reopened canvas shows this conversation on their own build and, unless they skipped
-   the phone, a phone message has arrived here.
+   the link, a message sent through it has arrived here.
 
-5. **Show the wow: sessions working in parallel.** When the first phone message has arrived, say
-   in one line what just happened (their phone is steering this conversation). Then show why it
+5. **Show the wow: sessions working in parallel.** When the first message through the link has
+   arrived, say
+   in one line what just happened (their phone or browser is steering this conversation). Then show why it
    matters without a lecture: while you keep asking them questions, start two or three small,
    independent sessions so they appear in the canvas's recent sessions list, for example one that
    reads their recent GitHub activity (aggregates only, read-only) and proposes panels, and the
@@ -222,7 +232,7 @@ and check on it.
    sessions list, on the phone too, to watch each one work, and name the idea in a sentence: this
    conversation conducts, sessions do the work, the canvas is the remote control. Don't claim more
    than you see: report only what appears in the list.
-   Done when the user has seen the started sessions in the list (or the phone was skipped and you
+   Done when the user has seen the started sessions in the list (or the link was skipped and you
    have said what the list shows).
 
 ## What comes next
