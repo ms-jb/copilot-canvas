@@ -50,8 +50,10 @@ export function field(body: unknown, key: string): string | undefined {
 export async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
   let response: Response;
   try {
+    // "no-cache" revalidates by ETag (a 304 costs no body); the host sends `no-store` for
+    // anything sensitive, which the browser then never keeps.
     response = await fetch(url(path), {
-      cache: "no-store",
+      cache: "no-cache",
       credentials: "same-origin",
       headers: { accept: "application/json" },
       signal,

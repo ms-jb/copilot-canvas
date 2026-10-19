@@ -1,7 +1,7 @@
 import { API, CONTRACT_VERSION, ERROR_CODES, IDENTITY_APP, toPublicOrigin, validateSessions, validateSkills, validateContextState, } from "../../shared/contract.mjs";
 import { createPostRoutes } from "./post-routes.mjs";
 import { isRead } from "./request-policy.mjs";
-import { errorMessage, notAllowed, sendError, sendJson } from "./responses.mjs";
+import { errorMessage, notAllowed, sendError, sendJson, sendReadJson } from "./responses.mjs";
 export function createRoutes({ config, bridge, generation, csrfToken, log, getSourceDir, getShareInfo, getSessions, policy, assets, events, }) {
     const posts = createPostRoutes(bridge, policy, log);
     function handleBootstrap(res) {
@@ -38,7 +38,7 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
             log(`Could not read share info: ${errorMessage(error)}`, "warning");
         }
         const body = { publicUrl };
-        sendJson(res, 200, body);
+        sendReadJson(res, body);
     }
     return async function route(req, res) {
         const relative = policy.authorize(req, res);
@@ -104,7 +104,7 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 const body = await bridge.listSkills().catch(() => null);
                 if (!validateSkills(body))
                     return sendError(res, ERROR_CODES.internal, "Skills are unavailable.");
-                return sendJson(res, 200, body);
+                return sendReadJson(res, body);
             }
             case API.context: {
                 if (method !== "GET")
@@ -112,7 +112,7 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 const body = await bridge.readContext().catch(() => null);
                 if (!validateContextState(body))
                     return sendError(res, ERROR_CODES.internal, "Context usage is unavailable.");
-                return sendJson(res, 200, body);
+                return sendReadJson(res, body);
             }
             case API.share:
                 if (method !== "GET")
@@ -125,7 +125,7 @@ export function createRoutes({ config, bridge, generation, csrfToken, log, getSo
                 if (!validateSessions(body)) {
                     return sendError(res, ERROR_CODES.internal, "Session list is unavailable.");
                 }
-                return sendJson(res, 200, body);
+                return sendReadJson(res, body);
             }
             default:
                 return sendError(res, ERROR_CODES.notFound, "Not found.");

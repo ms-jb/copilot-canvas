@@ -9,6 +9,10 @@ export const FORWARDED_HEADERS = [
   "accept",
   "content-type",
   "last-event-id",
+  // Compressed static files, and 304s for what the browser already has.
+  "accept-encoding",
+  "if-none-match",
+  "if-modified-since",
   HEADERS.csrf,
   HEADERS.generation,
 ];
@@ -28,6 +32,9 @@ const ROUTES: Record<string, string> = {
   [`/${API.sessions}`]: "GET",
   [`/${API.reload}`]: "POST",
   [`/${API.stop}`]: "POST",
+  [`/${API.queue}`]: "POST",
+  [`/${API.skills}`]: "GET",
+  [`/${API.context}`]: "GET",
 };
 
 // Writes must be pinned to the provider run the page was loaded from.
@@ -37,6 +44,7 @@ export const PINNED_WRITES = new Set<string>([
   API.respond,
   API.reload,
   API.stop,
+  API.queue,
 ]);
 
 export function allowedMethod(pathname: string): string | undefined {

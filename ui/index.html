@@ -10,8 +10,8 @@
     <meta name="theme-color" content="#f6f8fa" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#151b23" media="(prefers-color-scheme: dark)" />
     <meta name="referrer" content="no-referrer" />
-    <!-- Installable from the phone (Add to Home Screen). The gateway's service worker only shows
-         notifications: nothing is cached offline. -->
+    <!-- Installable from the phone (Add to Home Screen). The gateway's service worker caches the
+         app shell (gateway/sw.js) and shows notifications; conversations are never cached. -->
     <link rel="manifest" href="./assets/manifest.webmanifest" crossorigin="use-credentials" />
     <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./assets/icon-180.png" />

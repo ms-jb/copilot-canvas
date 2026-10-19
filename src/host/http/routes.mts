@@ -19,7 +19,7 @@ import type { createEventStream } from "./event-stream.mts";
 import { createPostRoutes } from "./post-routes.mts";
 import { isRead } from "./request-policy.mts";
 import type { RequestPolicy } from "./request-policy.mts";
-import { errorMessage, notAllowed, sendError, sendJson } from "./responses.mts";
+import { errorMessage, notAllowed, sendError, sendJson, sendReadJson } from "./responses.mts";
 
 export function createRoutes({
   config,
@@ -79,7 +79,7 @@ export function createRoutes({
       log(`Could not read share info: ${errorMessage(error)}`, "warning");
     }
     const body: ShareInfo = { publicUrl };
-    sendJson(res, 200, body);
+    sendReadJson(res, body);
   }
   return async function route(req: IncomingMessage, res: ServerResponse): Promise<void> {
     const relative = policy.authorize(req, res);
@@ -132,14 +132,14 @@ export function createRoutes({
         const body = await bridge.listSkills().catch(() => null);
         if (!validateSkills(body))
           return sendError(res, ERROR_CODES.internal, "Skills are unavailable.");
-        return sendJson(res, 200, body);
+        return sendReadJson(res, body);
       }
       case API.context: {
         if (method !== "GET") return notAllowed(res, "GET");
         const body = await bridge.readContext().catch(() => null);
         if (!validateContextState(body))
           return sendError(res, ERROR_CODES.internal, "Context usage is unavailable.");
-        return sendJson(res, 200, body);
+        return sendReadJson(res, body);
       }
       case API.share:
         if (method !== "GET") return notAllowed(res, "GET");
@@ -150,7 +150,7 @@ export function createRoutes({
         if (!validateSessions(body)) {
           return sendError(res, ERROR_CODES.internal, "Session list is unavailable.");
         }
-        return sendJson(res, 200, body);
+        return sendReadJson(res, body);
       }
       default:
         return sendError(res, ERROR_CODES.notFound, "Not found.");

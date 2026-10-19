@@ -57,7 +57,7 @@ every page) and in `ui/src`, and use what exists.
 `GET` endpoint: the path in `API` and its response shape in `src/shared/contract.mts`, the
 route in `src/host/http/routes.mts`, and the read in the host (for example `gh` through
 `execFile` with a timeout, never a shell string). Keep tokens in the host. Add it to the gateway's
-`ROUTES` only if it should work on the phone, and only for reads, then restart `npm run devtunnel`.
+`ROUTES` (`gateway/server/request-policy.mts`) only if it should work on the phone, and only for reads, then restart `npm run devtunnel`.
 
 Keep browser-safe shared modules independent of host, gateway and Node code. The renderer imports
 them only through `ui/src/shared.ts`. The gateway may use `src/shared/node/`, but never `src/host/`.
