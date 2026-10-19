@@ -37,8 +37,8 @@ questions and approvals from anywhere, and ask Copilot to add panels or change h
 
 ## What you need
 
-- A GitHub account with any Copilot plan. [Copilot Free](https://github.com/features/copilot/plans)
-  works, but its monthly limits can run out during setup. On Copilot Business or Enterprise, your
+- A GitHub account with any Copilot plan, including
+  [Copilot Free](https://github.com/features/copilot/plans). On Copilot Business or Enterprise, your
   organization must leave the GitHub Copilot app policy on (it is on by default).
 
 ## What you get

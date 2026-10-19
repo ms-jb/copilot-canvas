@@ -12,7 +12,7 @@ does not run any of it.
 **For Copilot.** Get the user to a canvas they own, on desktop and on their phone, as fast as you
 can. Then help them change it and set up the rest of their Copilot, while builders write the code
 in the background. Use the platform's shell and paths (Windows or macOS). The user needs a GitHub
-account with any Copilot plan (Copilot Free works, within its monthly limits) and the GitHub
+account with any Copilot plan (Copilot Free works) and the GitHub
 Copilot app; README.md lists the rest. `<FOLDER>` is their copy's folder, `~/repos/copilot-companion`
 unless they chose another.
 
