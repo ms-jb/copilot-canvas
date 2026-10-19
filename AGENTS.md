@@ -145,8 +145,8 @@ and never add this route to `ROUTES`.
 
 ## Get updates
 
-Users bring in template changes with the `update-copilot-canvas` skill
-(`.github/skills/update-copilot-canvas/`), backed by `scripts/upstream-sync.mts`. A copy made from the
+Users bring in template changes with the `update-copilot-companion` skill
+(`.github/skills/update-copilot-companion/`), backed by `scripts/upstream-sync.mts`. A copy made from the
 template shares no git history with it, so `.template-sync.json` (tracked, written by setup) names the
 upstream commit the copy last synced to, and every file upstream changed since is classified:
 untouched (taken), changed by the user (three-way merged, conflicts left for a person), personalization

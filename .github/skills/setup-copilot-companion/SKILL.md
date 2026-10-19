@@ -140,7 +140,7 @@ and check on it.
         `~/.copilot/extensions/copilot-companion` in one step and records where the copy is, so later
         tweaks rebuild from it. The open canvas sees the new build and reloads itself.
      4. Record which template version the copy started from, so it can be updated later with the
-        `update-copilot-canvas` skill: run `node scripts/upstream-sync.mts record` in `<FOLDER>` (it
+        `update-copilot-companion` skill: run `node scripts/upstream-sync.mts record` in `<FOLDER>` (it
         reads the template's latest commit and adds no remote), then
         `git add .template-sync.json` and commit it as "Record the template version this copy started
         from". Skip it only if `.template-sync.json` already exists.
@@ -235,6 +235,6 @@ and check on it.
   running or the user asks for more.
 - **Something is missing or broken, or the user wants it gone:** read
   [references/troubleshooting.md](references/troubleshooting.md) for the fixes and for Undo.
-- **Keep their copy up to date:** the `update-copilot-canvas` skill (offered as the last, optional
+- **Keep their copy up to date:** the `update-copilot-companion` skill (offered as the last, optional
   stage in [references/rest-of-copilot.md](references/rest-of-copilot.md)) brings new template
   changes into their copy, with their changes kept.

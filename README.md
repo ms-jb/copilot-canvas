@@ -70,7 +70,7 @@ folder, if you prefer). It has fresh history and no link back to this repository
 
 New features and fixes land here. To bring them into your copy, paste this into any Copilot chat:
 
-> Update my Copilot Canvas from upstream with the update-copilot-canvas skill.
+> Update my Copilot Companion from upstream with the update-copilot-companion skill.
 
 Copilot checks what is new, tells you in plain language, and applies it on a separate branch with your
 own changes kept (your name, icons and anything you built are never overwritten). It asks before it

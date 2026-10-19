@@ -1,12 +1,12 @@
 ---
-name: update-copilot-canvas
-description: "Update the user's own copy of Copilot Canvas / Copilot Companion from the upstream template ms-jb/copilot-companion: check what is new, explain it in plain language, apply it on a branch with their customizations kept, verify, then ask before merging and installing. Use for 'update my Copilot Canvas from upstream', 'get the latest template', 'is there an update', or a scheduled check."
+name: update-copilot-companion
+description: "Update the user's own copy of Copilot Companion (formerly Copilot Canvas) from the upstream template ms-jb/copilot-companion: check what is new, explain it in plain language, apply it on a branch with their customizations kept, verify, then ask before merging and installing. Use for 'update my Copilot Companion from upstream', 'get the latest template', 'is there an update', or a scheduled check."
 ---
 
 # Update from upstream
 
-This is the playbook Copilot follows when the user says _"Update my Copilot Canvas from upstream with
-the update-copilot-canvas skill"_, or when a scheduled check tells them there is news. The user's copy
+This is the playbook Copilot follows when the user says _"Update my Copilot Companion from upstream with
+the update-copilot-companion skill"_, or when a scheduled check tells them there is news. The user's copy
 was made from the template and has no shared git history with it, so this is **not** a `git merge`
 of `upstream/main` (that would conflict on every file). `scripts/upstream-sync.mts` does the
 bookkeeping instead: `.template-sync.json` names the upstream commit the copy was last synced to, and

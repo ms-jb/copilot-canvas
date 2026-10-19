@@ -84,15 +84,15 @@ ask for the next one without this guide.
 8. **Keep it up to date (optional).** Detect first, change nothing: in their copy, check that
    `.template-sync.json` exists and run `node scripts/upstream-sync.mts check` once. If it says
    up to date, tell them so; if there are updates, say how many and offer to apply them now with the
-   `update-copilot-canvas` skill (their changes are kept, on a branch, and nothing is installed
+   `update-copilot-companion` skill (their changes are kept, on a branch, and nothing is installed
    without their yes). If the file is missing, that skill's `guess` and `record` fix it. Then offer,
    as a separate yes/no, a **weekly check that only tells them** when the template has news, on their
    phone (the check never merges or installs). Ask which they prefer: a scheduled Copilot task, or
    their computer's own scheduler (cron or a systemd timer, launchd, Task Scheduler). Follow
-   [update-copilot-canvas/references/recurring-check.md](../../update-copilot-canvas/references/recurring-check.md),
+   [update-copilot-companion/references/recurring-check.md](../../update-copilot-companion/references/recurring-check.md),
    run the job once, and read the result together. Skip the schedule if they decline; they can ask
-   any time. Undo is in the same file. Reuse line: _"Next time, say: update my Copilot Canvas from
-   upstream with the update-copilot-canvas skill."_
+   any time. Undo is in the same file. Reuse line: _"Next time, say: update my Copilot Companion from
+   upstream with the update-copilot-companion skill."_
 9. **Next changes.** Suggest a backup for `~/.copilot/copilot-instructions.md`, `skills/` and
    `agents/` (a private git repository or their cloud folder; never secrets). Offer a short weekly
    review: _"What did I repeat or correct this week?"_ Each answer can become a skill, a rule in their

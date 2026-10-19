@@ -32,7 +32,7 @@ Prefer what they already use. Run it weekly, for example Monday at 09:00, and sa
    `.timer` with `OnCalendar=Mon 09:00` and `Persistent=true`; `systemctl --user enable --now`.
    Cron works too: `0 9 * * 1 cd <FOLDER> && node scripts/upstream-sync.mts check --notify`.
 4. **Windows (Task Scheduler)**:
-   `schtasks /Create /SC WEEKLY /D MON /ST 09:00 /TN "Copilot Canvas update check" /TR "cmd /c cd /d <FOLDER> && node scripts\upstream-sync.mts check --notify"`.
+   `schtasks /Create /SC WEEKLY /D MON /ST 09:00 /TN "Copilot Companion update check" /TR "cmd /c cd /d <FOLDER> && node scripts\upstream-sync.mts check --notify"`.
 
 Use `<FOLDER>` and the full path to `node` where the scheduler has a short `PATH`. Check it by running
 the scheduled job once now and reading the result.
@@ -41,5 +41,5 @@ the scheduled job once now and reading the result.
 
 Say how: the scheduled task's own delete or disable, `launchctl unload` and remove the file,
 `systemctl --user disable --now` and remove the units (or the cron line), or
-`schtasks /Delete /TN "Copilot Canvas update check" /F`. The `upstream` remote can stay (its push is
+`schtasks /Delete /TN "Copilot Companion update check" /F`. The `upstream` remote can stay (its push is
 disabled); `git remote remove upstream` removes it.
