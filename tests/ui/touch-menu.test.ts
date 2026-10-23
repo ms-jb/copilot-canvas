@@ -10,3 +10,7 @@ test("menu items are 44px tall on touch screens and phones", () => {
     "Menu: { classNames: { item: classes.touchRow } }",
   );
 });
+
+test("every field reads at 16px so iOS Safari does not zoom into it", () => {
+  expect(readFileSync("ui/src/theme.ts", "utf8")).toContain('"--input-fz": "16px"');
+});

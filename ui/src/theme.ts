@@ -1,6 +1,7 @@
 import {
   createTheme,
   defaultVariantColorsResolver,
+  Input,
   type CSSVariablesResolver,
   type MantineColorsTuple,
   type VariantColorsResolver,
@@ -123,6 +124,8 @@ export const theme = createTheme({
   focusRing: "auto",
   respectReducedMotion: true,
   components: {
+    // iOS Safari zooms into a focused field under 16px, so every field reads at 16px.
+    Input: Input.extend({ vars: () => ({ wrapper: { "--input-fz": "16px" } }) }),
     Menu: { classNames: { item: classes.touchRow } },
     Tooltip: { defaultProps: { openDelay: 400, transitionProps: { duration: 120 } } },
     Drawer: {
