@@ -130,6 +130,11 @@
 }
 
 .send {
+  /* Mantine swaps a disabled filled button for the sunken fill, which all but vanishes against the
+     composer. Keep a visible boundary and inverse ink instead. */
+  --mantine-color-disabled: var(--cc-text-faint);
+  --mantine-color-disabled-color: var(--cc-surface);
+  --mantine-color-disabled-border: var(--cc-text-faint);
   flex: none;
   touch-action: manipulation;
   user-select: none;
