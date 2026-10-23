@@ -6,6 +6,7 @@ import {
   type VariantColorsResolver,
 } from "@mantine/core";
 import { useSyncExternalStore } from "react";
+import classes from "./theme.module.css";
 
 const DARK_QUERY = "(prefers-color-scheme: dark)";
 
@@ -122,6 +123,7 @@ export const theme = createTheme({
   focusRing: "auto",
   respectReducedMotion: true,
   components: {
+    Menu: { classNames: { item: classes.touchRow } },
     Tooltip: { defaultProps: { openDelay: 400, transitionProps: { duration: 120 } } },
     Drawer: {
       defaultProps: {

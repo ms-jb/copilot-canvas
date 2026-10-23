@@ -1,0 +1,9 @@
+/* Styles API classes the theme attaches to Mantine components (see theme.ts). */
+
+/* Same query as useTouchSize: phones and touch screens get 44px targets. */
+@media (max-width: 768px), (pointer: coarse) {
+  .touchRow {
+    align-items: center;
+    min-height: 44px;
+  }
+}
