@@ -52,21 +52,33 @@ export function tierLabel(model: ModelOption | undefined, tier: ContextTier): st
 }
 
 /**
- * The settings control's text, e.g. "Claude Opus 5.5 · High": the model and effort in use, plus the
- * context window on a wide composer (`full`) when the model offers a choice. The mode has its own
- * chip.
+ * The settings control's text as parts, e.g. `["Claude Opus 5.5", "High"]`: the model, then the
+ * effort in use, then the context window on a wide composer (`full`) when the model offers a
+ * choice. The mode has its own chip. A part that isn't shown is left out.
  */
+export function settingsParts(
+  controls: SessionControls,
+  shown: { model: boolean; effort: boolean; tier?: boolean },
+  full = false,
+): { model: string | null; rest: string[] } {
+  const effort = shown.effort ? effectiveEffort(controls) : undefined;
+  return {
+    model: shown.model ? modelLabel(controls) : null,
+    rest: [
+      effort ? effortLabel(effort) : null,
+      full && shown.tier
+        ? tierLabel(activeModel(controls), controls.contextTier ?? "default")
+        : null,
+    ].filter((part): part is string => part !== null),
+  };
+}
+
+/** The same parts joined, e.g. "Claude Opus 5.5 · High": the control's accessible name and tooltip. */
 export function settingsSummary(
   controls: SessionControls,
   shown: { model: boolean; effort: boolean; tier?: boolean },
   full = false,
 ): string {
-  const effort = shown.effort ? effectiveEffort(controls) : undefined;
-  return [
-    shown.model ? modelLabel(controls) : null,
-    effort ? effortLabel(effort) : null,
-    full && shown.tier ? tierLabel(activeModel(controls), controls.contextTier ?? "default") : null,
-  ]
-    .filter((part): part is string => part !== null)
-    .join(" · ");
+  const { model, rest } = settingsParts(controls, shown, full);
+  return (model ? [model, ...rest] : rest).join(" · ");
 }

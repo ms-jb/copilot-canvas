@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vite-plus/test";
 import { composerFit, MEDIUM_MIN, WIDE_MIN } from "../ui/src/components/composerFit.ts";
-import { settingsSummary } from "../ui/src/components/controls/labels.ts";
+import { settingsParts, settingsSummary } from "../ui/src/components/controls/labels.ts";
 import type { SessionControls } from "../src/shared/contract.mts";
 
 describe("composerFit", () => {
@@ -31,6 +31,14 @@ describe("settingsSummary", () => {
 
   it("names the model and effort", () => {
     expect(settingsSummary(controls, all)).toBe("Claude Opus 5.5 · High");
+  });
+
+  it("keeps the effort separate from the model name, so a narrow chip can clip only the name", () => {
+    expect(settingsParts(controls, all)).toEqual({ model: "Claude Opus 5.5", rest: ["High"] });
+    expect(settingsParts(controls, { model: false, effort: true })).toEqual({
+      model: null,
+      rest: ["High"],
+    });
   });
 
   it("falls back to the model's default effort", () => {

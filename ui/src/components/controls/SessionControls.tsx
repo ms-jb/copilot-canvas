@@ -3,9 +3,10 @@ import { useEffect, useState, type JSX } from "react";
 import type { ComposerFit } from "../composerFit";
 import { ComposerIconButton, ComposerTooltip } from "../ComposerIconButton";
 import { useTouchSize } from "../touchSize";
-import { activeModel, settingsSummary } from "./labels";
+import { activeModel, settingsParts, settingsSummary } from "./labels";
 import { SettingsPanel } from "./SettingsPanel";
 import type { SessionSettings } from "./useSessionSettings";
+import styles from "./SessionControls.module.css";
 
 const SlidersIcon = ({ size }: { size: number }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true">
@@ -48,11 +49,9 @@ export function SessionControls({
 
   if (!showModel && !showEffort && !showTier) return null;
 
-  const summary = settingsSummary(
-    controls,
-    { model: showModel, effort: showEffort, tier: showTier },
-    fit === "wide",
-  );
+  const shown = { model: showModel, effort: showEffort, tier: showTier };
+  const summary = settingsSummary(controls, shown, fit === "wide");
+  const { model, rest } = settingsParts(controls, shown, fit === "wide");
   const toggle = () => setOpened((current) => !current);
   const trigger =
     fit === "narrow" ? (
@@ -68,7 +67,7 @@ export function SessionControls({
         <SlidersIcon size={20} />
       </ComposerIconButton>
     ) : (
-      <ComposerTooltip label="Session settings" hidden={opened}>
+      <ComposerTooltip label={`Session settings: ${summary}`} hidden={opened}>
         <Button
           variant={opened ? "light" : "subtle"}
           color="gray"
@@ -79,6 +78,7 @@ export function SessionControls({
           fw={400}
           maw="100%"
           miw={0}
+          classNames={{ root: styles.chip, inner: styles.inner, label: styles.label }}
           leftSection={
             requested && !("mode" in requested) ? (
               <Loader size={14} color="currentColor" />
@@ -91,7 +91,14 @@ export function SessionControls({
           aria-expanded={opened}
           onClick={toggle}
         >
-          {summary}
+          {model ? (
+            <>
+              <span className={styles.model}>{model}</span>
+              <span className={styles.rest}>{rest.map((part) => ` · ${part}`).join("")}</span>
+            </>
+          ) : (
+            <span className={styles.rest}>{rest.join(" · ")}</span>
+          )}
         </Button>
       </ComposerTooltip>
     );

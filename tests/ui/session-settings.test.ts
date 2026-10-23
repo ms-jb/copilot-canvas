@@ -147,7 +147,8 @@ it("opens one settings control: an icon when narrow, the model and effort when m
     createElement(SessionControls, { settings, fit: "medium" }),
   );
   expect(medium).toContain('aria-label="Session settings: Claude Opus 5.5 · High"');
-  expect(medium).toContain(">Claude Opus 5.5 · High<");
+  expect(medium).toContain(">Claude Opus 5.5</span>");
+  expect(medium).toContain("> · High<");
   expect(medium).not.toContain(" title=");
   expect(medium).toContain('aria-haspopup="dialog"');
   expect(medium).toContain('aria-expanded="false"');
