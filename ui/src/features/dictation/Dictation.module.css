@@ -30,13 +30,6 @@
   font-variant-numeric: tabular-nums;
 }
 
-.dot {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: currentColor;
-}
-
 @media (prefers-reduced-motion: reduce) {
   .mic[data-state="recording"]::before {
     animation: none;

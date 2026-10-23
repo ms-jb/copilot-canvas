@@ -73,7 +73,6 @@ export function MicButton({ dictation, disabled }: { dictation: Dictation; disab
       </ComposerIconButton>
       {phase === "recording" && (
         <Text span size="xs" c="red" className={styles.elapsed} aria-hidden="true">
-          <span className={styles.dot} />
           {formatElapsed(elapsedMs)}
         </Text>
       )}
