@@ -3,6 +3,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { fetchBootstrap, fetchIdentity, type SendContext } from "./api";
 import { createStreamBatcher, flushesBufferedText } from "./connection/streamBatcher";
 import { planResume, watchResume } from "./connection/resume";
+import { recoverStalePage } from "./connection/staleReload";
+import { isRemote } from "./remote";
 import {
   API,
   applyServerEvent,
@@ -110,6 +112,13 @@ export function useConnection(): Connection {
       closeSource();
       clearTimeout(retryTimer);
       setPhase("stale");
+      if (isRemote()) {
+        recoverStalePage({
+          storage: window.sessionStorage,
+          now: Date.now,
+          reload: () => window.location.reload(),
+        });
+      }
     };
     staleRef.current = markStale;
 
